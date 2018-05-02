@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package oktoplus.commands;
+
+message Void {
+}
+
+message ResultInfo {
+  enum Status {
+    OK              = 0;
+    ERROR           = 1; // Generic error
+    SERVICE_DOWN    = 2; // Service is down, try later
+    SERVICE_BUSY    = 3; // Service is busy atm
+    QUOTA_EXHAUSTED = 4; // Exhausted quota
+  }
+  Status status         = 1;
+  float  execution_time = 2; // milliseconds
+  string error_detail   = 3;
+
+}
