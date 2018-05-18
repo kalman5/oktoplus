@@ -6,11 +6,25 @@
 Oktplus is a in-memory data store K:V where V is a container: std::list, std::map, boost::multi_index_container, std::set, you name it. Doing so the client can choose the best container for his own access data pattern.
 You can use it as a cache, datastore, etc. A this very first version the only container implemented is std::list and the supported operations are:
 
-- ListPushFront
-- ListPushBack
-- ListPopFront
-- ListPopBack
-- ListLength
+GRP Interface | List REDIS Command |
+---|:---:
+listPushFront | LPUSH
+listPushBack | RPUSH
+listPopFront | LPOP
+listPopBack | RPOP
+listLength | LLEN
+listEntryAtIndex | LINDEX
+  _ | BLPOP
+ _ | BRPOP
+ _ | BRPOPLPUSH
+ _ | LINSERT
+ _ | LPUSHX
+_ | LRANGE
+_ | LREM
+_ | LSET
+_ | LTRIM
+_ | RPOPLPUSH
+_ | RPUSHX
 
 the server exports a Grpc interface (https://grpc.io/). In src/Libraries/Commands/commands.proto you can find the definition of the exported interface and you can use it to build a client on your favourite language. 
 
