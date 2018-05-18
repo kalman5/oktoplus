@@ -11,7 +11,7 @@ listEntryAtIndex | LINDEX
   _ | BLPOP
  _ | BRPOP
  _ | BRPOPLPUSH
- _ | LINSERT
+ listInsert | LINSERT
  _ | LPUSHX
 _ | LRANGE
 _ | LREM
