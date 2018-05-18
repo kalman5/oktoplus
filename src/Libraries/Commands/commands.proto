@@ -14,8 +14,7 @@ service Interface {
                                                                          //BRPOP
                                                                          //BRPOPLPUSH
   rpc listEntryAtIndex(IndexRequest)    returns (ListGetValueReply) { }  //LINDEX
-  rpc listInsertBefore(InsertRequest)   returns (ListInsertReply)   { }  //LINSERT (BEFORE)
-  rpc listInsertAfter(InsertRequest)    returns (ListInsertReply)   { }  //LINSERT (AFTER)
+  rpc listInsert(ListInsertRequest)     returns (ListInsertReply)   { }  //LINSERT
                                                                          //LPUSHX
                                                                          //LRANGE
                                                                          //LREM
@@ -70,14 +69,21 @@ message IndexRequest {
 
 //////////////////////////////////////////////////////
 
-message InsertRequest {
-  string list_name = 1;
-  int64  index     = 2;
+message ListInsertRequest {
+  enum Position {
+    BEFORE          = 0;
+    AFTER           = 1;
+  }
+
+  string   list_name = 1;
+  Position position  = 2;
+  string   pivot     = 3;
+  string   value     = 4;
 }
 
 message ListInsertReply {
-  string list_name = 1;
-  int64  index     = 2;
+  ResultInfo info  = 1;
+  int64      size  = 2;
 }
 
 //////////////////////////////////////////////////////

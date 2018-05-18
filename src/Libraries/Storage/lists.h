@@ -17,6 +17,11 @@ class Lists
  public:
   DISABLE_EVIL_CONSTRUCTOR(Lists);
 
+  enum class Position {
+    BEFORE = 0,
+    AFTER  = 1
+  };
+
   Lists();
 
   size_t pushBack(const std::string&                   aName,
@@ -32,6 +37,8 @@ class Lists
   boost::optional<size_t> size(const std::string& aName);
 
   boost::optional<std::string> index(const std::string& aName, int64_t aIndex);
+
+  boost::optional<int64_t> insert(const std::string& aName, Position aPosition, const std::string& aPivot, const std::string& aValue);
 
  private:
   using ProtectedList = std::pair<boost::mutex, std::list<std::string>>;

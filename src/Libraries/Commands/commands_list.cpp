@@ -112,5 +112,32 @@ grpc::Status CommandsList::listEntryAtIndex(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
+grpc::Status CommandsList::listInsert(grpc::ServerContext*,
+                                      const ListInsertRequest* aRequest,
+                                      ListInsertReply*         aReply) {
+  const auto& myName     = aRequest->list_name();
+  const auto  myPosition = aRequest->position();
+  const auto& myPivot    = aRequest->pivot();
+  const auto& myValue    = aRequest->value();
+
+  //ListInsertRequest::Position::BEFORE;
+
+  storage::Lists::Position myListPosition;
+  if (myPosition == ListInsertRequest::Position::ListInsertRequest_Position_BEFORE) {
+    myListPosition = storage::Lists::Position::BEFORE;
+  } else {
+    myListPosition = storage::Lists::Position::AFTER;
+  }
+
+  auto myRet = theLists.insert(myName, myListPosition, myPivot, myValue);
+
+  if (myRet) {
+    aReply->set_size(myRet.get());
+  }
+
+  return grpc::Status::OK;
+}
+
+
 } // namespace commands
 } // namespace octoplus

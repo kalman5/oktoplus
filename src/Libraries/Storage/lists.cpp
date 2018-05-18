@@ -105,8 +105,38 @@ boost::optional<std::string> Lists::index(const std::string& aName,
                     });
 
   return myRet;
-
 }
+
+boost::optional<int64_t> Lists::insert(const std::string& aName,
+                                       Position aPosition,
+                                       const std::string& aPivot,
+                                       const std::string& aValue) {
+  boost::optional<int64_t> myRet;
+
+  performOnExisting(aName,
+                    [&myRet, aPosition, &aPivot, &aValue](ProtectedList& aList) {
+
+                      auto myIt = std::find(aList.second.begin(),
+                                            aList.second.end(),
+                                            aPivot);
+                      if (myIt == aList.second.end()) {
+                        myRet = -1;
+                        return;
+                      }
+
+                      if (aPosition == Position::AFTER) {
+                        ++myIt;
+                      }
+
+                      aList.second.insert(myIt, aValue);
+                      myRet = aList.second.size();
+                    });
+
+  return myRet;
+}
+
+
+/////////
 
 void Lists::performOnNew(const std::string& aName,
                          const Functor& aFunctor) {

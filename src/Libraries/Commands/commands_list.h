@@ -35,13 +35,18 @@ class CommandsList : virtual public Interface::Service
                           const ListLengthRequest*,
                           ListLengthReply*) final override;
 
-
                                                                          //BLPOP
                                                                          //BRPOP
                                                                          //BRPOPLPUSH
+
   grpc::Status listEntryAtIndex(grpc::ServerContext*,
                                 const IndexRequest*,
                                 ListGetValueReply*) final override;
+
+  grpc::Status listInsert(grpc::ServerContext*,
+                          const ListInsertRequest*,
+                          ListInsertReply*) final override;
+
 
   storage::Lists theLists;
 };
