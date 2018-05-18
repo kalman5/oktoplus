@@ -4,38 +4,21 @@
 
 ###### What is oktoplus
 Oktplus is a in-memory data store K:V where V is a container: std::list, std::map, boost::multi_index_container, std::set, you name it. Doing so the client can choose the best container for his own access data pattern.
-You can use it as a cache, datastore, etc. A this very first version the only container implemented is std::list and the supported operations are:
-
-GRP Interface | List REDIS Command |
----|:---:
-listPushFront | LPUSH
-listPushBack | RPUSH
-listPopFront | LPOP
-listPopBack | RPOP
-listLength | LLEN
-listEntryAtIndex | LINDEX
-  _ | BLPOP
- _ | BRPOP
- _ | BRPOPLPUSH
- _ | LINSERT
- _ | LPUSHX
-_ | LRANGE
-_ | LREM
-_ | LSET
-_ | LTRIM
-_ | RPOPLPUSH
-_ | RPUSHX
-
-the server exports a Grpc interface (https://grpc.io/). In src/Libraries/Commands/commands.proto you can find the definition of the exported interface and you can use it to build a client on your favourite language. 
-
-Server is multithread, at the moment two different clients working on different containers (type or name) have a minimal interaction. 
 
 If this reminds you of REDIS then you are right, I was inspired by it, however:
 
  - Redis is not multithread
  - Redis offers only basic containers
-  - For instance the Redis command LINDEX is O(n), so if you need to access a value with an index would be better to use a Vector style container
+ - For instance the Redis command LINDEX is O(n), so if you need to access a value with an index would be better to use a Vector style container
   - There is no analogue of multi-set in Redis
+
+Redis Commands Compatibility (temporary list)
+
+[LIST](docs/compatibility_list.md)
+
+The server exports a Grpc interface (https://grpc.io/). Refer to src/Libraries/Commands/commands.proto to see the exported interface, you can use it to build a client on your favourite language. 
+
+Server is multithread, two different clients working on different containers (type or name) have a minimal interaction. Two clients performing a parallel batch insert can procede in parallel without blocking each other.
 
 #### Road Map
 - Support all REDIS commands (at least the one relative to data storage)
