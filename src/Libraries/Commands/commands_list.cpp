@@ -100,7 +100,7 @@ grpc::Status CommandsList::listLength(grpc::ServerContext*,
 grpc::Status CommandsList::listEntryAtIndex(grpc::ServerContext*,
                                             const IndexRequest* aRequest,
                                             ListGetValueReply*  aReply) {
-  const auto& myName = aRequest->list_name();
+  const auto& myName = aRequest->name();
   const auto  myIndex = aRequest->index();
 
   auto myRet = theLists.index(myName, myIndex);
