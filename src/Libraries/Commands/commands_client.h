@@ -18,17 +18,17 @@ class CommandsClient final
   size_t listPushFront(const std::string&             myListName,
                        const std::vector<std::string> myValues);
 
-//   grpc::Status listPushBack(grpc::ServerContext*,
-//                             const ListPushRequest*,
-//                             ListPushReply*) override;
-//
+  //   grpc::Status listPushBack(grpc::ServerContext*,
+  //                             const ListPushRequest*,
+  //                             ListPushReply*) override;
+  //
 
   std::string listPopFront(const std::string& myListName);
-//
-//   grpc::Status listPopBack(grpc::ServerContext*,
-//                            const ListPopRequest*,
-//                            ListPopReply*) override;
-//
+  //
+  //   grpc::Status listPopBack(grpc::ServerContext*,
+  //                            const ListPopRequest*,
+  //                            ListPopReply*) override;
+  //
 
   std::shared_ptr<::grpc::ChannelCredentials> theCredentials;
 
@@ -36,4 +36,4 @@ class CommandsClient final
 };
 
 } // namespace commands
-} // namespace octoplus
+} // namespace oktoplus

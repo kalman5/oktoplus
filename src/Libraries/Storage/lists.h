@@ -6,8 +6,8 @@
 
 #include <functional>
 #include <list>
-#include <unordered_map>
 #include <string_view>
+#include <unordered_map>
 
 namespace oktoplus {
 namespace storage {
@@ -17,10 +17,7 @@ class Lists
  public:
   DISABLE_EVIL_CONSTRUCTOR(Lists);
 
-  enum class Position {
-    BEFORE = 0,
-    AFTER  = 1
-  };
+  enum class Position { BEFORE = 0, AFTER = 1 };
 
   Lists();
 
@@ -38,11 +35,14 @@ class Lists
 
   boost::optional<std::string> index(const std::string& aName, int64_t aIndex);
 
-  boost::optional<int64_t> insert(const std::string& aName, Position aPosition, const std::string& aPivot, const std::string& aValue);
+  boost::optional<int64_t> insert(const std::string& aName,
+                                  Position           aPosition,
+                                  const std::string& aPivot,
+                                  const std::string& aValue);
 
  private:
   using ProtectedList = std::pair<boost::mutex, std::list<std::string>>;
-  using Storage = std::unordered_map<std::string, ProtectedList>;
+  using Storage       = std::unordered_map<std::string, ProtectedList>;
 
   using Functor = std::function<void(ProtectedList& aList)>;
 
@@ -54,4 +54,4 @@ class Lists
 };
 
 } // namespace storage
-} // namespace octoplus
+} // namespace oktoplus

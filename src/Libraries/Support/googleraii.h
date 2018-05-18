@@ -10,13 +10,13 @@ class GoogleRaii final
 {
  public:
   GoogleRaii(const char* argv0, const bool aGlog, const bool aProtobuf)
-  : theGlog(aGlog)
-    , theProtobuf(aProtobuf) {
-  if (aGlog) {
-    ::google::InitGoogleLogging(argv0);
-    ::google::LogToStderr();
+      : theGlog(aGlog)
+      , theProtobuf(aProtobuf) {
+    if (aGlog) {
+      ::google::InitGoogleLogging(argv0);
+      ::google::LogToStderr();
+    }
   }
-}
 
   /// Clean-up static stuff in glog and protobuf.
   ~GoogleRaii() {
@@ -29,9 +29,9 @@ class GoogleRaii final
   }
 
  private:
-  const bool                       theGlog;
-  const bool                       theProtobuf;
+  const bool theGlog;
+  const bool theProtobuf;
 };
 
-}
-}
+} // namespace support
+} // namespace oktoplus

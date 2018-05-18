@@ -14,6 +14,7 @@ class CommandsList : virtual public Interface::Service
 {
  public:
   CommandsList();
+
  private:
   grpc::Status listPushFront(grpc::ServerContext*,
                              const ListPushRequest*,
@@ -35,9 +36,9 @@ class CommandsList : virtual public Interface::Service
                           const ListLengthRequest*,
                           ListLengthReply*) final override;
 
-                                                                         //BLPOP
-                                                                         //BRPOP
-                                                                         //BRPOPLPUSH
+  // BLPOP
+  // BRPOP
+  // BRPOPLPUSH
 
   grpc::Status listEntryAtIndex(grpc::ServerContext*,
                                 const IndexRequest*,
@@ -47,9 +48,8 @@ class CommandsList : virtual public Interface::Service
                           const ListInsertRequest*,
                           ListInsertReply*) final override;
 
-
   storage::Lists theLists;
 };
 
 } // namespace commands
-} // namespace octoplus
+} // namespace oktoplus

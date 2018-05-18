@@ -2,18 +2,17 @@
 
 #include <glog/logging.h>
 
-#include <string_view>
 #include <sstream>
+#include <string_view>
 
 namespace oktoplus {
 namespace commands {
 
 CommandsClient::CommandsClient(const std::string& myEndpoint)
     : theCredentials(::grpc::InsecureChannelCredentials())
-    , theStub(Interface::NewStub(::grpc::CreateChannel(myEndpoint, theCredentials))) {
-
+    , theStub(Interface::NewStub(
+          ::grpc::CreateChannel(myEndpoint, theCredentials))) {
 }
-
 
 size_t CommandsClient::listPushFront(const std::string&             myListName,
                                      const std::vector<std::string> myValues) {
@@ -27,7 +26,7 @@ size_t CommandsClient::listPushFront(const std::string&             myListName,
   }
 
   std::chrono::system_clock::time_point deadline =
-    std::chrono::system_clock::now() + std::chrono::seconds(5);
+      std::chrono::system_clock::now() + std::chrono::seconds(5);
 
   ::grpc::ClientContext myContext;
   myContext.set_deadline(deadline);
@@ -70,7 +69,7 @@ std::string CommandsClient::listPopFront(const std::string& myListName) {
   myRequest.set_list_name(myListName);
 
   std::chrono::system_clock::time_point deadline =
-    std::chrono::system_clock::now() + std::chrono::seconds(5);
+      std::chrono::system_clock::now() + std::chrono::seconds(5);
 
   ::grpc::ClientContext myContext;
   myContext.set_deadline(deadline);
@@ -102,4 +101,4 @@ std::string CommandsClient::listPopFront(const std::string& myListName) {
 // }
 
 } // namespace commands
-} // namespace octoplus
+} // namespace oktoplus

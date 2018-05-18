@@ -2,8 +2,8 @@
 
 #include <glog/logging.h>
 
-#include <string_view>
 #include <sstream>
+#include <string_view>
 
 namespace oktoplus {
 namespace commands {
@@ -13,7 +13,7 @@ CommandsServer::CommandsServer(const std::string& myEndpoint)
     , theServer() {
   ::grpc::ServerBuilder myBuilder;
   myBuilder.SetSyncServerOption(::grpc::ServerBuilder::NUM_CQS, 5)
-           .SetSyncServerOption(::grpc::ServerBuilder::MIN_POLLERS, 5);
+      .SetSyncServerOption(::grpc::ServerBuilder::MIN_POLLERS, 5);
   myBuilder.AddListeningPort(myEndpoint, theCredentials);
   myBuilder.RegisterService(this);
   theServer = myBuilder.BuildAndStart();
@@ -39,6 +39,5 @@ void CommandsServer::shutdown() {
   theServer->Shutdown();
 }
 
-
 } // namespace commands
-} // namespace octoplus
+} // namespace oktoplus

@@ -24,4 +24,4 @@ class CommandsServer : public CommandsList
 };
 
 } // namespace commands
-} // namespace octoplus
+} // namespace oktoplus

@@ -2,8 +2,8 @@
 
 #include <glog/logging.h>
 
-#include <string_view>
 #include <sstream>
+#include <string_view>
 
 namespace oktoplus {
 namespace commands {
@@ -13,8 +13,8 @@ CommandsList::CommandsList()
 }
 
 grpc::Status CommandsList::listPushFront(grpc::ServerContext*,
-                                           const ListPushRequest* aRequest,
-                                           ListPushReply*         aReply) {
+                                         const ListPushRequest* aRequest,
+                                         ListPushReply*         aReply) {
 
   std::vector<std::string_view> myStrings;
   myStrings.reserve(aRequest->values_size());
@@ -66,8 +66,8 @@ grpc::Status CommandsList::listPopFront(grpc::ServerContext*,
 }
 
 grpc::Status CommandsList::listPopBack(grpc::ServerContext*,
-                                         const ListGetValueRequest* aRequest,
-                                         ListGetValueReply*         aReply) {
+                                       const ListGetValueRequest* aRequest,
+                                       ListGetValueReply*         aReply) {
   const std::string& myName = aRequest->list_name();
 
   auto myRet = theLists.popBack(myName);
@@ -93,14 +93,14 @@ grpc::Status CommandsList::listLength(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-//BLPOP
-//BRPOP
-//BRPOPLPUSH
+// BLPOP
+// BRPOP
+// BRPOPLPUSH
 
 grpc::Status CommandsList::listEntryAtIndex(grpc::ServerContext*,
                                             const IndexRequest* aRequest,
                                             ListGetValueReply*  aReply) {
-  const auto& myName = aRequest->name();
+  const auto& myName  = aRequest->name();
   const auto  myIndex = aRequest->index();
 
   auto myRet = theLists.index(myName, myIndex);
@@ -120,10 +120,11 @@ grpc::Status CommandsList::listInsert(grpc::ServerContext*,
   const auto& myPivot    = aRequest->pivot();
   const auto& myValue    = aRequest->value();
 
-  //ListInsertRequest::Position::BEFORE;
+  // ListInsertRequest::Position::BEFORE;
 
   storage::Lists::Position myListPosition;
-  if (myPosition == ListInsertRequest::Position::ListInsertRequest_Position_BEFORE) {
+  if (myPosition ==
+      ListInsertRequest::Position::ListInsertRequest_Position_BEFORE) {
     myListPosition = storage::Lists::Position::BEFORE;
   } else {
     myListPosition = storage::Lists::Position::AFTER;
@@ -138,6 +139,5 @@ grpc::Status CommandsList::listInsert(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-
 } // namespace commands
-} // namespace octoplus
+} // namespace oktoplus
