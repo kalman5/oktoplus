@@ -1,4 +1,4 @@
-##### Prerequisite
+##### Pre-requisites
 - Grpc (refer to https://github.com/grpc/grpc/blob/master/INSTALL.md to install it on your system)
 - Glog
  
