@@ -20,8 +20,6 @@ class TestLists : public ::testing::Test
 
 TEST_F(TestLists, ctor) {
   okst::Lists myLists;
-
-  ASSERT_EQ(0u, myLists.hostedKeys());
 }
 
 TEST_F(TestLists, push_back_front_size) {
@@ -72,7 +70,6 @@ TEST_F(TestLists, pop_back) {
 
   // at this point the list is empty
   ASSERT_EQ(0u, myLists.size("l1"));
-  //ASSERT_EQ(0u, myLists.hostedKeys());
 
   ASSERT_FALSE(myLists.popBack("l1"));
   ASSERT_FALSE(myLists.popFront("l1"));

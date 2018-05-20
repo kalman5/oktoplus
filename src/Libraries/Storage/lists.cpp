@@ -11,12 +11,6 @@ Lists::Lists()
     , theStorage() {
 }
 
-size_t Lists::hostedKeys() const {
-  boost::lock_guard<boost::mutex> myLock(theMutex);
-
-  return theStorage.size();
-}
-
 size_t Lists::pushBack(const std::string&                   aName,
                        const std::vector<std::string_view>& aValues) {
 
@@ -166,16 +160,8 @@ void Lists::performOnExisting(const std::string& aName,
     myList = &myIt->second;
   }
 
-  {
-    boost::lock_guard<boost::mutex> myLock(myList->mutex);
-    aFunctor(myList->list);
-  }
-
-//   if (myList->list.empty()) {
-//     boost::lock_guard<boost::mutex> myLock(theMutex);
-//     auto myIt = theStorage.find(aName);
-//     boost::lock_guard<boost::mutex> myLockTwo(myList->mutex);
-//   }
+  boost::lock_guard<boost::mutex> myLock(myList->mutex);
+  aFunctor(myList->list);
 }
 
 void Lists::performOnExisting(const std::string&  aName,
