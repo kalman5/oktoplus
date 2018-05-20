@@ -143,52 +143,57 @@ void Lists::performOnNew(const std::string& aName, const Functor& aFunctor) {
 
   ProtectedList* myList = nullptr;
 
-  LockGuardPtr mySecondLevelLock;
-
   {
     boost::lock_guard<boost::mutex> myLock(theMutex);
     myList = &theStorage[aName];
-    mySecondLevelLock.reset(new boost::lock_guard<boost::mutex>(myList->mutex));
   }
 
+  boost::lock_guard<boost::mutex> myLock(myList->mutex);
   aFunctor(myList->list);
 }
 
 void Lists::performOnExisting(const std::string& aName,
                               const Functor&     aFunctor) {
 
-  Storage::iterator myIt;
-
-  LockGuardPtr mySecondLevelLock;
+  ProtectedList* myList = nullptr;
 
   {
     boost::lock_guard<boost::mutex> myLock(theMutex);
-    myIt = theStorage.find(aName);
+    auto myIt = theStorage.find(aName);
     if (myIt == theStorage.end()) {
       return;
     }
-    mySecondLevelLock.reset(new boost::lock_guard<boost::mutex>(myIt->second.mutex));
+    myList = &myIt->second;
   }
 
-  aFunctor(myIt->second.list);
+  {
+    boost::lock_guard<boost::mutex> myLock(myList->mutex);
+    aFunctor(myList->list);
+  }
+
+//   if (myList->list.empty()) {
+//     boost::lock_guard<boost::mutex> myLock(theMutex);
+//     auto myIt = theStorage.find(aName);
+//     boost::lock_guard<boost::mutex> myLockTwo(myList->mutex);
+//   }
 }
 
 void Lists::performOnExisting(const std::string&  aName,
                               const ConstFunctor& aFunctor) const {
 
-  Storage::const_iterator myIt;
+  const ProtectedList* myList = nullptr;
 
   {
     boost::lock_guard<boost::mutex> myLock(theMutex);
-    myIt = theStorage.find(aName);
+    auto myIt = theStorage.find(aName);
+    if (myIt == theStorage.end()) {
+      return;
+    }
+    myList = &myIt->second;
   }
 
-  if (myIt != theStorage.end()) {
-    const ProtectedList&            myList = myIt->second;
-    boost::lock_guard<boost::mutex> myLock(myList.mutex);
-
-    aFunctor(myList.list);
-  }
+  boost::lock_guard<boost::mutex> myLock(myList->mutex);
+  aFunctor(myList->list);
 }
 
 } // namespace storage

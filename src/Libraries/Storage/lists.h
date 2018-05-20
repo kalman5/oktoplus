@@ -57,8 +57,6 @@ class Lists
   void performOnExisting(const std::string& aName, const Functor& aFunctor);
   void performOnExisting(const std::string& aName, const ConstFunctor& aFunctor) const;
 
-  using LockGuardPtr = std::unique_ptr<boost::lock_guard<boost::mutex>>;
-
   mutable boost::mutex theMutex;
   Storage              theStorage;
 };
