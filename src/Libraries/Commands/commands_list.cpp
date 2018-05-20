@@ -86,9 +86,7 @@ grpc::Status CommandsList::listLength(grpc::ServerContext*,
 
   auto myRet = theLists.size(myName);
 
-  if (myRet) {
-    aReply->set_value(myRet.get());
-  }
+  aReply->set_value(myRet);
 
   return grpc::Status::OK;
 }

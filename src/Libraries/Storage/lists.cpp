@@ -11,16 +11,22 @@ Lists::Lists()
     , theStorage() {
 }
 
+size_t Lists::hostedKeys() const {
+  boost::lock_guard<boost::mutex> myLock(theMutex);
+
+  return theStorage.size();
+}
+
 size_t Lists::pushBack(const std::string&                   aName,
                        const std::vector<std::string_view>& aValues) {
 
   size_t myRet;
 
-  performOnNew(aName, [&myRet, &aValues](ProtectedList& aList) {
+  performOnNew(aName, [&myRet, &aValues](List& aList) {
     for (const auto& myString : aValues) {
-      aList.second.push_back(std::string(myString));
+      aList.push_back(std::string(myString));
     }
-    myRet = aList.second.size();
+    myRet = aList.size();
   });
 
   return myRet;
@@ -31,11 +37,11 @@ size_t Lists::pushFront(const std::string&                   aName,
 
   size_t myRet;
 
-  performOnNew(aName, [&myRet, &aValues](ProtectedList& aList) {
+  performOnNew(aName, [&myRet, &aValues](List& aList) {
     for (const auto& myString : aValues) {
-      aList.second.push_front(std::string(myString));
+      aList.push_front(std::string(myString));
     }
-    myRet = aList.second.size();
+    myRet = aList.size();
   });
 
   return myRet;
@@ -45,9 +51,12 @@ boost::optional<std::string> Lists::popBack(const std::string& aName) {
 
   boost::optional<std::string> myRet;
 
-  performOnExisting(aName, [&myRet](ProtectedList& aList) {
-    myRet = aList.second.back();
-    aList.second.pop_back();
+  performOnExisting(aName, [&myRet](List& aList) {
+    if (aList.empty()) {
+      return;
+    }
+    myRet = aList.back();
+    aList.pop_back();
   });
 
   return myRet;
@@ -57,40 +66,47 @@ boost::optional<std::string> Lists::popFront(const std::string& aName) {
 
   boost::optional<std::string> myRet;
 
-  performOnExisting(aName, [&myRet](ProtectedList& aList) {
-    myRet = aList.second.front();
-    aList.second.pop_front();
+  performOnExisting(aName, [&myRet](List& aList) {
+    if (aList.empty()) {
+      return;
+    }
+    myRet = aList.front();
+    aList.pop_front();
   });
 
   return myRet;
 }
 
-boost::optional<size_t> Lists::size(const std::string& aName) {
+size_t Lists::size(const std::string& aName) const {
 
   boost::optional<size_t> myRet;
 
   performOnExisting(
-      aName, [&myRet](ProtectedList& aList) { myRet = aList.second.size(); });
+      aName, [&myRet](const List& aList) { myRet = aList.size(); });
 
-  return myRet;
+  if (!myRet) {
+    return 0;
+  }
+
+  return myRet.get();
 }
 
 boost::optional<std::string> Lists::index(const std::string& aName,
-                                          int64_t            aIndex) {
+                                          int64_t            aIndex) const {
 
   boost::optional<std::string> myRet;
 
-  performOnExisting(aName, [&myRet, aIndex](ProtectedList& aList) {
+  performOnExisting(aName, [&myRet, aIndex](const List& aList) {
     if (aIndex >= 0) {
-      if (size_t(aIndex) < aList.second.size()) {
-        auto myIt = aList.second.begin();
+      if (size_t(aIndex) < aList.size()) {
+        auto myIt = aList.begin();
         std::advance(myIt, aIndex);
         myRet = *myIt;
       }
     } else {
       auto myReverseIndex = size_t(std::abs(aIndex + 1));
-      if (myReverseIndex < aList.second.size()) {
-        auto myIt = aList.second.rbegin();
+      if (myReverseIndex < aList.size()) {
+        auto myIt = aList.rbegin();
         std::advance(myIt, myReverseIndex);
         myRet = *myIt;
       }
@@ -107,9 +123,9 @@ boost::optional<int64_t> Lists::insert(const std::string& aName,
   boost::optional<int64_t> myRet;
 
   performOnExisting(
-      aName, [&myRet, aPosition, &aPivot, &aValue](ProtectedList& aList) {
-        auto myIt = std::find(aList.second.begin(), aList.second.end(), aPivot);
-        if (myIt == aList.second.end()) {
+      aName, [&myRet, aPosition, &aPivot, &aValue](List& aList) {
+        auto myIt = std::find(aList.begin(), aList.end(), aPivot);
+        if (myIt == aList.end()) {
           myRet = -1;
           return;
         }
@@ -118,8 +134,8 @@ boost::optional<int64_t> Lists::insert(const std::string& aName,
           ++myIt;
         }
 
-        aList.second.insert(myIt, aValue);
-        myRet = aList.second.size();
+        aList.insert(myIt, aValue);
+        myRet = aList.size();
       });
 
   return myRet;
@@ -130,14 +146,16 @@ boost::optional<int64_t> Lists::insert(const std::string& aName,
 void Lists::performOnNew(const std::string& aName, const Functor& aFunctor) {
 
   ProtectedList* myList = nullptr;
+
+  LockGuardPtr mySecondLevelLock;
+
   {
     boost::lock_guard<boost::mutex> myLock(theMutex);
     myList = &theStorage[aName];
+    mySecondLevelLock.reset(new boost::lock_guard<boost::mutex>(myList->mutex));
   }
 
-  boost::lock_guard<boost::mutex> myLock(myList->first);
-
-  aFunctor(*myList);
+  aFunctor(myList->list);
 }
 
 void Lists::performOnExisting(const std::string& aName,
@@ -145,16 +163,35 @@ void Lists::performOnExisting(const std::string& aName,
 
   Storage::iterator myIt;
 
+  LockGuardPtr mySecondLevelLock;
+
+  {
+    boost::lock_guard<boost::mutex> myLock(theMutex);
+    myIt = theStorage.find(aName);
+    if (myIt == theStorage.end()) {
+      return;
+    }
+    mySecondLevelLock.reset(new boost::lock_guard<boost::mutex>(myIt->second.mutex));
+  }
+
+  aFunctor(myIt->second.list);
+}
+
+void Lists::performOnExisting(const std::string&  aName,
+                              const ConstFunctor& aFunctor) const {
+
+  Storage::const_iterator myIt;
+
   {
     boost::lock_guard<boost::mutex> myLock(theMutex);
     myIt = theStorage.find(aName);
   }
 
   if (myIt != theStorage.end()) {
-    ProtectedList&                  myList = myIt->second;
-    boost::lock_guard<boost::mutex> myLock(myList.first);
+    const ProtectedList&            myList = myIt->second;
+    boost::lock_guard<boost::mutex> myLock(myList.mutex);
 
-    aFunctor(myList);
+    aFunctor(myList.list);
   }
 }
 

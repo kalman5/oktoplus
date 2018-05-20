@@ -21,6 +21,8 @@ class Lists
 
   Lists();
 
+  size_t hostedKeys() const;
+
   size_t pushBack(const std::string&                   aName,
                   const std::vector<std::string_view>& aValues);
 
@@ -31,9 +33,9 @@ class Lists
 
   boost::optional<std::string> popFront(const std::string& aName);
 
-  boost::optional<size_t> size(const std::string& aName);
+  size_t size(const std::string& aName) const;
 
-  boost::optional<std::string> index(const std::string& aName, int64_t aIndex);
+  boost::optional<std::string> index(const std::string& aName, int64_t aIndex) const;
 
   boost::optional<int64_t> insert(const std::string& aName,
                                   Position           aPosition,
@@ -41,16 +43,24 @@ class Lists
                                   const std::string& aValue);
 
  private:
-  using ProtectedList = std::pair<boost::mutex, std::list<std::string>>;
-  using Storage       = std::unordered_map<std::string, ProtectedList>;
+  using List = std::list<std::string>;
+  struct ProtectedList {
+    mutable boost::mutex mutex;
+    List                 list;
+  };
 
-  using Functor = std::function<void(ProtectedList& aList)>;
+  using Storage      = std::unordered_map<std::string, ProtectedList>;
+  using Functor      = std::function<void(List& aList)>;
+  using ConstFunctor = std::function<void(const List& aList)>;
 
   void performOnNew(const std::string& aName, const Functor& aFunctor);
   void performOnExisting(const std::string& aName, const Functor& aFunctor);
+  void performOnExisting(const std::string& aName, const ConstFunctor& aFunctor) const;
 
-  boost::mutex theMutex;
-  Storage      theStorage;
+  using LockGuardPtr = std::unique_ptr<boost::lock_guard<boost::mutex>>;
+
+  mutable boost::mutex theMutex;
+  Storage              theStorage;
 };
 
 } // namespace storage
