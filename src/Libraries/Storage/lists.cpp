@@ -79,16 +79,12 @@ boost::optional<std::string> Lists::popFront(const std::string& aName) {
 
 size_t Lists::size(const std::string& aName) const {
 
-  boost::optional<size_t> myRet;
+  size_t myRet = 0;
 
   performOnExisting(
       aName, [&myRet](const List& aList) { myRet = aList.size(); });
 
-  if (!myRet) {
-    return 0;
-  }
-
-  return myRet.get();
+  return myRet;
 }
 
 boost::optional<std::string> Lists::index(const std::string& aName,
