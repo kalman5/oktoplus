@@ -51,10 +51,6 @@ KeepEmptyLinesAtTheStartOfBlocks: false
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
 PointerAlignment: Left
-RawStringFormats:
-  - Delimiter: 'proto'
-    Language:  TextProto
-    BasedOnStyle: google
 ReflowComments: true
 SortIncludes: true
 SortUsingDeclarations: true

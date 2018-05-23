@@ -24,7 +24,6 @@ int main(int argc, char** argv) {
     ::testing::InitGoogleMock(&argc, argv);
     ::testing::AddGlobalTestEnvironment(new OktoplusEnvironment);
 
-
     srand(time(nullptr)); // many element in the test are randomly generated
     srand48(time(nullptr));
 

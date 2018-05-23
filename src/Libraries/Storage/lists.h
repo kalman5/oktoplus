@@ -35,7 +35,8 @@ class Lists
 
   size_t size(const std::string& aName) const;
 
-  boost::optional<std::string> index(const std::string& aName, int64_t aIndex) const;
+  boost::optional<std::string> index(const std::string& aName,
+                                     int64_t            aIndex) const;
 
   boost::optional<int64_t> insert(const std::string& aName,
                                   Position           aPosition,
@@ -46,9 +47,9 @@ class Lists
   using List = std::list<std::string>;
   struct ProtectedList {
     ProtectedList()
-      : mutex(new boost::mutex())
-      , list()
-    {}
+        : mutex(new boost::mutex())
+        , list() {
+    }
     std::unique_ptr<boost::mutex> mutex;
     List                          list;
   };
@@ -59,7 +60,8 @@ class Lists
 
   void performOnNew(const std::string& aName, const Functor& aFunctor);
   void performOnExisting(const std::string& aName, const Functor& aFunctor);
-  void performOnExisting(const std::string& aName, const ConstFunctor& aFunctor) const;
+  void performOnExisting(const std::string&  aName,
+                         const ConstFunctor& aFunctor) const;
 
   mutable boost::mutex theMutex;
   Storage              theStorage;

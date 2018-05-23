@@ -9,12 +9,10 @@ namespace okst = oktoplus::storage;
 class TestLists : public ::testing::Test
 {
  public:
-  TestLists()
-  {
+  TestLists() {
   }
 
   void SetUp() override {
-
   }
 };
 
@@ -32,17 +30,17 @@ TEST_F(TestLists, push_back_front_size) {
   ASSERT_EQ(2u, myLists.pushFront("l2", {"1"}));
 
   // Multiple Value
-  ASSERT_EQ(5u, myLists.pushFront("l1", {"3","2","1"}));
-  ASSERT_EQ(7u, myLists.pushBack("l1", {"6","7"}));
+  ASSERT_EQ(5u, myLists.pushFront("l1", {"3", "2", "1"}));
+  ASSERT_EQ(7u, myLists.pushBack("l1", {"6", "7"}));
 
   ASSERT_EQ(7u, myLists.size("l1"));
   ASSERT_EQ(2u, myLists.size("l2"));
 
   // Not existing list
-  ASSERT_EQ(0u,  myLists.size("l3"));
+  ASSERT_EQ(0u, myLists.size("l3"));
 
   for (size_t i = 0; i < 7; ++i) {
-    ASSERT_EQ(std::to_string(i+1), myLists.index("l1", i).get());
+    ASSERT_EQ(std::to_string(i + 1), myLists.index("l1", i).get());
   }
 
   ASSERT_EQ("1", myLists.index("l2", 0).get());
@@ -52,7 +50,7 @@ TEST_F(TestLists, push_back_front_size) {
 TEST_F(TestLists, pop_back) {
   okst::Lists myLists;
 
-  ASSERT_EQ(5u, myLists.pushFront("l1", {"5","4","3","2","1"}));
+  ASSERT_EQ(5u, myLists.pushFront("l1", {"5", "4", "3", "2", "1"}));
 
   ASSERT_EQ("1", myLists.popFront("l1").get());
   ASSERT_EQ(4u, myLists.size("l1"));
@@ -78,7 +76,6 @@ TEST_F(TestLists, pop_back) {
   ASSERT_FALSE(myLists.popFront("xxxx"));
 }
 
-
 TEST_F(TestLists, index) {
   okst::Lists myLists;
 
@@ -89,16 +86,16 @@ TEST_F(TestLists, index) {
   ASSERT_EQ(3u, myLists.size("l1"));
 
   // Index out of bound (positive)
-  ASSERT_FALSE(myLists.index("l1",  3));
+  ASSERT_FALSE(myLists.index("l1", 3));
   // Index out of bound (negative)
   ASSERT_FALSE(myLists.index("l1", -4));
 
-  ASSERT_EQ("one",   myLists.index("l1",  0).get());
-  ASSERT_EQ("two",   myLists.index("l1",  1).get());
-  ASSERT_EQ("three", myLists.index("l1",  2).get());
+  ASSERT_EQ("one", myLists.index("l1", 0).get());
+  ASSERT_EQ("two", myLists.index("l1", 1).get());
+  ASSERT_EQ("three", myLists.index("l1", 2).get());
   ASSERT_EQ("three", myLists.index("l1", -1).get());
-  ASSERT_EQ("two",   myLists.index("l1", -2).get());
-  ASSERT_EQ("one",   myLists.index("l1", -3).get());
+  ASSERT_EQ("two", myLists.index("l1", -2).get());
+  ASSERT_EQ("one", myLists.index("l1", -3).get());
 }
 
 TEST_F(TestLists, insert) {
@@ -110,20 +107,30 @@ TEST_F(TestLists, insert) {
 
   ASSERT_EQ(3u, myLists.size("l1"));
 
-  ASSERT_EQ(4, myLists.insert("l1", okst::Lists::Position::BEFORE, "one",   ".5").get());
-  ASSERT_EQ(5, myLists.insert("l1", okst::Lists::Position::BEFORE, "two",   "one.5").get());
-  ASSERT_EQ(6, myLists.insert("l1", okst::Lists::Position::AFTER,  "two",   "two.5").get());
-  ASSERT_EQ(7, myLists.insert("l1", okst::Lists::Position::AFTER,  "three", "three.5").get());
+  ASSERT_EQ(
+      4,
+      myLists.insert("l1", okst::Lists::Position::BEFORE, "one", ".5").get());
+  ASSERT_EQ(5,
+            myLists.insert("l1", okst::Lists::Position::BEFORE, "two", "one.5")
+                .get());
+  ASSERT_EQ(
+      6,
+      myLists.insert("l1", okst::Lists::Position::AFTER, "two", "two.5").get());
+  ASSERT_EQ(
+      7,
+      myLists.insert("l1", okst::Lists::Position::AFTER, "three", "three.5")
+          .get());
 
-  //not existing pivot
-  ASSERT_EQ(-1, myLists.insert("l1", okst::Lists::Position::AFTER, "xxxxx", "yyyy").get());
+  // not existing pivot
+  ASSERT_EQ(-1,
+            myLists.insert("l1", okst::Lists::Position::AFTER, "xxxxx", "yyyy")
+                .get());
 
-  ASSERT_EQ(".5",      myLists.index("l1",  0).get());
-  ASSERT_EQ("one",     myLists.index("l1",  1).get());
-  ASSERT_EQ("one.5",   myLists.index("l1",  2).get());
-  ASSERT_EQ("two",     myLists.index("l1",  3).get());
-  ASSERT_EQ("two.5",   myLists.index("l1",  4).get());
-  ASSERT_EQ("three",   myLists.index("l1",  5).get());
-  ASSERT_EQ("three.5", myLists.index("l1",  6).get());
+  ASSERT_EQ(".5", myLists.index("l1", 0).get());
+  ASSERT_EQ("one", myLists.index("l1", 1).get());
+  ASSERT_EQ("one.5", myLists.index("l1", 2).get());
+  ASSERT_EQ("two", myLists.index("l1", 3).get());
+  ASSERT_EQ("two.5", myLists.index("l1", 4).get());
+  ASSERT_EQ("three", myLists.index("l1", 5).get());
+  ASSERT_EQ("three.5", myLists.index("l1", 6).get());
 }
-
