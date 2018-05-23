@@ -21,6 +21,8 @@ class Lists
 
   Lists();
 
+  size_t hostedKeys() const;
+
   size_t pushBack(const std::string&                   aName,
                   const std::vector<std::string_view>& aValues);
 
@@ -43,8 +45,12 @@ class Lists
  private:
   using List = std::list<std::string>;
   struct ProtectedList {
-    mutable boost::mutex mutex;
-    List                 list;
+    ProtectedList()
+      : mutex(new boost::mutex())
+      , list()
+    {}
+    std::unique_ptr<boost::mutex> mutex;
+    List                          list;
   };
 
   using Storage      = std::unordered_map<std::string, ProtectedList>;
