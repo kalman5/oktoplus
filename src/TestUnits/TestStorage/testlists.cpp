@@ -70,6 +70,7 @@ TEST_F(TestLists, pop_back) {
 
   // at this point the list is empty
   ASSERT_EQ(0u, myLists.size("l1"));
+  ASSERT_EQ(0u, myLists.hostedKeys());
 
   ASSERT_FALSE(myLists.popBack("l1"));
   ASSERT_FALSE(myLists.popFront("l1"));
