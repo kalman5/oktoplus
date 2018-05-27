@@ -13,7 +13,7 @@ listEntryAtIndex | LINDEX
  _ | BRPOPLPUSH
  listInsert | LINSERT
  _ | LPUSHX
-_ | LRANGE
+ listRange | LRANGE
 _ | LREM
 _ | LSET
 _ | LTRIM
