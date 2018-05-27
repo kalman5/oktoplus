@@ -7,7 +7,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/Libraries)
 # Libraries
 find_library(GLOG     glog)
 #find_library(CRYPTO++ crypto++)
-#find_library(JSONCPP    jsoncpp)   # This will permit to store jsons
+find_library(JSONCPP    jsoncpp)   # This will permit to store jsons
 #find_library(FFTW3      fftw3f)    # This will permit eventually to perform FFT operations on series
 
 #find_path(FFTW3_INCLUDE_PATH fftw3.h)

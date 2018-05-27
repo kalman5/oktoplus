@@ -134,3 +134,57 @@ TEST_F(TestLists, insert) {
   ASSERT_EQ("three", myLists.index("l1", 5).get());
   ASSERT_EQ("three.5", myLists.index("l1", 6).get());
 }
+
+TEST_F(TestLists, range) {
+  okst::Lists myLists;
+
+  ASSERT_EQ(1u, myLists.pushBack("l1", {"1"}));
+  ASSERT_EQ(2u, myLists.pushBack("l1", {"2"}));
+  ASSERT_EQ(3u, myLists.pushBack("l1", {"3"}));
+
+  ASSERT_EQ(3u, myLists.size("l1"));
+
+  ASSERT_EQ(
+    std::vector<std::string>({"1", "2", "3"}),
+    myLists.range("l1", 0, 2));
+
+  ASSERT_EQ(
+    std::vector<std::string>({"1", "2", "3"}),
+    myLists.range("l1", 0, 20));
+
+  ASSERT_EQ(
+    std::vector<std::string>({"2", "3"}),
+    myLists.range("l1", 1, 2));
+
+  ASSERT_EQ(
+    std::vector<std::string>({"2", "3"}),
+    myLists.range("l1", 1, 20));
+
+  ASSERT_EQ(
+    std::vector<std::string>(),
+    myLists.range("l1", 10, 20));
+
+  ASSERT_EQ(
+    std::vector<std::string>({"1", "2", "3"}),
+    myLists.range("l1", -3, -1));
+
+  ASSERT_EQ(
+    std::vector<std::string>({"1", "2", "3"}),
+    myLists.range("l1", -30, -1));
+
+  ASSERT_EQ(
+    std::vector<std::string>({"1", "2"}),
+    myLists.range("l1", -30, -2));
+
+  ASSERT_EQ(
+    std::vector<std::string>(),
+    myLists.range("l1", -30, -10));
+
+  ASSERT_EQ(
+    std::vector<std::string>({"1", "2"}),
+    myLists.range("l1", -30, 1));
+
+  ASSERT_EQ(
+    std::vector<std::string>({"1", "2", "3"}),
+    myLists.range("l1", -30, 30));
+}

@@ -118,8 +118,6 @@ grpc::Status CommandsList::listInsert(grpc::ServerContext*,
   const auto& myPivot    = aRequest->pivot();
   const auto& myValue    = aRequest->value();
 
-  // ListInsertRequest::Position::BEFORE;
-
   storage::Lists::Position myListPosition;
   if (myPosition ==
       ListInsertRequest::Position::ListInsertRequest_Position_BEFORE) {
@@ -132,6 +130,23 @@ grpc::Status CommandsList::listInsert(grpc::ServerContext*,
 
   if (myRet) {
     aReply->set_size(myRet.get());
+  }
+
+  return grpc::Status::OK;
+}
+
+grpc::Status CommandsList::listRange(grpc::ServerContext*,
+                                     const RangeRequest* aRequest,
+                                     RangeReply*         aReply) {
+
+  const auto& myName  = aRequest->list_name();
+  const auto  myStart = aRequest->start();
+  const auto  myStop  = aRequest->stop();
+
+  auto myRet = theLists.range(myName, myStart, myStop);
+
+  for (auto&& myValue : myRet) {
+    aReply->add_values(std::move(myValue));
   }
 
   return grpc::Status::OK;

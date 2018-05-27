@@ -43,6 +43,10 @@ class Lists
                                   const std::string& aPivot,
                                   const std::string& aValue);
 
+  std::vector<std::string> range(const std::string& aName,
+                                 int64_t            aStart,
+                                 int64_t            aEnd) const;
+
  private:
   using List = std::list<std::string>;
   struct ProtectedList {

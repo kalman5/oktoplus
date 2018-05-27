@@ -48,6 +48,13 @@ class CommandsList : virtual public Interface::Service
                           const ListInsertRequest*,
                           ListInsertReply*) final override;
 
+  // LPUSHX
+
+  grpc::Status listRange(grpc::ServerContext*,
+                         const RangeRequest*,
+                         RangeReply*) final override;
+
+
   storage::Lists theLists;
 };
 

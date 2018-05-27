@@ -1,6 +1,7 @@
 #include "Storage/lists.h"
 
 #include <algorithm>
+#include <iterator>
 #include <string>
 
 namespace oktoplus {
@@ -135,6 +136,62 @@ boost::optional<int64_t> Lists::insert(const std::string& aName,
   return myRet;
 }
 
+
+
+
+std::vector<std::string> Lists::range(const std::string& aName,
+                                      int64_t            aStart,
+                                      int64_t            aEnd) const {
+
+  std::vector<std::string> myRet;
+
+  performOnExisting(aName, [&myRet, aStart, aEnd](const List& aList) {
+
+    if (aList.empty()) {
+      return;
+    }
+
+    int64_t myStart = aStart;
+    int64_t myEnd   = aEnd;
+
+    if (aStart > 0 and size_t(aStart) >= aList.size()) {
+      return;
+    } else if (aStart < 0) {
+      if (size_t(-aStart) > aList.size()) {
+        myStart = 0;
+      } else {
+        myStart = aList.size() + aStart;
+      }
+    }
+
+    if (aEnd > 0 and size_t(aEnd) >= aList.size()) {
+      myEnd = aList.size()-1;
+    } else if (aEnd < 0) {
+      if (size_t(-aEnd) > aList.size()) {
+        return;
+      } else {
+        myEnd = aList.size() + aEnd;
+      }
+    }
+
+    if (myStart > myEnd) {
+      return;
+    }
+
+    auto myItStart = aList.begin();
+    std::advance(myItStart, myStart);
+    auto myItEnd = aList.begin();
+    std::advance(myItEnd, myEnd+1);
+
+    while (myItStart != myItEnd) {
+      myRet.push_back(*myItStart);
+      ++myItStart;
+    }
+  });
+
+  return myRet;
+}
+
 /////////
 
 void Lists::performOnNew(const std::string& aName, const Functor& aFunctor) {
@@ -155,6 +212,8 @@ void Lists::performOnNew(const std::string& aName, const Functor& aFunctor) {
   assert(mySecondLevelLock->owns_lock());
   aFunctor(myList->list);
 }
+
+
 
 void Lists::performOnExisting(const std::string& aName,
                               const Functor&     aFunctor) {

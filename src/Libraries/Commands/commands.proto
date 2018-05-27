@@ -16,7 +16,7 @@ service Interface {
   rpc listEntryAtIndex(IndexRequest)    returns (ListGetValueReply) { }  //LINDEX
   rpc listInsert(ListInsertRequest)     returns (ListInsertReply)   { }  //LINSERT
                                                                          //LPUSHX
-                                                                         //LRANGE
+  rpc listRange(RangeRequest)           returns (RangeReply)        { }  //LRANGE
                                                                          //LREM
                                                                          //LSET
                                                                          //LTRIM
@@ -84,6 +84,19 @@ message ListInsertRequest {
 message ListInsertReply {
   ResultInfo info  = 1;
   int64      size  = 2;
+}
+
+//////////////////////////////////////////////////////
+
+message RangeRequest {
+  string list_name = 1;
+  int64  start     = 2;
+  int64  stop      = 3;
+}
+
+message RangeReply {
+  ResultInfo      info   = 1;
+  repeated string values = 2;
 }
 
 //////////////////////////////////////////////////////
