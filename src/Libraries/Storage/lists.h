@@ -47,6 +47,10 @@ class Lists
                                  int64_t            aStart,
                                  int64_t            aEnd) const;
 
+  size_t remove(const std::string& aName,
+                int64_t            aCount,
+                const std::string& aValue);
+
  private:
   using List = std::list<std::string>;
   struct ProtectedList {

@@ -152,5 +152,20 @@ grpc::Status CommandsList::listRange(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
+grpc::Status CommandsList::listRemove(grpc::ServerContext*,
+                                      const RemoveRequest* aRequest,
+                                      RemoveReply* aReply) {
+
+  const auto& myName    = aRequest->list_name();
+  const auto  myCounter = aRequest->count();
+  const auto& myValue   = aRequest->value();
+
+  auto myRet = theLists.remove(myName, myCounter, myValue);
+
+  aReply->set_removed(myRet);
+
+  return grpc::Status::OK;
+}
+
 } // namespace commands
 } // namespace oktoplus

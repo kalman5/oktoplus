@@ -188,3 +188,96 @@ TEST_F(TestLists, range) {
     std::vector<std::string>({"1", "2", "3"}),
     myLists.range("l1", -30, 30));
 }
+
+
+TEST_F(TestLists, remove) {
+
+  { // Not existing element
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(0u, myLists.remove("l1", 0, "7"));
+    ASSERT_EQ(0u, myLists.remove("l1", -1, "7"));
+    ASSERT_EQ(0u, myLists.remove("l1", 1, "7"));
+
+    ASSERT_EQ(
+      std::vector<std::string>({"1","3","3","3","4","3","6","6"}),
+      myLists.range("l1", -30, 30));
+  }
+
+  { // all occurencies
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(4u, myLists.remove("l1", 0, "3"));
+
+
+    ASSERT_EQ(
+      std::vector<std::string>({"1","4","6","6"}),
+      myLists.range("l1", -30, 30));
+  }
+
+  { // more than in the list from beginning
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(4u, myLists.remove("l1", 20, "3"));
+
+
+    ASSERT_EQ(
+      std::vector<std::string>({"1","4","6","6"}),
+      myLists.range("l1", -30, 30));
+  }
+
+  { // same amount from left
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(4u, myLists.remove("l1", 4, "3"));
+
+
+    ASSERT_EQ(
+      std::vector<std::string>({"1","4","6","6"}),
+      myLists.range("l1", -30, 30));
+  }
+
+  { // less amount from left
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(2u, myLists.remove("l1", 2, "3"));
+
+
+    ASSERT_EQ(
+      std::vector<std::string>({"1","3","4","3","6","6"}),
+      myLists.range("l1", -30, 30));
+  }
+
+  { // more than in the list from right
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(4u, myLists.remove("l1", -20, "3"));
+
+
+    ASSERT_EQ(
+      std::vector<std::string>({"1","4","6","6"}),
+      myLists.range("l1", -30, 30));
+  }
+
+  { // same amount from right
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(4u, myLists.remove("l1", -4, "3"));
+
+
+    ASSERT_EQ(
+      std::vector<std::string>({"1","4","6","6"}),
+      myLists.range("l1", -30, 30));
+  }
+
+  { // less amount from right
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(3u, myLists.remove("l1", -3, "3"));
+
+
+    ASSERT_EQ(
+      std::vector<std::string>({"1","3","4","6","6"}),
+      myLists.range("l1", -30, 30));
+  }
+}

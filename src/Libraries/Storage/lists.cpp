@@ -192,6 +192,56 @@ std::vector<std::string> Lists::range(const std::string& aName,
   return myRet;
 }
 
+size_t Lists::remove(const std::string& aName,
+                     int64_t            aCount,
+                     const std::string& aValue) {
+  size_t myRet = 0;
+
+  performOnExisting(aName, [&myRet, aCount, &aValue](List& aList) {
+
+    if (aCount == 0) {
+      size_t myRemoved = 0;
+      for (auto myIt = aList.begin(); myIt != aList.end(); ) {
+        if (*myIt == aValue) {
+          myIt = aList.erase(myIt);
+          ++myRemoved;
+        } else {
+          ++myIt;
+        }
+      }
+      myRet = myRemoved;
+    } else {
+
+      auto myToRemove = std::abs(aCount);
+
+      if (aCount > 0) {
+        for (auto myIt = aList.begin(); myIt != aList.end() and myToRemove > 0; ) {
+          if (*myIt == aValue) {
+            myIt = aList.erase(myIt);
+            --myToRemove;
+          } else {
+            ++myIt;
+          }
+        }
+      } else {
+        for (auto myIt = aList.rbegin(); myIt != aList.rend() and myToRemove > 0; ) {
+          if (*myIt == aValue) {
+            myIt = List::reverse_iterator(aList.erase(std::next(myIt).base()));
+            --myToRemove;
+          } else {
+            ++myIt;
+          }
+        }
+      }
+
+      assert(std::abs(aCount) >= myToRemove);
+      myRet = std::abs(aCount) - myToRemove;
+    }
+  });
+
+  return myRet;
+}
+
 /////////
 
 void Lists::performOnNew(const std::string& aName, const Functor& aFunctor) {
@@ -252,7 +302,8 @@ void Lists::performOnExisting(const std::string& aName,
 
     while (true) {
       boost::lock_guard<boost::mutex> myLock(theMutex);
-      auto                            myIt = theStorage.find(aName);
+
+      auto myIt = theStorage.find(aName);
       if (myIt == theStorage.end()) {
         return;
       }

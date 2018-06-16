@@ -54,6 +54,9 @@ class CommandsList : virtual public Interface::Service
                          const RangeRequest*,
                          RangeReply*) final override;
 
+  grpc::Status listRemove(grpc::ServerContext*,
+                          const RemoveRequest*,
+                          RemoveReply*) final override;
 
   storage::Lists theLists;
 };
