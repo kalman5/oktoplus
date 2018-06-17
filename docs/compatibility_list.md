@@ -15,7 +15,7 @@ listEntryAtIndex | LINDEX
  _ | LPUSHX
  listRange | LRANGE
  listRemove | LREM
-_ | LSET
+ listSet | LSET
 _ | LTRIM
 _ | RPOPLPUSH
 _ | RPUSHX
