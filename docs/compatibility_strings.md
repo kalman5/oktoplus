@@ -1,21 +1,28 @@
 
 
-GRP Interface | List REDIS Command |
+GRP Interface | Strings REDIS Command |
 ---|:---:
-listPushFront | LPUSH
-listPushBack | RPUSH
-listPopFront | LPOP
-listPopBack | RPOP
-listLength | LLEN
-listIndex | LINDEX
-  _ | BLPOP
- _ | BRPOP
- _ | BRPOPLPUSH
- listInsert | LINSERT
- _ | LPUSHX
- listRange | LRANGE
- listRemove | LREM
- listSet | LSET
-_ | LTRIM
-_ | RPOPLPUSH
-_ | RPUSHX
+ _ | APPEND
+ _ | BITCOUNT
+ _ | BITFIELD
+ _ | BITOP
+ _ | BITOPS
+ _ | DECR
+ _ | DECRBY
+ _ | GET
+ _ | GETBIT
+ _ | GETRANGE
+ _ | GETSET
+ _ | INCR
+ _ | INCRBY
+ _ | INCRBYFLOAT
+ _ | MGET
+ _ | MSET
+ _ | MSETNX
+ _ | PSETEX
+ _ | SET
+ _ | SETBIT
+ _ | SETEX
+ _ | SETNX
+ _ | SETRANGE
+ _ | STRLEN
