@@ -14,7 +14,9 @@ If this reminds you of REDIS then you are right, I was inspired by it, however:
 
 Redis Commands Compatibility
 
-   [LIST](docs/compatibility_list.md) 60% Completed
+  - [LISTS](docs/compatibility_lists.md) 60% Completed
+  - [SETS](docs/compatibility_sets.md) 0% Completed
+  - [STRINGS](docs/compatibility_strings.md) 0% Completed
 
 The server exports a Grpc interface (https://grpc.io/). Refer to src/Libraries/Commands/commands.proto to see the exported interface, you can use it to build a client for your favourite language. 
 
