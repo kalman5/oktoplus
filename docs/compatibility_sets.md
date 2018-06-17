@@ -1,21 +1,20 @@
 
 
-GRP Interface | List REDIS Command |
+GRP Interface | Sets REDIS Command |
 ---|:---:
-listPushFront | LPUSH
-listPushBack | RPUSH
-listPopFront | LPOP
-listPopBack | RPOP
-listLength | LLEN
-listIndex | LINDEX
-  _ | BLPOP
- _ | BRPOP
- _ | BRPOPLPUSH
- listInsert | LINSERT
- _ | LPUSHX
- listRange | LRANGE
- listRemove | LREM
- listSet | LSET
-_ | LTRIM
-_ | RPOPLPUSH
-_ | RPUSHX
+_ | SADD
+_ | SCARD
+_ | SDIFF
+_ | SDIFFSTORE
+_ | SINTER
+_ | SINTERSTORE
+_ | SISMEMBER
+_ | SMEMBERS
+_ | SMOVE
+_ | SPOP
+_ | SRANDMEMBER
+_ | SREM
+_ | SUNION
+_ | SUNIONSTORE
+_ | SSCAN
+
