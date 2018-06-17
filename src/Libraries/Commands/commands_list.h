@@ -40,9 +40,9 @@ class CommandsList : virtual public Interface::Service
   // BRPOP
   // BRPOPLPUSH
 
-  grpc::Status listEntryAtIndex(grpc::ServerContext*,
-                                const IndexRequest*,
-                                ListGetValueReply*) final override;
+  grpc::Status listIndex(grpc::ServerContext*,
+                         const IndexRequest*,
+                         ListGetValueReply*) final override;
 
   grpc::Status listInsert(grpc::ServerContext*,
                           const ListInsertRequest*,
@@ -57,6 +57,10 @@ class CommandsList : virtual public Interface::Service
   grpc::Status listRemove(grpc::ServerContext*,
                           const RemoveRequest*,
                           RemoveReply*) final override;
+
+  grpc::Status listSet(grpc::ServerContext*,
+                       const SetRequest*,
+                       SetReply*) final override;
 
   storage::Lists theLists;
 };

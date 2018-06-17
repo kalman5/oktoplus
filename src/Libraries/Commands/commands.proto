@@ -13,12 +13,12 @@ service Interface {
                                                                          //BLPOP
                                                                          //BRPOP
                                                                          //BRPOPLPUSH
-  rpc listEntryAtIndex(IndexRequest)    returns (ListGetValueReply) { }  //LINDEX
+  rpc listIndex(IndexRequest)           returns (ListGetValueReply) { }  //LINDEX
   rpc listInsert(ListInsertRequest)     returns (ListInsertReply)   { }  //LINSERT
                                                                          //LPUSHX
   rpc listRange(RangeRequest)           returns (RangeReply)        { }  //LRANGE
   rpc listRemove(RemoveRequest)         returns (RemoveReply)       { }  //LREM
-                                                                         //LSET
+  rpc listSet(SetRequest)               returns (SetReply)          { }  //LSET
                                                                          //LTRIM
                                                                          //RPOPLPUSH
                                                                          //RPUSHX
@@ -29,7 +29,7 @@ service Interface {
 //////////////////////////////////////////////////////
 
 message ListPushRequest {
-  string list_name       = 1;
+  string name            = 1;
   repeated string values = 2;
 }
 
@@ -41,7 +41,7 @@ message ListPushReply {
 //////////////////////////////////////////////////////
 
 message ListGetValueRequest {
-  string list_name = 1;
+  string name = 1;
 }
 
 message ListGetValueReply {
@@ -52,7 +52,7 @@ message ListGetValueReply {
 //////////////////////////////////////////////////////
 
 message ListLengthRequest {
-  string list_name = 1;
+  string name = 1;
 }
 
 message ListLengthReply {
@@ -75,10 +75,10 @@ message ListInsertRequest {
     AFTER           = 1;
   }
 
-  string   list_name = 1;
-  Position position  = 2;
-  string   pivot     = 3;
-  string   value     = 4;
+  string   name     = 1;
+  Position position = 2;
+  string   pivot    = 3;
+  string   value    = 4;
 }
 
 message ListInsertReply {
@@ -89,9 +89,9 @@ message ListInsertReply {
 //////////////////////////////////////////////////////
 
 message RangeRequest {
-  string list_name = 1;
-  int64  start     = 2;
-  int64  stop      = 3;
+  string name  = 1;
+  int64  start = 2;
+  int64  stop  = 3;
 }
 
 message RangeReply {
@@ -102,14 +102,26 @@ message RangeReply {
 //////////////////////////////////////////////////////
 
 message RemoveRequest {
-  string list_name = 1;
-  int64  count     = 2;
-  string value     = 3;
+  string name  = 1;
+  int64  count = 2;
+  string value = 3;
 }
 
 message RemoveReply {
   ResultInfo info    = 1;
   int64      removed = 2;
+}
+
+//////////////////////////////////////////////////////
+
+message SetRequest {
+  string name  = 1;
+  int64  index = 2;
+  string value = 3;
+}
+
+message SetReply {
+  ResultInfo info = 1;
 }
 
 //////////////////////////////////////////////////////

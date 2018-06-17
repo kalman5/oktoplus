@@ -22,7 +22,7 @@ grpc::Status CommandsList::listPushFront(grpc::ServerContext*,
     myStrings.push_back(aRequest->values(i));
   }
 
-  const auto& myName = aRequest->list_name();
+  const auto& myName = aRequest->name();
 
   auto myRet = theLists.pushFront(myName, myStrings);
 
@@ -41,7 +41,7 @@ grpc::Status CommandsList::listPushBack(grpc::ServerContext*,
     myStrings.push_back(aRequest->values(i));
   }
 
-  const auto& myName = aRequest->list_name();
+  const auto& myName = aRequest->name();
 
   auto myRet = theLists.pushBack(myName, myStrings);
 
@@ -54,7 +54,7 @@ grpc::Status CommandsList::listPopFront(grpc::ServerContext*,
                                         const ListGetValueRequest* aRequest,
                                         ListGetValueReply*         aReply) {
 
-  const auto& myName = aRequest->list_name();
+  const auto& myName = aRequest->name();
 
   auto myRet = theLists.popFront(myName);
 
@@ -68,7 +68,7 @@ grpc::Status CommandsList::listPopFront(grpc::ServerContext*,
 grpc::Status CommandsList::listPopBack(grpc::ServerContext*,
                                        const ListGetValueRequest* aRequest,
                                        ListGetValueReply*         aReply) {
-  const std::string& myName = aRequest->list_name();
+  const std::string& myName = aRequest->name();
 
   auto myRet = theLists.popBack(myName);
 
@@ -82,7 +82,7 @@ grpc::Status CommandsList::listPopBack(grpc::ServerContext*,
 grpc::Status CommandsList::listLength(grpc::ServerContext*,
                                       const ListLengthRequest* aRequest,
                                       ListLengthReply*         aReply) {
-  const auto& myName = aRequest->list_name();
+  const auto& myName = aRequest->name();
 
   auto myRet = theLists.size(myName);
 
@@ -95,9 +95,9 @@ grpc::Status CommandsList::listLength(grpc::ServerContext*,
 // BRPOP
 // BRPOPLPUSH
 
-grpc::Status CommandsList::listEntryAtIndex(grpc::ServerContext*,
-                                            const IndexRequest* aRequest,
-                                            ListGetValueReply*  aReply) {
+grpc::Status CommandsList::listIndex(grpc::ServerContext*,
+                                     const IndexRequest* aRequest,
+                                     ListGetValueReply*  aReply) {
   const auto& myName  = aRequest->name();
   const auto  myIndex = aRequest->index();
 
@@ -113,7 +113,7 @@ grpc::Status CommandsList::listEntryAtIndex(grpc::ServerContext*,
 grpc::Status CommandsList::listInsert(grpc::ServerContext*,
                                       const ListInsertRequest* aRequest,
                                       ListInsertReply*         aReply) {
-  const auto& myName     = aRequest->list_name();
+  const auto& myName     = aRequest->name();
   const auto  myPosition = aRequest->position();
   const auto& myPivot    = aRequest->pivot();
   const auto& myValue    = aRequest->value();
@@ -139,7 +139,7 @@ grpc::Status CommandsList::listRange(grpc::ServerContext*,
                                      const RangeRequest* aRequest,
                                      RangeReply*         aReply) {
 
-  const auto& myName  = aRequest->list_name();
+  const auto& myName  = aRequest->name();
   const auto  myStart = aRequest->start();
   const auto  myStop  = aRequest->stop();
 
@@ -154,9 +154,9 @@ grpc::Status CommandsList::listRange(grpc::ServerContext*,
 
 grpc::Status CommandsList::listRemove(grpc::ServerContext*,
                                       const RemoveRequest* aRequest,
-                                      RemoveReply* aReply) {
+                                      RemoveReply*         aReply) {
 
-  const auto& myName    = aRequest->list_name();
+  const auto& myName    = aRequest->name();
   const auto  myCounter = aRequest->count();
   const auto& myValue   = aRequest->value();
 
@@ -165,6 +165,26 @@ grpc::Status CommandsList::listRemove(grpc::ServerContext*,
   aReply->set_removed(myRet);
 
   return grpc::Status::OK;
+}
+
+grpc::Status CommandsList::listSet(grpc::ServerContext*,
+                                   const SetRequest* aRequest,
+                                   SetReply*) {
+
+  const auto& myName  = aRequest->name();
+  const auto  myIndex = aRequest->index();
+  const auto& myValue = aRequest->value();
+
+  const auto myRet = theLists.set(myName, myIndex, myValue);
+
+  switch (myRet) {
+    case storage::Lists::Status::OK:
+      return grpc::Status::OK;
+    case storage::Lists::Status::OUT_OF_RANGE:
+      return grpc::Status(grpc::OUT_OF_RANGE, "list out of range");
+    case storage::Lists::Status::NOT_FOUND:
+      return grpc::Status(grpc::NOT_FOUND, "list not found");
+  };
 }
 
 } // namespace commands

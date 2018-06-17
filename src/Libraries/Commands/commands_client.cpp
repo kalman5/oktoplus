@@ -19,7 +19,7 @@ size_t CommandsClient::listPushFront(const std::string&             myListName,
 
   ListPushRequest myRequest;
 
-  myRequest.set_list_name(myListName);
+  myRequest.set_name(myListName);
 
   for (const auto& myValue : myValues) {
     myRequest.add_values(std::move(myValue));
@@ -66,7 +66,7 @@ std::string CommandsClient::listPopFront(const std::string& myListName) {
 
   ListGetValueRequest myRequest;
 
-  myRequest.set_list_name(myListName);
+  myRequest.set_name(myListName);
 
   std::chrono::system_clock::time_point deadline =
       std::chrono::system_clock::now() + std::chrono::seconds(5);

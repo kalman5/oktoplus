@@ -242,6 +242,44 @@ size_t Lists::remove(const std::string& aName,
   return myRet;
 }
 
+Lists::Status Lists::set(const std::string& aName,
+                         int64_t            aIndex,
+                         const std::string& aValue) {
+
+  Status myRet = Status::OK;
+
+  bool myFound = false;
+
+  performOnExisting(aName, [&myRet, &myFound, &aValue, aIndex](List& aList) {
+    // If this lambda is called then the list was found
+    myFound = true;
+
+    if (aIndex >= 0) {
+      if (size_t(aIndex) < aList.size()) {
+        auto myIt = aList.begin();
+        std::advance(myIt, aIndex);
+        *myIt = aValue;
+      } else {
+        myRet = Status::OUT_OF_RANGE;
+      }
+    } else {
+      auto myReverseIndex = size_t(std::abs(aIndex + 1));
+      if (myReverseIndex < aList.size()) {
+        auto myIt = aList.rbegin();
+        std::advance(myIt, myReverseIndex);
+        *myIt = aValue;
+      } else {
+        myRet = Status::OUT_OF_RANGE;
+      }
+    }
+  });
+
+
+
+  return myFound ? myRet : Status::NOT_FOUND;
+
+}
+
 /////////
 
 void Lists::performOnNew(const std::string& aName, const Functor& aFunctor) {

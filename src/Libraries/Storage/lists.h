@@ -18,6 +18,7 @@ class Lists
   DISABLE_EVIL_CONSTRUCTOR(Lists);
 
   enum class Position { BEFORE = 0, AFTER = 1 };
+  enum class Status { OK = 0, NOT_FOUND = 1, OUT_OF_RANGE = 2 };
 
   Lists();
 
@@ -50,6 +51,10 @@ class Lists
   size_t remove(const std::string& aName,
                 int64_t            aCount,
                 const std::string& aValue);
+
+  Status set(const std::string& aName,
+             int64_t            aIndex,
+             const std::string& aValue);
 
  private:
   using List = std::list<std::string>;

@@ -281,3 +281,45 @@ TEST_F(TestLists, remove) {
       myLists.range("l1", -30, 30));
   }
 }
+
+TEST_F(TestLists, set) {
+
+  { // Not existing list
+    okst::Lists myLists;
+
+    ASSERT_EQ(okst::Lists::Status::NOT_FOUND,
+              myLists.set("xxxx", 2, "3"));
+  }
+
+  { // OUT OF RANGE
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+
+    ASSERT_EQ(okst::Lists::Status::OUT_OF_RANGE,
+              myLists.set("l1", 30, "3"));
+
+    ASSERT_EQ(okst::Lists::Status::OUT_OF_RANGE,
+              myLists.set("l1", -30, "3"));
+  }
+
+  { // valid range
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","2","3","4","5","6","7","8"}));
+
+    ASSERT_EQ(okst::Lists::Status::OK,
+              myLists.set("l1", 3, "40"));
+
+    ASSERT_EQ(
+      std::vector<std::string>({"1","2","3","40","5","6","7","8"}),
+      myLists.range("l1", -30, 30));
+
+    ASSERT_EQ(okst::Lists::Status::OK,
+              myLists.set("l1", -3, "60"));
+
+    ASSERT_EQ(
+      std::vector<std::string>({"1","2","3","40","5","60","7","8"}),
+      myLists.range("l1", -30, 30));
+  }
+
+
+}
