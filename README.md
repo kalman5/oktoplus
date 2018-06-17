@@ -14,11 +14,11 @@ If this reminds you of REDIS then you are right, I was inspired by it, however:
 
 Redis Commands Compatibility
 
-[LIST](docs/compatibility_list.md) 60% Completed
+   [LIST](docs/compatibility_list.md) 60% Completed
 
-The server exports a Grpc interface (https://grpc.io/). Refer to src/Libraries/Commands/commands.proto to see the exported interface, you can use it to build a client on your favourite language. 
+The server exports a Grpc interface (https://grpc.io/). Refer to src/Libraries/Commands/commands.proto to see the exported interface, you can use it to build a client for your favourite language. 
 
-Server is multithread, two different clients working on different containers (type or name) have a minimal interaction. Two clients performing a parallel batch insert can procede in parallel without blocking each other.
+Server is multithread, two different clients working on different containers (type or name) have a minimal interaction. For example multiple clients performing a parallel batch insert on different keys can procede in parallel without blocking each other.
 
 #### Road Map
 - Support all REDIS commands (at least the one relative to data storage)
