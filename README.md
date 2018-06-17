@@ -12,9 +12,9 @@ If this reminds you of REDIS then you are right, I was inspired by it, however:
  - For instance the Redis command LINDEX is O(n), so if you need to access a value with an index would be better to use a Vector style container
   - There is no analogue of multi-set in Redis
 
-Redis Commands Compatibility (temporary list)
+Redis Commands Compatibility
 
-[LIST](docs/compatibility_list.md)
+[LIST](docs/compatibility_list.md) 60% Completed
 
 The server exports a Grpc interface (https://grpc.io/). Refer to src/Libraries/Commands/commands.proto to see the exported interface, you can use it to build a client on your favourite language. 
 
