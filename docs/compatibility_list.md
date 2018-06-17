@@ -7,7 +7,7 @@ listPushBack | RPUSH
 listPopFront | LPOP
 listPopBack | RPOP
 listLength | LLEN
-listEntryAtIndex | LINDEX
+listIndex | LINDEX
   _ | BLPOP
  _ | BRPOP
  _ | BRPOPLPUSH
