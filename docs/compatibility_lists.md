@@ -1,6 +1,6 @@
 
 
-GRP Interface | List REDIS Command |
+GRP Interface | Lists REDIS Command |
 ---|:---:
 listPushFront | LPUSH
 listPushBack | RPUSH
