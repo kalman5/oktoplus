@@ -19,7 +19,7 @@ service Interface {
   rpc listRange(RangeRequest)           returns (RangeReply)        { }  //LRANGE
   rpc listRemove(RemoveRequest)         returns (RemoveReply)       { }  //LREM
   rpc listSet(SetRequest)               returns (SetReply)          { }  //LSET
-                                                                         //LTRIM
+  rpc listTrim(TrimRequest)             returns (TrimReply)         { }  //LTRIM
                                                                          //RPOPLPUSH
                                                                          //RPUSHX
   //////////////////////////////////////////////////////////////
@@ -121,6 +121,18 @@ message SetRequest {
 }
 
 message SetReply {
+  ResultInfo info = 1;
+}
+
+//////////////////////////////////////////////////////
+
+message TrimRequest {
+  string name  = 1;
+  int64  start = 2;
+  int64  stop  = 3;
+}
+
+message TrimReply {
   ResultInfo info = 1;
 }
 

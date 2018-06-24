@@ -16,6 +16,6 @@ listIndex | LINDEX
  listRange | LRANGE
  listRemove | LREM
  listSet | LSET
-_ | LTRIM
+ listTrim | LTRIM
 _ | RPOPLPUSH
 _ | RPUSHX

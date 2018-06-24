@@ -46,7 +46,7 @@ class Lists
 
   std::vector<std::string> range(const std::string& aName,
                                  int64_t            aStart,
-                                 int64_t            aEnd) const;
+                                 int64_t            aStop) const;
 
   size_t remove(const std::string& aName,
                 int64_t            aCount,
@@ -55,6 +55,10 @@ class Lists
   Status set(const std::string& aName,
              int64_t            aIndex,
              const std::string& aValue);
+
+  void trim(const std::string& aName,
+            int64_t            aStart,
+            int64_t            aStop);
 
  private:
   using List = std::list<std::string>;

@@ -320,6 +320,86 @@ TEST_F(TestLists, set) {
       std::vector<std::string>({"1","2","3","40","5","60","7","8"}),
       myLists.range("l1", -30, 30));
   }
+}
 
+TEST_F(TestLists, trim) {
 
+  {
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+
+    myLists.trim("l1", 0, 7);
+
+    ASSERT_EQ(
+      std::vector<std::string>({"0","1","2","3","4","5","6","7"}),
+      myLists.range("l1", -30, 30));
+  }
+
+  {
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+
+    myLists.trim("l1", -8, -1);
+
+    ASSERT_EQ(
+      std::vector<std::string>({"0","1","2","3","4","5","6","7"}),
+      myLists.range("l1", -30, 30));
+  }
+
+  {
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+
+    myLists.trim("l1", 5, 4);
+
+    ASSERT_EQ(
+      std::vector<std::string>({}),
+      myLists.range("l1", -30, 30));
+    ASSERT_EQ(0u, myLists.hostedKeys());
+  }
+
+  {
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+
+    myLists.trim("l1", 15, 30);
+
+    ASSERT_EQ(
+      std::vector<std::string>({}),
+      myLists.range("l1", -30, 30));
+    ASSERT_EQ(0u, myLists.hostedKeys());
+  }
+
+  {
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+
+    myLists.trim("l1", 1, 6);
+
+    ASSERT_EQ(
+      std::vector<std::string>({"1","2","3","4","5","6"}),
+      myLists.range("l1", -30, 30));
+  }
+
+  {
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+
+    myLists.trim("l1", 5, 5);
+
+    ASSERT_EQ(
+      std::vector<std::string>({"5"}),
+      myLists.range("l1", -30, 30));
+  }
+
+  {
+    okst::Lists myLists;
+    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+
+    myLists.trim("l1", 5, 50);
+
+    ASSERT_EQ(
+      std::vector<std::string>({"5","6","7"}),
+      myLists.range("l1", -30, 30));
+  }
 }

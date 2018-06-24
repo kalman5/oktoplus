@@ -62,6 +62,10 @@ class CommandsList : virtual public Interface::Service
                        const SetRequest*,
                        SetReply*) final override;
 
+  grpc::Status listTrim(grpc::ServerContext*,
+                       const TrimRequest*,
+                       TrimReply*) final override;
+
   storage::Lists theLists;
 };
 

@@ -141,18 +141,18 @@ boost::optional<int64_t> Lists::insert(const std::string& aName,
 
 std::vector<std::string> Lists::range(const std::string& aName,
                                       int64_t            aStart,
-                                      int64_t            aEnd) const {
+                                      int64_t            aStop) const {
 
   std::vector<std::string> myRet;
 
-  performOnExisting(aName, [&myRet, aStart, aEnd](const List& aList) {
+  performOnExisting(aName, [&myRet, aStart, aStop](const List& aList) {
 
     if (aList.empty()) {
       return;
     }
 
-    int64_t myStart = aStart;
-    int64_t myEnd   = aEnd;
+    auto myStart = aStart;
+    auto myStop  = aStop;
 
     if (aStart > 0 and size_t(aStart) >= aList.size()) {
       return;
@@ -164,26 +164,26 @@ std::vector<std::string> Lists::range(const std::string& aName,
       }
     }
 
-    if (aEnd > 0 and size_t(aEnd) >= aList.size()) {
-      myEnd = aList.size()-1;
-    } else if (aEnd < 0) {
-      if (size_t(-aEnd) > aList.size()) {
+    if (aStop > 0 and size_t(aStop) >= aList.size()) {
+      myStop = aList.size()-1;
+    } else if (aStop < 0) {
+      if (size_t(-aStop) > aList.size()) {
         return;
       } else {
-        myEnd = aList.size() + aEnd;
+        myStop = aList.size() + aStop;
       }
     }
 
-    if (myStart > myEnd) {
+    if (myStart > myStop) {
       return;
     }
 
     auto myItStart = aList.begin();
     std::advance(myItStart, myStart);
-    auto myItEnd = aList.begin();
-    std::advance(myItEnd, myEnd+1);
+    auto myItStop = aList.begin();
+    std::advance(myItStop, myStop+1);
 
-    while (myItStart != myItEnd) {
+    while (myItStart != myItStop) {
       myRet.push_back(*myItStart);
       ++myItStart;
     }
@@ -274,10 +274,59 @@ Lists::Status Lists::set(const std::string& aName,
     }
   });
 
-
-
   return myFound ? myRet : Status::NOT_FOUND;
+}
 
+void Lists::trim(const std::string& aName,
+                 int64_t            aStart,
+                 int64_t            aStop) {
+
+  performOnExisting(aName, [aStart, aStop](List& aList) {
+    if (aList.empty()) {
+      return;
+    }
+
+    auto myStart = aStart;
+    auto myStop  = aStop;
+
+    if (aStart > 0 and size_t(aStart) >= aList.size()) {
+      aList.clear();
+      return;
+    } else if (aStart < 0) {
+      if (size_t(-aStart) > aList.size()) {
+        myStart = 0;
+      } else {
+        myStart = aList.size() + aStart;
+      }
+    }
+
+    if (aStop > 0 and size_t(aStop) >= aList.size()) {
+      myStop = aList.size()-1;
+    } else if (aStop < 0) {
+      if (size_t(-aStop) > aList.size()) {
+        return;
+      } else {
+        myStop = aList.size() + aStop;
+      }
+    }
+
+    if (myStart > myStop) {
+      aList.clear();
+      return;
+    }
+
+    if (myStart == 0 and size_t(myStop+1) == aList.size()) {
+      return;
+    }
+
+    auto myItStart = aList.begin();
+    std::advance(myItStart, myStart);
+    auto myItStop = aList.begin();
+    std::advance(myItStop, myStop+1);
+
+    aList.erase(aList.begin(), myItStart);
+    aList.erase(myItStop, aList.end());
+  });
 }
 
 /////////
