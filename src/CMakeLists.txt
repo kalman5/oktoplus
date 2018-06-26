@@ -52,7 +52,9 @@ set(PRJ_COMMONS "-Wall -Wextra -pedantic -Werror -pthread -fPIC -fno-strict-alia
 set(CMAKE_CXX_FLAGS_DEBUG     "-O0 -g3 ${PRJ_COMMONS}"                                    )
 set(CMAKE_CXX_FLAGS_OPTIMIZED "-O3 -g3 ${PRJ_COMMONS} -DNDEBUG -funroll-loops -ffast-math")
 
-set(CMAKE_EXE_LINKER_FLAGS    "-Wl,--no-as-needed")
+if(NOT APPLE)
+  set(CMAKE_EXE_LINKER_FLAGS    "-Wl,--no-as-needed")
+endif()
 #################################################################
 
 # summary
