@@ -14,7 +14,7 @@ If this reminds you of REDIS then you are right, I was inspired by it, however:
 
 Redis Commands Compatibility
 
-  - [LISTS](docs/compatibility_lists.md) 65% Completed
+  - [LISTS](docs/compatibility_lists.md) 77% Completed
   - [SETS](docs/compatibility_sets.md) 0% Completed
   - [STRINGS](docs/compatibility_strings.md) 0% Completed
 
