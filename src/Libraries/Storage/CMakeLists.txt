@@ -4,5 +4,5 @@ add_library(oktoplus_storage SHARED
 )
 
 target_link_libraries(oktoplus_storage
-
+  ${Boost_LIBRARIES}
 )

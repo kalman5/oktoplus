@@ -84,7 +84,12 @@ then
 
   ninja
 else
-  cores=`cat /proc/cpuinfo | grep processor | wc -l`
+  cores=1
+  if [ -r /proc/cpuinfo ] ; then
+    cores=`cat /proc/cpuinfo | grep processor | wc -l`
+  elif [ -x "/usr/sbin/sysctl" ] ; then
+    cores=`sysctl -n hw.physicalcpu`
+  fi
   CPUNUM=$cores
 
   echo

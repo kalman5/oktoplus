@@ -5,7 +5,7 @@
 ***
 
 ##### How to build (for optimized mode replace debug with optimized)
-* git clone --recurse-submodules https://bbgithub.dev.bloomberg.com/gmendola/oktoplus.git
+* git clone --recurse-submodules https://github.com/kalman5/oktoplus.git
 * cd oktoplus
 * mkdir build/debug
 * cd build/debug
