@@ -12,10 +12,10 @@ listIndex | LINDEX
  _ | BRPOP
  _ | BRPOPLPUSH
  listInsert | LINSERT
- _ | LPUSHX
+ listPushFrontExist | LPUSHX
  listRange | LRANGE
  listRemove | LREM
  listSet | LSET
  listTrim | LTRIM
 _ | RPOPLPUSH
-_ | RPUSHX
+ listPushBackExist | RPUSHX
