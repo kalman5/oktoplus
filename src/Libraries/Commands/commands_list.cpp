@@ -135,6 +135,25 @@ grpc::Status CommandsList::listInsert(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
+grpc::Status CommandsList::listExistPushFront(grpc::ServerContext*,
+                                              const ListPushRequest* aRequest,
+                                              ListPushReply*         aReply) {
+
+  std::vector<std::string_view> myStrings;
+  myStrings.reserve(aRequest->values_size());
+  for (int i = 0; i < aRequest->values_size(); ++i) {
+    myStrings.push_back(aRequest->values(i));
+  }
+
+  const auto& myName = aRequest->name();
+
+  auto myRet = theLists.pushFrontExist(myName, myStrings);
+
+  aReply->set_size(myRet);
+
+  return grpc::Status::OK;
+}
+
 grpc::Status CommandsList::listRange(grpc::ServerContext*,
                                      const RangeRequest* aRequest,
                                      RangeReply*         aReply) {
@@ -196,6 +215,25 @@ grpc::Status CommandsList::listTrim(grpc::ServerContext*,
   const auto  myStop  = aRequest->stop();
 
   theLists.trim(myName, myStart, myStop);
+
+  return grpc::Status::OK;
+}
+
+grpc::Status CommandsList::listExistPushBack(grpc::ServerContext*,
+                                             const ListPushRequest* aRequest,
+                                             ListPushReply*         aReply) {
+
+  std::vector<std::string_view> myStrings;
+  myStrings.reserve(aRequest->values_size());
+  for (int i = 0; i < aRequest->values_size(); ++i) {
+    myStrings.push_back(aRequest->values(i));
+  }
+
+  const auto& myName = aRequest->name();
+
+  auto myRet = theLists.pushBackExist(myName, myStrings);
+
+  aReply->set_size(myRet);
 
   return grpc::Status::OK;
 }

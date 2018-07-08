@@ -48,7 +48,9 @@ class CommandsList : virtual public Interface::Service
                           const ListInsertRequest*,
                           ListInsertReply*) final override;
 
-  // LPUSHX
+  grpc::Status listExistPushFront(grpc::ServerContext*,
+                                  const ListPushRequest*,
+                                  ListPushReply*) final override;
 
   grpc::Status listRange(grpc::ServerContext*,
                          const RangeRequest*,
@@ -65,6 +67,12 @@ class CommandsList : virtual public Interface::Service
   grpc::Status listTrim(grpc::ServerContext*,
                        const TrimRequest*,
                        TrimReply*) final override;
+
+  // RPOPLPUSH
+
+  grpc::Status listExistPushBack(grpc::ServerContext*,
+                                 const ListPushRequest*,
+                                 ListPushReply*) final override;
 
   storage::Lists theLists;
 };

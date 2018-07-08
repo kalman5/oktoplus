@@ -5,23 +5,23 @@ import "types.proto";
 package oktoplus.commands;
 
 service Interface {
-  rpc listPushFront(ListPushRequest)    returns (ListPushReply)     { }  //LPUSH
-  rpc listPushBack(ListPushRequest)     returns (ListPushReply)     { }  //RPUSH
-  rpc listPopFront(ListGetValueRequest) returns (ListGetValueReply) { }  //LPOP
-  rpc listPopBack(ListGetValueRequest)  returns (ListGetValueReply) { }  //RPOP
-  rpc listLength(ListLengthRequest)     returns (ListLengthReply)   { }  //LLEN
-                                                                         //BLPOP
-                                                                         //BRPOP
-                                                                         //BRPOPLPUSH
-  rpc listIndex(IndexRequest)           returns (ListGetValueReply) { }  //LINDEX
-  rpc listInsert(ListInsertRequest)     returns (ListInsertReply)   { }  //LINSERT
-                                                                         //LPUSHX
-  rpc listRange(RangeRequest)           returns (RangeReply)        { }  //LRANGE
-  rpc listRemove(RemoveRequest)         returns (RemoveReply)       { }  //LREM
-  rpc listSet(SetRequest)               returns (SetReply)          { }  //LSET
-  rpc listTrim(TrimRequest)             returns (TrimReply)         { }  //LTRIM
-                                                                         //RPOPLPUSH
-                                                                         //RPUSHX
+  rpc listPushFront(ListPushRequest)      returns (ListPushReply)     { }  // LPUSH
+  rpc listPushBack(ListPushRequest)       returns (ListPushReply)     { }  // RPUSH
+  rpc listPopFront(ListGetValueRequest)   returns (ListGetValueReply) { }  // LPOP
+  rpc listPopBack(ListGetValueRequest)    returns (ListGetValueReply) { }  // RPOP
+  rpc listLength(ListLengthRequest)       returns (ListLengthReply)   { }  // LLEN
+                                                                           // BLPOP
+                                                                           // BRPOP
+                                                                           // BRPOPLPUSH
+  rpc listIndex(IndexRequest)             returns (ListGetValueReply) { }  // LINDEX
+  rpc listInsert(ListInsertRequest)       returns (ListInsertReply)   { }  // LINSERT
+  rpc listExistPushFront(ListPushRequest) returns (ListPushReply)     { }  // LPUSHX
+  rpc listRange(RangeRequest)             returns (RangeReply)        { }  // LRANGE
+  rpc listRemove(RemoveRequest)           returns (RemoveReply)       { }  // LREM
+  rpc listSet(SetRequest)                 returns (SetReply)          { }  // LSET
+  rpc listTrim(TrimRequest)               returns (TrimReply)         { }  // LTRIM
+                                                                           // RPOPLPUSH
+  rpc listExistPushBack(ListPushRequest)  returns (ListPushReply)     { }  // RPUSHX
   //////////////////////////////////////////////////////////////
 
 }

@@ -47,6 +47,52 @@ TEST_F(TestLists, push_back_front_size) {
   ASSERT_EQ("2", myLists.index("l2", 1).get());
 }
 
+TEST_F(TestLists, push_back_on_existing) {
+  okst::Lists myLists;
+
+  ASSERT_EQ(0u, myLists.pushBackExist("l1", {"1"}));
+  ASSERT_EQ(0u, myLists.size("l1"));
+  ASSERT_EQ(0u, myLists.hostedKeys());
+
+  // Single value
+  ASSERT_EQ(1u, myLists.pushBack("l1", {"1"}));
+  ASSERT_EQ(2u, myLists.pushBackExist("l1", {"2"}));
+  ASSERT_EQ(2u, myLists.size("l1"));
+  ASSERT_EQ(1u, myLists.hostedKeys());
+
+  // Multiple Value
+  ASSERT_EQ(5u, myLists.pushBackExist("l1", {"3", "4", "5"}));
+  ASSERT_EQ(5u, myLists.size("l1"));
+  ASSERT_EQ(1u, myLists.hostedKeys());
+
+  for (size_t i = 0; i < 5; ++i) {
+    ASSERT_EQ(std::to_string(i + 1), myLists.index("l1", i).get());
+  }
+}
+
+TEST_F(TestLists, push_front_on_existing) {
+  okst::Lists myLists;
+
+  ASSERT_EQ(0u, myLists.pushFrontExist("l1", {"5"}));
+  ASSERT_EQ(0u, myLists.size("l1"));
+  ASSERT_EQ(0u, myLists.hostedKeys());
+
+  // Single value
+  ASSERT_EQ(1u, myLists.pushFront("l1", {"5"}));
+  ASSERT_EQ(2u, myLists.pushFrontExist("l1", {"4"}));
+  ASSERT_EQ(2u, myLists.size("l1"));
+  ASSERT_EQ(1u, myLists.hostedKeys());
+
+  // Multiple Value
+  ASSERT_EQ(5u, myLists.pushFrontExist("l1", {"3", "2", "1"}));
+  ASSERT_EQ(5u, myLists.size("l1"));
+  ASSERT_EQ(1u, myLists.hostedKeys());
+
+  for (size_t i = 0; i < 5; ++i) {
+    ASSERT_EQ(std::to_string(i + 1), myLists.index("l1", i).get());
+  }
+}
+
 TEST_F(TestLists, pop_back) {
   okst::Lists myLists;
 

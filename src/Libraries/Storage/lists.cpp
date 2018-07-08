@@ -17,21 +17,6 @@ size_t Lists::hostedKeys() const {
   return theStorage.size();
 }
 
-size_t Lists::pushBack(const std::string&                   aName,
-                       const std::vector<std::string_view>& aValues) {
-
-  size_t myRet;
-
-  performOnNew(aName, [&myRet, &aValues](List& aList) {
-    for (const auto& myString : aValues) {
-      aList.push_back(std::string(myString));
-    }
-    myRet = aList.size();
-  });
-
-  return myRet;
-}
-
 size_t Lists::pushFront(const std::string&                   aName,
                         const std::vector<std::string_view>& aValues) {
 
@@ -40,6 +25,21 @@ size_t Lists::pushFront(const std::string&                   aName,
   performOnNew(aName, [&myRet, &aValues](List& aList) {
     for (const auto& myString : aValues) {
       aList.push_front(std::string(myString));
+    }
+    myRet = aList.size();
+  });
+
+  return myRet;
+}
+
+size_t Lists::pushBack(const std::string&                   aName,
+                       const std::vector<std::string_view>& aValues) {
+
+  size_t myRet;
+
+  performOnNew(aName, [&myRet, &aValues](List& aList) {
+    for (const auto& myString : aValues) {
+      aList.push_back(std::string(myString));
     }
     myRet = aList.size();
   });
@@ -136,8 +136,20 @@ boost::optional<int64_t> Lists::insert(const std::string& aName,
   return myRet;
 }
 
+size_t Lists::pushFrontExist(const std::string&                   aName,
+                             const std::vector<std::string_view>& aValues) {
 
+  size_t myRet = 0;
 
+  performOnExisting(aName, [&myRet, &aValues](List& aList) {
+    for (const auto& myString : aValues) {
+      aList.push_front(std::string(myString));
+    }
+    myRet = aList.size();
+  });
+
+  return myRet;
+}
 
 std::vector<std::string> Lists::range(const std::string& aName,
                                       int64_t            aStart,
@@ -327,6 +339,21 @@ void Lists::trim(const std::string& aName,
     aList.erase(aList.begin(), myItStart);
     aList.erase(myItStop, aList.end());
   });
+}
+
+size_t Lists::pushBackExist(const std::string&                   aName,
+                            const std::vector<std::string_view>& aValues) {
+
+  size_t myRet = 0;
+
+  performOnExisting(aName, [&myRet, &aValues](List& aList) {
+    for (const auto& myString : aValues) {
+      aList.push_back(std::string(myString));
+    }
+    myRet = aList.size();
+  });
+
+  return myRet;
 }
 
 /////////

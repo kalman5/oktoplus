@@ -24,11 +24,11 @@ class Lists
 
   size_t hostedKeys() const;
 
-  size_t pushBack(const std::string&                   aName,
-                  const std::vector<std::string_view>& aValues);
-
   size_t pushFront(const std::string&                   aName,
                    const std::vector<std::string_view>& aValues);
+
+  size_t pushBack(const std::string&                   aName,
+                  const std::vector<std::string_view>& aValues);
 
   boost::optional<std::string> popBack(const std::string& aName);
 
@@ -43,6 +43,9 @@ class Lists
                                   Position           aPosition,
                                   const std::string& aPivot,
                                   const std::string& aValue);
+
+  size_t pushFrontExist(const std::string&                   aName,
+                        const std::vector<std::string_view>& aValues);
 
   std::vector<std::string> range(const std::string& aName,
                                  int64_t            aStart,
@@ -59,6 +62,9 @@ class Lists
   void trim(const std::string& aName,
             int64_t            aStart,
             int64_t            aStop);
+
+  size_t pushBackExist(const std::string&                   aName,
+                       const std::vector<std::string_view>& aValues);
 
  private:
   using List = std::list<std::string>;
