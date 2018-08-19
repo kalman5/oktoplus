@@ -17,5 +17,5 @@ listIndex | LINDEX
  listRemove | LREM
  listSet | LSET
  listTrim | LTRIM
-_ | RPOPLPUSH
+ listPopBackPushFront | RPOPLPUSH
  listPushBackExist | RPUSHX
