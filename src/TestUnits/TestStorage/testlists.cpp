@@ -397,6 +397,12 @@ TEST_F(TestLists, pop_back_push_front) {
 
     ASSERT_EQ(3u, myLists.pushBack("l1", {"0","1","2"}));
     ASSERT_EQ("2", myLists.popBackPushFront("l1", "l1").get());
+    ASSERT_EQ("1", myLists.popBackPushFront("l1", "l1").get());
+
+    ASSERT_EQ("1", myLists.popFront("l1").get());
+    ASSERT_EQ("2", myLists.popFront("l1").get());
+    ASSERT_EQ("0", myLists.popFront("l1").get());
+    ASSERT_EQ(0u, myLists.hostedKeys());
   }
 }
 
