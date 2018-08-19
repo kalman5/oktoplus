@@ -24,7 +24,7 @@ Server is multithread, two different clients working on different containers (ty
 
 #### Road Map
 - Support all REDIS commands (at least the one relative to data storage)
-- Support the following containers: vector, map, multimap, set, multiset, unorderd_map, unordered_multimap, boost::multi_index (up to at least 3 keys)
+- Support the following containers: list, vector, map, multimap, set, multiset, unorderd_map, unordered_multimap, boost::multi_index (up to at least 3 keys)
 - Make it distributed using RAFT as consensus protocol
 
 ***
