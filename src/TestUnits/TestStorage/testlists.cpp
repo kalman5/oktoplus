@@ -368,6 +368,38 @@ TEST_F(TestLists, set) {
   }
 }
 
+TEST_F(TestLists, pop_back_push_front) {
+  {
+    okst::Lists myLists;
+
+    ASSERT_EQ(1u, myLists.pushBack("l1", {"0"}));
+    ASSERT_EQ("0", myLists.popBackPushFront("l1", "l2").get());
+    ASSERT_EQ(1u, myLists.hostedKeys());
+  }
+
+  {
+    okst::Lists myLists;
+
+    ASSERT_EQ(2u, myLists.pushBack("l1", {"0","1"}));
+    ASSERT_EQ("1", myLists.popBackPushFront("l1", "l2").get());
+    ASSERT_EQ(2u, myLists.hostedKeys());
+
+    ASSERT_EQ("0", myLists.popBackPushFront("l1", "l2").get());
+    ASSERT_EQ(1u, myLists.hostedKeys());
+
+    ASSERT_EQ("0", myLists.popFront("l2").get());
+    ASSERT_EQ("1", myLists.popFront("l2").get());
+    ASSERT_EQ(0u, myLists.hostedKeys());
+  }
+
+  {
+    okst::Lists myLists;
+
+    ASSERT_EQ(3u, myLists.pushBack("l1", {"0","1","2"}));
+    ASSERT_EQ("2", myLists.popBackPushFront("l1", "l1").get());
+  }
+}
+
 TEST_F(TestLists, trim) {
 
   {

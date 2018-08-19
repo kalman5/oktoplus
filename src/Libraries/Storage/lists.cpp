@@ -9,11 +9,12 @@ namespace storage {
 
 Lists::Lists()
     : theMutex()
-    , theStorage() {
+    , theStorage()
+    , thePopBackPushFrontMutex() {
 }
 
 size_t Lists::hostedKeys() const {
-  boost::lock_guard<boost::mutex> myLock(theMutex);
+  const boost::lock_guard<StorageMutex> myLock(theMutex);
   return theStorage.size();
 }
 
@@ -151,14 +152,12 @@ size_t Lists::pushFrontExist(const std::string&                   aName,
   return myRet;
 }
 
-std::vector<std::string> Lists::range(const std::string& aName,
-                                      int64_t            aStart,
-                                      int64_t            aStop) const {
+std::vector<std::string>
+Lists::range(const std::string& aName, int64_t aStart, int64_t aStop) const {
 
   std::vector<std::string> myRet;
 
   performOnExisting(aName, [&myRet, aStart, aStop](const List& aList) {
-
     if (aList.empty()) {
       return;
     }
@@ -177,7 +176,7 @@ std::vector<std::string> Lists::range(const std::string& aName,
     }
 
     if (aStop > 0 and size_t(aStop) >= aList.size()) {
-      myStop = aList.size()-1;
+      myStop = aList.size() - 1;
     } else if (aStop < 0) {
       if (size_t(-aStop) > aList.size()) {
         return;
@@ -193,7 +192,7 @@ std::vector<std::string> Lists::range(const std::string& aName,
     auto myItStart = aList.begin();
     std::advance(myItStart, myStart);
     auto myItStop = aList.begin();
-    std::advance(myItStop, myStop+1);
+    std::advance(myItStop, myStop + 1);
 
     while (myItStart != myItStop) {
       myRet.push_back(*myItStart);
@@ -210,10 +209,9 @@ size_t Lists::remove(const std::string& aName,
   size_t myRet = 0;
 
   performOnExisting(aName, [&myRet, aCount, &aValue](List& aList) {
-
     if (aCount == 0) {
       size_t myRemoved = 0;
-      for (auto myIt = aList.begin(); myIt != aList.end(); ) {
+      for (auto myIt = aList.begin(); myIt != aList.end();) {
         if (*myIt == aValue) {
           myIt = aList.erase(myIt);
           ++myRemoved;
@@ -227,7 +225,8 @@ size_t Lists::remove(const std::string& aName,
       auto myToRemove = std::abs(aCount);
 
       if (aCount > 0) {
-        for (auto myIt = aList.begin(); myIt != aList.end() and myToRemove > 0; ) {
+        for (auto myIt = aList.begin();
+             myIt != aList.end() and myToRemove > 0;) {
           if (*myIt == aValue) {
             myIt = aList.erase(myIt);
             --myToRemove;
@@ -236,7 +235,8 @@ size_t Lists::remove(const std::string& aName,
           }
         }
       } else {
-        for (auto myIt = aList.rbegin(); myIt != aList.rend() and myToRemove > 0; ) {
+        for (auto myIt = aList.rbegin();
+             myIt != aList.rend() and myToRemove > 0;) {
           if (*myIt == aValue) {
             myIt = List::reverse_iterator(aList.erase(std::next(myIt).base()));
             --myToRemove;
@@ -289,9 +289,7 @@ Lists::Status Lists::set(const std::string& aName,
   return myFound ? myRet : Status::NOT_FOUND;
 }
 
-void Lists::trim(const std::string& aName,
-                 int64_t            aStart,
-                 int64_t            aStop) {
+void Lists::trim(const std::string& aName, int64_t aStart, int64_t aStop) {
 
   performOnExisting(aName, [aStart, aStop](List& aList) {
     if (aList.empty()) {
@@ -313,7 +311,7 @@ void Lists::trim(const std::string& aName,
     }
 
     if (aStop > 0 and size_t(aStop) >= aList.size()) {
-      myStop = aList.size()-1;
+      myStop = aList.size() - 1;
     } else if (aStop < 0) {
       if (size_t(-aStop) > aList.size()) {
         return;
@@ -327,18 +325,47 @@ void Lists::trim(const std::string& aName,
       return;
     }
 
-    if (myStart == 0 and size_t(myStop+1) == aList.size()) {
+    if (myStart == 0 and size_t(myStop + 1) == aList.size()) {
       return;
     }
 
     auto myItStart = aList.begin();
     std::advance(myItStart, myStart);
     auto myItStop = aList.begin();
-    std::advance(myItStop, myStop+1);
+    std::advance(myItStop, myStop + 1);
 
     aList.erase(aList.begin(), myItStart);
     aList.erase(myItStop, aList.end());
   });
+}
+
+boost::optional<std::string>
+Lists::popBackPushFront(const std::string& aSourceName,
+                        const std::string& aDestinationName) {
+
+  boost::optional<std::string> myRet;
+
+  // This mutex is required to avoid a dead lock in case two different
+  // operations are running:   L1 -> L2
+  //                           L2 -> L1
+  const boost::lock_guard<PopBackPushFrontMutex> myLock(thePopBackPushFrontMutex);
+
+  performOnExisting(
+      aSourceName, [this, &aDestinationName, &myRet](List& aSourceList) {
+        if (aSourceList.empty()) {
+          return;
+        }
+        myRet = aSourceList.back();
+        aSourceList.pop_back();
+
+        const std::string myValue = myRet.get();
+
+        performOnNew(aDestinationName, [&myValue](List& aDestinationList) {
+          aDestinationList.push_front(myValue);
+        });
+      });
+
+  return myRet;
 }
 
 size_t Lists::pushBackExist(const std::string&                   aName,
@@ -360,13 +387,13 @@ size_t Lists::pushBackExist(const std::string&                   aName,
 
 void Lists::performOnNew(const std::string& aName, const Functor& aFunctor) {
 
-  ProtectedList*                                    myList = nullptr;
-  std::unique_ptr<boost::unique_lock<boost::mutex>> mySecondLevelLock;
+  ProtectedList*                                 myList = nullptr;
+  std::unique_ptr<boost::unique_lock<ListMutex>> mySecondLevelLock;
 
   while (true) {
-    boost::lock_guard<boost::mutex> myLock(theMutex);
+    boost::lock_guard<StorageMutex> myLock(theMutex);
     myList = &theStorage[aName];
-    mySecondLevelLock.reset(new boost::unique_lock<boost::mutex>(
+    mySecondLevelLock.reset(new boost::unique_lock<ListMutex>(
         *myList->mutex, boost::try_to_lock_t()));
     if (mySecondLevelLock->owns_lock()) {
       break;
@@ -376,8 +403,6 @@ void Lists::performOnNew(const std::string& aName, const Functor& aFunctor) {
   assert(mySecondLevelLock->owns_lock());
   aFunctor(myList->list);
 }
-
-
 
 void Lists::performOnExisting(const std::string& aName,
                               const Functor&     aFunctor) {
@@ -411,18 +436,18 @@ void Lists::performOnExisting(const std::string& aName,
   bool myHasBecomeEmpty = false;
 
   {
-    ProtectedList*                                    myList = nullptr;
-    std::unique_ptr<boost::unique_lock<boost::mutex>> mySecondLevelLock;
+    ProtectedList*                                 myList = nullptr;
+    std::unique_ptr<boost::unique_lock<ListMutex>> mySecondLevelLock;
 
     while (true) {
-      boost::lock_guard<boost::mutex> myLock(theMutex);
+      boost::lock_guard<StorageMutex> myLock(theMutex);
 
       auto myIt = theStorage.find(aName);
       if (myIt == theStorage.end()) {
         return;
       }
       myList = &myIt->second;
-      mySecondLevelLock.reset(new boost::unique_lock<boost::mutex>(
+      mySecondLevelLock.reset(new boost::unique_lock<ListMutex>(
           *myList->mutex, boost::try_to_lock_t()));
       if (mySecondLevelLock->owns_lock()) {
         break;
@@ -435,13 +460,13 @@ void Lists::performOnExisting(const std::string& aName,
   }
 
   if (myHasBecomeEmpty) {
-    boost::lock_guard<boost::mutex> myLock(theMutex);
+    boost::lock_guard<StorageMutex> myLock(theMutex);
     auto                            myIt = theStorage.find(aName);
     if (myIt == theStorage.end()) {
       return;
     }
-    std::unique_ptr<boost::mutex>   myMutex;
-    boost::lock_guard<boost::mutex> mySecondLevelLock(*myIt->second.mutex);
+    std::unique_ptr<ListMutex>   myMutex;
+    boost::lock_guard<ListMutex> mySecondLevelLock(*myIt->second.mutex);
 
     if (not myIt->second.list.empty()) {
       return;
@@ -457,16 +482,16 @@ void Lists::performOnExisting(const std::string&  aName,
 
   const ProtectedList* myList = nullptr;
 
-  std::unique_ptr<boost::unique_lock<boost::mutex>> mySecondLevelLock;
+  std::unique_ptr<boost::unique_lock<ListMutex>> mySecondLevelLock;
 
   while (true) {
-    boost::lock_guard<boost::mutex> myLock(theMutex);
+    boost::lock_guard<StorageMutex> myLock(theMutex);
     auto                            myIt = theStorage.find(aName);
     if (myIt == theStorage.end()) {
       return;
     }
     myList = &myIt->second;
-    mySecondLevelLock.reset(new boost::unique_lock<boost::mutex>(
+    mySecondLevelLock.reset(new boost::unique_lock<ListMutex>(
         *myList->mutex, boost::try_to_lock_t()));
     if (mySecondLevelLock->owns_lock()) {
       break;

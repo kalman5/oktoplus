@@ -60,15 +60,15 @@ class CommandsList : virtual public Interface::Service
                           const RemoveRequest*,
                           RemoveReply*) final override;
 
-  grpc::Status listSet(grpc::ServerContext*,
-                       const SetRequest*,
-                       SetReply*) final override;
+  grpc::Status
+  listSet(grpc::ServerContext*, const SetRequest*, SetReply*) final override;
 
-  grpc::Status listTrim(grpc::ServerContext*,
-                       const TrimRequest*,
-                       TrimReply*) final override;
+  grpc::Status
+  listTrim(grpc::ServerContext*, const TrimRequest*, TrimReply*) final override;
 
-  // RPOPLPUSH
+  grpc::Status listPopBackPushFront(grpc::ServerContext*,
+                                    const ListPopPushRequest*,
+                                    ListPopPushReply*) final override;
 
   grpc::Status listExistPushBack(grpc::ServerContext*,
                                  const ListPushRequest*,

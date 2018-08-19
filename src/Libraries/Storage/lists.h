@@ -47,34 +47,35 @@ class Lists
   size_t pushFrontExist(const std::string&                   aName,
                         const std::vector<std::string_view>& aValues);
 
-  std::vector<std::string> range(const std::string& aName,
-                                 int64_t            aStart,
-                                 int64_t            aStop) const;
+  std::vector<std::string>
+  range(const std::string& aName, int64_t aStart, int64_t aStop) const;
 
-  size_t remove(const std::string& aName,
-                int64_t            aCount,
-                const std::string& aValue);
+  size_t
+  remove(const std::string& aName, int64_t aCount, const std::string& aValue);
 
-  Status set(const std::string& aName,
-             int64_t            aIndex,
-             const std::string& aValue);
+  Status
+  set(const std::string& aName, int64_t aIndex, const std::string& aValue);
 
-  void trim(const std::string& aName,
-            int64_t            aStart,
-            int64_t            aStop);
+  void trim(const std::string& aName, int64_t aStart, int64_t aStop);
+
+  boost::optional<std::string>
+  popBackPushFront(const std::string& aSourceName,
+                   const std::string& aDestinationName);
 
   size_t pushBackExist(const std::string&                   aName,
                        const std::vector<std::string_view>& aValues);
 
  private:
-  using List = std::list<std::string>;
+  using List      = std::list<std::string>;
+  using ListMutex = boost::recursive_mutex;
+
   struct ProtectedList {
     ProtectedList()
-        : mutex(new boost::mutex())
+        : mutex(new ListMutex())
         , list() {
     }
-    std::unique_ptr<boost::mutex> mutex;
-    List                          list;
+    std::unique_ptr<ListMutex> mutex;
+    List                       list;
   };
 
   using Storage      = std::unordered_map<std::string, ProtectedList>;
@@ -86,8 +87,15 @@ class Lists
   void performOnExisting(const std::string&  aName,
                          const ConstFunctor& aFunctor) const;
 
-  mutable boost::mutex theMutex;
+  using StorageMutex = boost::mutex;
+  using PopBackPushFrontMutex = boost::mutex;
+
+  mutable StorageMutex theMutex;
   Storage              theStorage;
+
+  PopBackPushFrontMutex thePopBackPushFrontMutex;
+
+
 };
 
 } // namespace storage

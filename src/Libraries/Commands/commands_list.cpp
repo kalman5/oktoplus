@@ -219,6 +219,23 @@ grpc::Status CommandsList::listTrim(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
+grpc::Status
+CommandsList::listPopBackPushFront(grpc::ServerContext*,
+                                   const ListPopPushRequest* aRequest,
+                                   ListPopPushReply*         aReply) {
+
+  const auto& mySourceName      = aRequest->source_name();
+  const auto& myDestinationName = aRequest->destination_name();
+
+  auto myRet = theLists.popBackPushFront(mySourceName, myDestinationName);
+
+  if (myRet) {
+    aReply->set_value(myRet.get());
+  }
+
+  return grpc::Status::OK;
+}
+
 grpc::Status CommandsList::listExistPushBack(grpc::ServerContext*,
                                              const ListPushRequest* aRequest,
                                              ListPushReply*         aReply) {
