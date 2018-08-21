@@ -3,7 +3,7 @@
 ![alt text](docs/octopus-free.png "Oktoplus")
 
 ###### What is oktoplus
-Oktplus is a in-memory data store K:V where V is a container: std::list, std::map, boost::multi_index_container, std::set, you name it. Doing so the client can choose the best container for his own access data pattern.
+Oktoplus is a in-memory data store K:V where V is a container: std::list, std::map, boost::multi_index_container, std::set, you name it. Doing so the client can choose the best container for his own access data pattern.
 
 If this reminds you of REDIS then you are right, I was inspired by it, however:
 
