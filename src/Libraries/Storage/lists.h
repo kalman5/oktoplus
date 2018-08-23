@@ -1,13 +1,14 @@
 #pragma once
 
 #include "Support/non_copyable.h"
+#include "Support/containerfunctorapplier.h"
 
-#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/optional.hpp>
 
 #include <functional>
 #include <list>
 #include <string_view>
-#include <unordered_map>
 
 namespace oktoplus {
 namespace storage {
@@ -66,36 +67,12 @@ class Lists
                        const std::vector<std::string_view>& aValues);
 
  private:
-  using List      = std::list<std::string>;
-  using ListMutex = boost::recursive_mutex;
+  using List = std::list<std::string>;
 
-  struct ProtectedList {
-    ProtectedList()
-        : mutex(new ListMutex())
-        , list() {
-    }
-    std::unique_ptr<ListMutex> mutex;
-    List                       list;
-  };
+  support::ContainerFunctorApplier<List> theApplyer;
 
-  using Storage      = std::unordered_map<std::string, ProtectedList>;
-  using Functor      = std::function<void(List& aList)>;
-  using ConstFunctor = std::function<void(const List& aList)>;
-
-  void performOnNew(const std::string& aName, const Functor& aFunctor);
-  void performOnExisting(const std::string& aName, const Functor& aFunctor);
-  void performOnExisting(const std::string&  aName,
-                         const ConstFunctor& aFunctor) const;
-
-  using StorageMutex = boost::mutex;
   using PopBackPushFrontMutex = boost::mutex;
-
-  mutable StorageMutex theMutex;
-  Storage              theStorage;
-
   PopBackPushFrontMutex thePopBackPushFrontMutex;
-
-
 };
 
 } // namespace storage

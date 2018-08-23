@@ -4,18 +4,18 @@
 #include <iterator>
 #include <string>
 
+#include <boost/thread/lock_guard.hpp>
+
 namespace oktoplus {
 namespace storage {
 
 Lists::Lists()
-    : theMutex()
-    , theStorage()
+    : theApplyer()
     , thePopBackPushFrontMutex() {
 }
 
 size_t Lists::hostedKeys() const {
-  const boost::lock_guard<StorageMutex> myLock(theMutex);
-  return theStorage.size();
+  return theApplyer.hostedKeys();
 }
 
 size_t Lists::pushFront(const std::string&                   aName,
@@ -23,7 +23,7 @@ size_t Lists::pushFront(const std::string&                   aName,
 
   size_t myRet;
 
-  performOnNew(aName, [&myRet, &aValues](List& aList) {
+  theApplyer.performOnNew(aName, [&myRet, &aValues](List& aList) {
     for (const auto& myString : aValues) {
       aList.push_front(std::string(myString));
     }
@@ -38,7 +38,7 @@ size_t Lists::pushBack(const std::string&                   aName,
 
   size_t myRet;
 
-  performOnNew(aName, [&myRet, &aValues](List& aList) {
+  theApplyer.performOnNew(aName, [&myRet, &aValues](List& aList) {
     for (const auto& myString : aValues) {
       aList.push_back(std::string(myString));
     }
@@ -52,7 +52,7 @@ boost::optional<std::string> Lists::popBack(const std::string& aName) {
 
   boost::optional<std::string> myRet;
 
-  performOnExisting(aName, [&myRet](List& aList) {
+  theApplyer.performOnExisting(aName, [&myRet](List& aList) {
     if (aList.empty()) {
       return;
     }
@@ -67,7 +67,7 @@ boost::optional<std::string> Lists::popFront(const std::string& aName) {
 
   boost::optional<std::string> myRet;
 
-  performOnExisting(aName, [&myRet](List& aList) {
+  theApplyer.performOnExisting(aName, [&myRet](List& aList) {
     if (aList.empty()) {
       return;
     }
@@ -82,7 +82,7 @@ size_t Lists::size(const std::string& aName) const {
 
   size_t myRet = 0;
 
-  performOnExisting(aName,
+  theApplyer.performOnExisting(aName,
                     [&myRet](const List& aList) { myRet = aList.size(); });
 
   return myRet;
@@ -93,7 +93,7 @@ boost::optional<std::string> Lists::index(const std::string& aName,
 
   boost::optional<std::string> myRet;
 
-  performOnExisting(aName, [&myRet, aIndex](const List& aList) {
+  theApplyer.performOnExisting(aName, [&myRet, aIndex](const List& aList) {
     if (aIndex >= 0) {
       if (size_t(aIndex) < aList.size()) {
         auto myIt = aList.begin();
@@ -119,7 +119,7 @@ boost::optional<int64_t> Lists::insert(const std::string& aName,
                                        const std::string& aValue) {
   boost::optional<int64_t> myRet;
 
-  performOnExisting(aName, [&myRet, aPosition, &aPivot, &aValue](List& aList) {
+  theApplyer.performOnExisting(aName, [&myRet, aPosition, &aPivot, &aValue](List& aList) {
     auto myIt = std::find(aList.begin(), aList.end(), aPivot);
     if (myIt == aList.end()) {
       myRet = -1;
@@ -142,7 +142,7 @@ size_t Lists::pushFrontExist(const std::string&                   aName,
 
   size_t myRet = 0;
 
-  performOnExisting(aName, [&myRet, &aValues](List& aList) {
+  theApplyer.performOnExisting(aName, [&myRet, &aValues](List& aList) {
     for (const auto& myString : aValues) {
       aList.push_front(std::string(myString));
     }
@@ -157,7 +157,7 @@ Lists::range(const std::string& aName, int64_t aStart, int64_t aStop) const {
 
   std::vector<std::string> myRet;
 
-  performOnExisting(aName, [&myRet, aStart, aStop](const List& aList) {
+  theApplyer.performOnExisting(aName, [&myRet, aStart, aStop](const List& aList) {
     if (aList.empty()) {
       return;
     }
@@ -208,7 +208,7 @@ size_t Lists::remove(const std::string& aName,
                      const std::string& aValue) {
   size_t myRet = 0;
 
-  performOnExisting(aName, [&myRet, aCount, &aValue](List& aList) {
+  theApplyer.performOnExisting(aName, [&myRet, aCount, &aValue](List& aList) {
     if (aCount == 0) {
       size_t myRemoved = 0;
       for (auto myIt = aList.begin(); myIt != aList.end();) {
@@ -262,7 +262,7 @@ Lists::Status Lists::set(const std::string& aName,
 
   bool myFound = false;
 
-  performOnExisting(aName, [&myRet, &myFound, &aValue, aIndex](List& aList) {
+  theApplyer.performOnExisting(aName, [&myRet, &myFound, &aValue, aIndex](List& aList) {
     // If this lambda is called then the list was found
     myFound = true;
 
@@ -291,7 +291,7 @@ Lists::Status Lists::set(const std::string& aName,
 
 void Lists::trim(const std::string& aName, int64_t aStart, int64_t aStop) {
 
-  performOnExisting(aName, [aStart, aStop](List& aList) {
+  theApplyer.performOnExisting(aName, [aStart, aStop](List& aList) {
     if (aList.empty()) {
       return;
     }
@@ -350,7 +350,7 @@ Lists::popBackPushFront(const std::string& aSourceName,
   //                           L2 -> L1
   const boost::lock_guard<PopBackPushFrontMutex> myLock(thePopBackPushFrontMutex);
 
-  performOnExisting(
+  theApplyer.performOnExisting(
       aSourceName, [this, &aDestinationName, &myRet](List& aSourceList) {
         if (aSourceList.empty()) {
           return;
@@ -360,7 +360,7 @@ Lists::popBackPushFront(const std::string& aSourceName,
 
         const std::string myValue = myRet.get();
 
-        performOnNew(aDestinationName, [&myValue](List& aDestinationList) {
+        theApplyer.performOnNew(aDestinationName, [&myValue](List& aDestinationList) {
           aDestinationList.push_front(myValue);
         });
       });
@@ -373,7 +373,7 @@ size_t Lists::pushBackExist(const std::string&                   aName,
 
   size_t myRet = 0;
 
-  performOnExisting(aName, [&myRet, &aValues](List& aList) {
+  theApplyer.performOnExisting(aName, [&myRet, &aValues](List& aList) {
     for (const auto& myString : aValues) {
       aList.push_back(std::string(myString));
     }
@@ -385,122 +385,7 @@ size_t Lists::pushBackExist(const std::string&                   aName,
 
 /////////
 
-void Lists::performOnNew(const std::string& aName, const Functor& aFunctor) {
 
-  ProtectedList*                                 myList = nullptr;
-  std::unique_ptr<boost::unique_lock<ListMutex>> mySecondLevelLock;
-
-  while (true) {
-    boost::lock_guard<StorageMutex> myLock(theMutex);
-    myList = &theStorage[aName];
-    mySecondLevelLock.reset(new boost::unique_lock<ListMutex>(
-        *myList->mutex, boost::try_to_lock_t()));
-    if (mySecondLevelLock->owns_lock()) {
-      break;
-    }
-  }
-
-  assert(mySecondLevelLock->owns_lock());
-  aFunctor(myList->list);
-}
-
-void Lists::performOnExisting(const std::string& aName,
-                              const Functor&     aFunctor) {
-
-  // This looks a bit gymnic but this is what needs to do
-  // After the operation if the list is empty has to be removed
-  // from the storage
-  // The lock is done in multiple phases
-  //  - External Lock
-  //  - Try to acquire the internal Lock (each key has his own mutex), if the
-  //  lock
-  //    is not acquired it unlock the external lock and restart the acquisition,
-  //    this will permit other threads to work on different keys
-  //  - Unlock External Lock this gives the ability to another thread to operate
-  //    on another key while current threads works on aName key
-  //  - After the operation if the list has become empty has to be removed, but
-  //    in order to do so the external lock has to be acquired, so release all
-  //    the lock and start to:
-  //      - Acquire external lock
-  //      - Retrieve the key (if not exists we are done)
-  //      - Lock the mutex (the mutex associated with the key)
-  //      - If the key is still empty (in mean while while all locks were
-  //      released some
-  //        clients can have added a value) continue otherwise we are done
-  //      - Move the mutex out on a local mutex (the key "carrying" the mutex is
-  //      going
-  //        to be destroyed hence we need to move it out)
-  //      - Remove the keys
-  //      - Release all the locks
-
-  bool myHasBecomeEmpty = false;
-
-  {
-    ProtectedList*                                 myList = nullptr;
-    std::unique_ptr<boost::unique_lock<ListMutex>> mySecondLevelLock;
-
-    while (true) {
-      boost::lock_guard<StorageMutex> myLock(theMutex);
-
-      auto myIt = theStorage.find(aName);
-      if (myIt == theStorage.end()) {
-        return;
-      }
-      myList = &myIt->second;
-      mySecondLevelLock.reset(new boost::unique_lock<ListMutex>(
-          *myList->mutex, boost::try_to_lock_t()));
-      if (mySecondLevelLock->owns_lock()) {
-        break;
-      }
-    }
-
-    assert(mySecondLevelLock->owns_lock());
-    aFunctor(myList->list);
-    myHasBecomeEmpty = myList->list.empty();
-  }
-
-  if (myHasBecomeEmpty) {
-    boost::lock_guard<StorageMutex> myLock(theMutex);
-    auto                            myIt = theStorage.find(aName);
-    if (myIt == theStorage.end()) {
-      return;
-    }
-    std::unique_ptr<ListMutex>   myMutex;
-    boost::lock_guard<ListMutex> mySecondLevelLock(*myIt->second.mutex);
-
-    if (not myIt->second.list.empty()) {
-      return;
-    }
-
-    myMutex = std::move(myIt->second.mutex);
-    theStorage.erase(myIt);
-  }
-}
-
-void Lists::performOnExisting(const std::string&  aName,
-                              const ConstFunctor& aFunctor) const {
-
-  const ProtectedList* myList = nullptr;
-
-  std::unique_ptr<boost::unique_lock<ListMutex>> mySecondLevelLock;
-
-  while (true) {
-    boost::lock_guard<StorageMutex> myLock(theMutex);
-    auto                            myIt = theStorage.find(aName);
-    if (myIt == theStorage.end()) {
-      return;
-    }
-    myList = &myIt->second;
-    mySecondLevelLock.reset(new boost::unique_lock<ListMutex>(
-        *myList->mutex, boost::try_to_lock_t()));
-    if (mySecondLevelLock->owns_lock()) {
-      break;
-    }
-  }
-
-  assert(mySecondLevelLock->owns_lock());
-  aFunctor(myList->list);
-}
 
 } // namespace storage
 } // namespace oktoplus
