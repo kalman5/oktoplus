@@ -14,14 +14,14 @@ CommandsClient::CommandsClient(const std::string& myEndpoint)
           ::grpc::CreateChannel(myEndpoint, theCredentials))) {
 }
 
-size_t CommandsClient::listPushFront(const std::string&             myListName,
-                                     const std::vector<std::string> myValues) {
+size_t CommandsClient::listPushFront(const std::string&             aListName,
+                                     const std::vector<std::string> aValues) {
 
   ListPushRequest myRequest;
 
-  myRequest.set_name(myListName);
+  myRequest.set_name(aListName);
 
-  for (const auto& myValue : myValues) {
+  for (const auto& myValue : aValues) {
     myRequest.add_values(std::move(myValue));
   }
 
@@ -62,11 +62,11 @@ size_t CommandsClient::listPushFront(const std::string&             myListName,
 //   return grpc::Status::OK;
 // }
 
-std::string CommandsClient::listPopFront(const std::string& myListName) {
+std::string CommandsClient::listPopFront(const std::string& aListName) {
 
   ListGetValueRequest myRequest;
 
-  myRequest.set_name(myListName);
+  myRequest.set_name(aListName);
 
   std::chrono::system_clock::time_point deadline =
       std::chrono::system_clock::now() + std::chrono::seconds(5);
