@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Support/non_copyable.h"
 #include "Support/containerfunctorapplier.h"
+#include "Support/non_copyable.h"
 
-#include <boost/thread/mutex.hpp>
 #include <boost/optional.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include <functional>
 #include <list>

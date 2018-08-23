@@ -13,18 +13,20 @@ namespace oktoplus {
 namespace support {
 
 template <class CONTAINER>
-class ContainerFunctorApplier {
-public:
+class ContainerFunctorApplier
+{
+ public:
   using Container    = CONTAINER;
   using Functor      = std::function<void(Container& aList)>;
   using ConstFunctor = std::function<void(const Container& aList)>;
-public:
+
+ public:
   DISABLE_EVIL_CONSTRUCTOR(ContainerFunctorApplier);
 
   ContainerFunctorApplier()
-    : theMutex()
-    , theStorage()
-  {}
+      : theMutex()
+      , theStorage() {
+  }
 
   size_t hostedKeys() const;
 
@@ -33,7 +35,7 @@ public:
   void performOnExisting(const std::string&  aName,
                          const ConstFunctor& aFunctor) const;
 
-private:
+ private:
   using ContainerMutex = boost::recursive_mutex;
 
   struct ProtectedContainer {
@@ -62,7 +64,7 @@ template <class CONTAINER>
 void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
                                                       const Functor& aFunctor) {
 
-  ProtectedContainer*                        myContainer = nullptr;
+  ProtectedContainer*                                 myContainer = nullptr;
   std::unique_ptr<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
 
   while (true) {
@@ -80,8 +82,8 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
 }
 
 template <class CONTAINER>
-void ContainerFunctorApplier<CONTAINER>::performOnExisting(const std::string& aName,
-                                                           const Functor&     aFunctor) {
+void ContainerFunctorApplier<CONTAINER>::performOnExisting(
+    const std::string& aName, const Functor& aFunctor) {
 
   // This looks a bit gymnic but this is what needs to do
   // After the operation if the list is empty has to be removed
@@ -112,7 +114,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(const std::string& aN
   bool myHasBecomeEmpty = false;
 
   {
-    ProtectedContainer*                        myContainer = nullptr;
+    ProtectedContainer*                                 myContainer = nullptr;
     std::unique_ptr<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
 
     while (true) {
@@ -137,7 +139,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(const std::string& aN
 
   if (myHasBecomeEmpty) {
     boost::lock_guard<Mutex> myLock(theMutex);
-    auto                            myIt = theStorage.find(aName);
+    auto                     myIt = theStorage.find(aName);
     if (myIt == theStorage.end()) {
       return;
     }
@@ -154,8 +156,8 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(const std::string& aN
 }
 
 template <class CONTAINER>
-void ContainerFunctorApplier<CONTAINER>::performOnExisting(const std::string&  aName,
-                                                           const ConstFunctor& aFunctor) const {
+void ContainerFunctorApplier<CONTAINER>::performOnExisting(
+    const std::string& aName, const ConstFunctor& aFunctor) const {
 
   const ProtectedContainer* myList = nullptr;
 
