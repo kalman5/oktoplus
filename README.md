@@ -14,9 +14,11 @@ If this reminds you of REDIS then you are right, I was inspired by it, however:
 
 Redis Commands Compatibility
 
+  - [DEQUES](docs/compatibility_deques.md) This container is Oktoplus specific there is no equivalent in Redis
   - [LISTS](docs/compatibility_lists.md) 82% Completed
   - [SETS](docs/compatibility_sets.md) 0% Completed
   - [STRINGS](docs/compatibility_strings.md) 0% Completed
+  - [VECTORS](docs/compatibility_vectors.md) This container is Oktoplus specific there is no equivalent in Redis
 
 The server exports a Grpc interface (https://grpc.io/). Refer to src/Libraries/Commands/commands.proto to see the exported interface, you can use it to build a client for your favourite language. 
 
