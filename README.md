@@ -20,8 +20,8 @@ Redis Commands Compatibility
   
 **Oktoplus** specific containers
 
-  - [DEQUES](docs/compatibility_deques.md)
-  - [VECTORS](docs/compatibility_vectors.md)
+  - [DEQUES](docs/deques.md)
+  - [VECTORS](docs/vectors.md)
   
 The server exports a Grpc interface (https://grpc.io/). Refer to src/Libraries/Commands/commands.proto to see the exported interface, you can use it to build a client for your favourite language. 
 
