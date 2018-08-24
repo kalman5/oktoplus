@@ -13,9 +13,11 @@ set_source_files_properties(${GRPC_SRCS} PROPERTIES COMPILE_FLAGS -Wno-unused-pa
 add_library (oktoplus_commands SHARED
   ${PROTO_SRCS}
   ${GRPC_SRCS}
+  ${CMAKE_SRC_DIR}/Libraries/Commands/commands_deque.cpp
   ${CMAKE_SRC_DIR}/Libraries/Commands/commands_list.cpp
   ${CMAKE_SRC_DIR}/Libraries/Commands/commands_client.cpp
   ${CMAKE_SRC_DIR}/Libraries/Commands/commands_server.cpp
+  ${CMAKE_SRC_DIR}/Libraries/Commands/commands_vector.cpp
 )
 
 target_link_libraries (oktoplus_commands

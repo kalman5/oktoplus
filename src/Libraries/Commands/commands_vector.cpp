@@ -1,4 +1,4 @@
-#include "Commands/commands_list.h"
+#include "Commands/commands_vector.h"
 
 #include <glog/logging.h>
 
@@ -8,30 +8,11 @@
 namespace oktoplus {
 namespace commands {
 
-CommandsList::CommandsList()
-    : theLists() {
+CommandsVector::CommandsVector()
+    : theVectors() {
 }
 
-grpc::Status CommandsList::listPushFront(grpc::ServerContext*,
-                                         const PushRequest* aRequest,
-                                         PushReply*         aReply) {
-
-  std::vector<std::string_view> myStrings;
-  myStrings.reserve(aRequest->values_size());
-  for (int i = 0; i < aRequest->values_size(); ++i) {
-    myStrings.push_back(aRequest->values(i));
-  }
-
-  const auto& myName = aRequest->name();
-
-  auto myRet = theLists.pushFront(myName, myStrings);
-
-  aReply->set_size(myRet);
-
-  return grpc::Status::OK;
-}
-
-grpc::Status CommandsList::listPushBack(grpc::ServerContext*,
+grpc::Status CommandsVector::vectorPushBack(grpc::ServerContext*,
                                         const PushRequest* aRequest,
                                         PushReply*         aReply) {
 
@@ -43,34 +24,19 @@ grpc::Status CommandsList::listPushBack(grpc::ServerContext*,
 
   const auto& myName = aRequest->name();
 
-  auto myRet = theLists.pushBack(myName, myStrings);
+  auto myRet = theVectors.pushBack(myName, myStrings);
 
   aReply->set_size(myRet);
 
   return grpc::Status::OK;
 }
 
-grpc::Status CommandsList::listPopFront(grpc::ServerContext*,
-                                        const GetValueRequest* aRequest,
-                                        GetValueReply*         aReply) {
-
-  const auto& myName = aRequest->name();
-
-  auto myRet = theLists.popFront(myName);
-
-  if (myRet) {
-    aReply->set_value(myRet.get());
-  }
-
-  return grpc::Status::OK;
-}
-
-grpc::Status CommandsList::listPopBack(grpc::ServerContext*,
+grpc::Status CommandsVector::vectorPopBack(grpc::ServerContext*,
                                        const GetValueRequest* aRequest,
                                        GetValueReply*         aReply) {
   const std::string& myName = aRequest->name();
 
-  auto myRet = theLists.popBack(myName);
+  auto myRet = theVectors.popBack(myName);
 
   if (myRet) {
     aReply->set_value(myRet.get());
@@ -79,12 +45,12 @@ grpc::Status CommandsList::listPopBack(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-grpc::Status CommandsList::listLength(grpc::ServerContext*,
+grpc::Status CommandsVector::vectorLength(grpc::ServerContext*,
                                       const LengthRequest* aRequest,
                                       LengthReply*         aReply) {
   const auto& myName = aRequest->name();
 
-  auto myRet = theLists.size(myName);
+  auto myRet = theVectors.size(myName);
 
   aReply->set_value(myRet);
 
@@ -95,13 +61,13 @@ grpc::Status CommandsList::listLength(grpc::ServerContext*,
 // BRPOP
 // BRPOPLPUSH
 
-grpc::Status CommandsList::listIndex(grpc::ServerContext*,
+grpc::Status CommandsVector::vectorIndex(grpc::ServerContext*,
                                      const IndexRequest* aRequest,
                                      GetValueReply*  aReply) {
   const auto& myName  = aRequest->name();
   const auto  myIndex = aRequest->index();
 
-  auto myRet = theLists.index(myName, myIndex);
+  auto myRet = theVectors.index(myName, myIndex);
 
   if (myRet) {
     aReply->set_value(myRet.get());
@@ -110,7 +76,7 @@ grpc::Status CommandsList::listIndex(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-grpc::Status CommandsList::listInsert(grpc::ServerContext*,
+grpc::Status CommandsVector::vectorInsert(grpc::ServerContext*,
                                       const InsertRequest* aRequest,
                                       InsertReply*         aReply) {
   const auto& myName     = aRequest->name();
@@ -118,15 +84,15 @@ grpc::Status CommandsList::listInsert(grpc::ServerContext*,
   const auto& myPivot    = aRequest->pivot();
   const auto& myValue    = aRequest->value();
 
-  storage::Lists::Position myListPosition;
+  storage::Vectors::Position myListPosition;
   if (myPosition ==
       InsertRequest::Position::InsertRequest_Position_BEFORE) {
-    myListPosition = storage::Lists::Position::BEFORE;
+    myListPosition = storage::Vectors::Position::BEFORE;
   } else {
-    myListPosition = storage::Lists::Position::AFTER;
+    myListPosition = storage::Vectors::Position::AFTER;
   }
 
-  auto myRet = theLists.insert(myName, myListPosition, myPivot, myValue);
+  auto myRet = theVectors.insert(myName, myListPosition, myPivot, myValue);
 
   if (myRet) {
     aReply->set_size(myRet.get());
@@ -135,26 +101,7 @@ grpc::Status CommandsList::listInsert(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-grpc::Status CommandsList::listExistPushFront(grpc::ServerContext*,
-                                              const PushRequest* aRequest,
-                                              PushReply*         aReply) {
-
-  std::vector<std::string_view> myStrings;
-  myStrings.reserve(aRequest->values_size());
-  for (int i = 0; i < aRequest->values_size(); ++i) {
-    myStrings.push_back(aRequest->values(i));
-  }
-
-  const auto& myName = aRequest->name();
-
-  auto myRet = theLists.pushFrontExist(myName, myStrings);
-
-  aReply->set_size(myRet);
-
-  return grpc::Status::OK;
-}
-
-grpc::Status CommandsList::listRange(grpc::ServerContext*,
+grpc::Status CommandsVector::vectorRange(grpc::ServerContext*,
                                      const RangeRequest* aRequest,
                                      RangeReply*         aReply) {
 
@@ -162,7 +109,7 @@ grpc::Status CommandsList::listRange(grpc::ServerContext*,
   const auto  myStart = aRequest->start();
   const auto  myStop  = aRequest->stop();
 
-  auto myRet = theLists.range(myName, myStart, myStop);
+  auto myRet = theVectors.range(myName, myStart, myStop);
 
   for (auto&& myValue : myRet) {
     aReply->add_values(std::move(myValue));
@@ -171,7 +118,7 @@ grpc::Status CommandsList::listRange(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-grpc::Status CommandsList::listRemove(grpc::ServerContext*,
+grpc::Status CommandsVector::vectorRemove(grpc::ServerContext*,
                                       const RemoveRequest* aRequest,
                                       RemoveReply*         aReply) {
 
@@ -179,14 +126,14 @@ grpc::Status CommandsList::listRemove(grpc::ServerContext*,
   const auto  myCounter = aRequest->count();
   const auto& myValue   = aRequest->value();
 
-  auto myRet = theLists.remove(myName, myCounter, myValue);
+  auto myRet = theVectors.remove(myName, myCounter, myValue);
 
   aReply->set_removed(myRet);
 
   return grpc::Status::OK;
 }
 
-grpc::Status CommandsList::listSet(grpc::ServerContext*,
+grpc::Status CommandsVector::vectorSet(grpc::ServerContext*,
                                    const SetRequest* aRequest,
                                    SetReply*) {
 
@@ -194,19 +141,19 @@ grpc::Status CommandsList::listSet(grpc::ServerContext*,
   const auto  myIndex = aRequest->index();
   const auto& myValue = aRequest->value();
 
-  const auto myRet = theLists.set(myName, myIndex, myValue);
+  const auto myRet = theVectors.set(myName, myIndex, myValue);
 
   switch (myRet) {
-    case storage::Lists::Status::OK:
+    case storage::Vectors::Status::OK:
       return grpc::Status::OK;
-    case storage::Lists::Status::OUT_OF_RANGE:
+    case storage::Vectors::Status::OUT_OF_RANGE:
       return grpc::Status(grpc::OUT_OF_RANGE, "list out of range");
-    case storage::Lists::Status::NOT_FOUND:
+    case storage::Vectors::Status::NOT_FOUND:
       return grpc::Status(grpc::NOT_FOUND, "list not found");
   };
 }
 
-grpc::Status CommandsList::listTrim(grpc::ServerContext*,
+grpc::Status CommandsVector::vectorTrim(grpc::ServerContext*,
                                     const TrimRequest* aRequest,
                                     TrimReply*) {
 
@@ -214,29 +161,12 @@ grpc::Status CommandsList::listTrim(grpc::ServerContext*,
   const auto  myStart = aRequest->start();
   const auto  myStop  = aRequest->stop();
 
-  theLists.trim(myName, myStart, myStop);
+  theVectors.trim(myName, myStart, myStop);
 
   return grpc::Status::OK;
 }
 
-grpc::Status
-CommandsList::listPopBackPushFront(grpc::ServerContext*,
-                                   const PopPushRequest* aRequest,
-                                   PopPushReply*         aReply) {
-
-  const auto& mySourceName      = aRequest->source_name();
-  const auto& myDestinationName = aRequest->destination_name();
-
-  auto myRet = theLists.popBackPushFront(mySourceName, myDestinationName);
-
-  if (myRet) {
-    aReply->set_value(myRet.get());
-  }
-
-  return grpc::Status::OK;
-}
-
-grpc::Status CommandsList::listExistPushBack(grpc::ServerContext*,
+grpc::Status CommandsVector::vectorExistPushBack(grpc::ServerContext*,
                                              const PushRequest* aRequest,
                                              PushReply*         aReply) {
 
@@ -248,7 +178,7 @@ grpc::Status CommandsList::listExistPushBack(grpc::ServerContext*,
 
   const auto& myName = aRequest->name();
 
-  auto myRet = theLists.pushBackExist(myName, myStrings);
+  auto myRet = theVectors.pushBackExist(myName, myStrings);
 
   aReply->set_size(myRet);
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Commands/commands_server_service.h"
-#include "Storage/lists.h"
+#include "Storage/deques.h"
 
 #include <grpc++/grpc++.h>
 
@@ -10,29 +10,29 @@
 namespace oktoplus {
 namespace commands {
 
-class CommandsList : virtual public Interface::Service
+class CommandsDeque : virtual public Interface::Service
 {
  public:
-  CommandsList();
+  CommandsDeque();
 
  private:
-  grpc::Status listPushFront(grpc::ServerContext*,
+  grpc::Status dequePushFront(grpc::ServerContext*,
                              const PushRequest*,
                              PushReply*) final override;
 
-  grpc::Status listPushBack(grpc::ServerContext*,
+  grpc::Status dequePushBack(grpc::ServerContext*,
                             const PushRequest*,
                             PushReply*) final override;
 
-  grpc::Status listPopFront(grpc::ServerContext*,
+  grpc::Status dequePopFront(grpc::ServerContext*,
                             const GetValueRequest*,
                             GetValueReply*) final override;
 
-  grpc::Status listPopBack(grpc::ServerContext*,
+  grpc::Status dequePopBack(grpc::ServerContext*,
                            const GetValueRequest*,
                            GetValueReply*) final override;
 
-  grpc::Status listLength(grpc::ServerContext*,
+  grpc::Status dequeLength(grpc::ServerContext*,
                           const LengthRequest*,
                           LengthReply*) final override;
 
@@ -40,41 +40,41 @@ class CommandsList : virtual public Interface::Service
   // BRPOP
   // BRPOPLPUSH
 
-  grpc::Status listIndex(grpc::ServerContext*,
+  grpc::Status dequeIndex(grpc::ServerContext*,
                          const IndexRequest*,
                          GetValueReply*) final override;
 
-  grpc::Status listInsert(grpc::ServerContext*,
+  grpc::Status dequeInsert(grpc::ServerContext*,
                           const InsertRequest*,
                           InsertReply*) final override;
 
-  grpc::Status listExistPushFront(grpc::ServerContext*,
+  grpc::Status dequeExistPushFront(grpc::ServerContext*,
                                   const PushRequest*,
                                   PushReply*) final override;
 
-  grpc::Status listRange(grpc::ServerContext*,
+  grpc::Status dequeRange(grpc::ServerContext*,
                          const RangeRequest*,
                          RangeReply*) final override;
 
-  grpc::Status listRemove(grpc::ServerContext*,
+  grpc::Status dequeRemove(grpc::ServerContext*,
                           const RemoveRequest*,
                           RemoveReply*) final override;
 
   grpc::Status
-  listSet(grpc::ServerContext*, const SetRequest*, SetReply*) final override;
+  dequeSet(grpc::ServerContext*, const SetRequest*, SetReply*) final override;
 
   grpc::Status
-  listTrim(grpc::ServerContext*, const TrimRequest*, TrimReply*) final override;
+  dequeTrim(grpc::ServerContext*, const TrimRequest*, TrimReply*) final override;
 
-  grpc::Status listPopBackPushFront(grpc::ServerContext*,
+  grpc::Status dequePopBackPushFront(grpc::ServerContext*,
                                     const PopPushRequest*,
                                     PopPushReply*) final override;
 
-  grpc::Status listExistPushBack(grpc::ServerContext*,
+  grpc::Status dequeExistPushBack(grpc::ServerContext*,
                                  const PushRequest*,
                                  PushReply*) final override;
 
-  storage::Lists theLists;
+  storage::Deques theQueues;
 };
 
 } // namespace commands

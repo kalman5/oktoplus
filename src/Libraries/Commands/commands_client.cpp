@@ -17,7 +17,7 @@ CommandsClient::CommandsClient(const std::string& myEndpoint)
 size_t CommandsClient::listPushFront(const std::string&             aListName,
                                      const std::vector<std::string> aValues) {
 
-  ListPushRequest myRequest;
+  PushRequest myRequest;
 
   myRequest.set_name(aListName);
 
@@ -31,7 +31,7 @@ size_t CommandsClient::listPushFront(const std::string&             aListName,
   ::grpc::ClientContext myContext;
   myContext.set_deadline(deadline);
 
-  ListPushReply myReply;
+  PushReply myReply;
 
   ::grpc::Status myStatus =
       theStub->listPushFront(&myContext, myRequest, &myReply);
@@ -64,7 +64,7 @@ size_t CommandsClient::listPushFront(const std::string&             aListName,
 
 std::string CommandsClient::listPopFront(const std::string& aListName) {
 
-  ListGetValueRequest myRequest;
+  GetValueRequest myRequest;
 
   myRequest.set_name(aListName);
 
@@ -74,7 +74,7 @@ std::string CommandsClient::listPopFront(const std::string& aListName) {
   ::grpc::ClientContext myContext;
   myContext.set_deadline(deadline);
 
-  ListGetValueReply myReply;
+  GetValueReply myReply;
 
   ::grpc::Status myStatus =
       theStub->listPopFront(&myContext, myRequest, &myReply);
