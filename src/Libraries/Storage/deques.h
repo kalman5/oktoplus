@@ -8,7 +8,7 @@
 #include <deque>
 #include <string>
 
-namespace oktoplus {
+namespace okts {
 namespace storage {
 
 class Deques : public BackOperations<std::deque<std::string>>,
@@ -23,4 +23,4 @@ class Deques : public BackOperations<std::deque<std::string>>,
 };
 
 } // namespace storage
-} // namespace oktoplus
+} // namespace okts

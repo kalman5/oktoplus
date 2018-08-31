@@ -5,7 +5,7 @@
 #include <sstream>
 #include <string_view>
 
-namespace oktoplus {
+namespace okts {
 namespace commands {
 
 CommandsDeque::CommandsDeque()
@@ -204,6 +204,8 @@ grpc::Status CommandsDeque::dequeSet(grpc::ServerContext*,
     case storage::Deques::Status::NOT_FOUND:
       return grpc::Status(grpc::NOT_FOUND, "list not found");
   };
+
+  return grpc::Status(grpc::INTERNAL, "internal error");
 }
 
 grpc::Status CommandsDeque::dequeTrim(grpc::ServerContext*,
@@ -256,4 +258,4 @@ grpc::Status CommandsDeque::dequeExistPushBack(grpc::ServerContext*,
 }
 
 } // namespace commands
-} // namespace oktoplus
+} // namespace okts

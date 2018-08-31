@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace oktoplus {
+namespace okts {
 namespace storage {
 
 class Vectors : public BackOperations<std::vector<std::string>>
@@ -20,4 +20,4 @@ class Vectors : public BackOperations<std::vector<std::string>>
 };
 
 } // namespace storage
-} // namespace oktoplus
+} // namespace okts

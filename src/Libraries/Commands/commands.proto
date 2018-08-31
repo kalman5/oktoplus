@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "types.proto";
 
-package oktoplus.commands;
+package okts.commands;
 
 service Interface {
   // LIST

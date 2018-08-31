@@ -5,7 +5,7 @@
 #include <sstream>
 #include <string_view>
 
-namespace oktoplus {
+namespace okts {
 namespace commands {
 
 CommandsVector::CommandsVector()
@@ -151,6 +151,8 @@ grpc::Status CommandsVector::vectorSet(grpc::ServerContext*,
     case storage::Vectors::Status::NOT_FOUND:
       return grpc::Status(grpc::NOT_FOUND, "list not found");
   };
+
+  return grpc::Status(grpc::INTERNAL, "internal error");
 }
 
 grpc::Status CommandsVector::vectorTrim(grpc::ServerContext*,
@@ -186,4 +188,4 @@ grpc::Status CommandsVector::vectorExistPushBack(grpc::ServerContext*,
 }
 
 } // namespace commands
-} // namespace oktoplus
+} // namespace okts

@@ -10,7 +10,7 @@
 #include <list>
 #include <string_view>
 
-namespace oktoplus {
+namespace okts {
 namespace storage {
 
 template <class CONTAINER>
@@ -30,8 +30,8 @@ class GenericContainer
   }
 
  protected:
-  support::ContainerFunctorApplier<CONTAINER> theApplyer;
+  sup::ContainerFunctorApplier<CONTAINER> theApplyer;
 };
 
 } // namespace storage
-} // namespace oktoplus
+} // namespace okts

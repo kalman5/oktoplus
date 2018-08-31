@@ -1,6 +1,6 @@
 #include "Storage/vectors.h"
 
-namespace oktoplus {
+namespace okts {
 namespace storage {
 
 Vectors::Vectors()
@@ -8,4 +8,4 @@ Vectors::Vectors()
 }
 
 } // namespace storage
-} // namespace oktoplus
+} // namespace okts

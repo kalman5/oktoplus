@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Support/non_copyable.h"
+#include "Support/mutex.h"
 
 #include <boost/thread/lock_guard.hpp>
 #include <boost/thread/mutex.hpp>
@@ -9,8 +10,8 @@
 #include <functional>
 #include <unordered_map>
 
-namespace oktoplus {
-namespace support {
+namespace okts {
+namespace sup {
 
 template <class CONTAINER>
 class ContainerFunctorApplier
@@ -48,15 +49,16 @@ class ContainerFunctorApplier
   };
 
   using Storage = std::unordered_map<std::string, ProtectedContainer>;
-  using Mutex   = boost::mutex;
+  using Mutex   = mutex;
 
   mutable Mutex theMutex;
-  Storage       theStorage;
+  Storage       theStorage GUARDED_BY(theMutex);
 };
 
 template <class CONTAINER>
 size_t ContainerFunctorApplier<CONTAINER>::hostedKeys() const {
-  const boost::lock_guard<Mutex> myLock(theMutex);
+
+  const lock_guard<Mutex> myLock(theMutex);
   return theStorage.size();
 }
 
@@ -68,7 +70,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
   std::unique_ptr<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
 
   while (true) {
-    boost::lock_guard<Mutex> myLock(theMutex);
+    lock_guard<Mutex> myLock(theMutex);
     myContainer = &theStorage[aName];
     mySecondLevelLock.reset(new boost::unique_lock<ContainerMutex>(
         *myContainer->mutex, boost::try_to_lock_t()));
@@ -118,7 +120,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
     std::unique_ptr<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
 
     while (true) {
-      boost::lock_guard<Mutex> myLock(theMutex);
+      lock_guard<Mutex> myLock(theMutex);
 
       auto myIt = theStorage.find(aName);
       if (myIt == theStorage.end()) {
@@ -138,7 +140,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
   }
 
   if (myHasBecomeEmpty) {
-    boost::lock_guard<Mutex> myLock(theMutex);
+    lock_guard<Mutex> myLock(theMutex);
     auto                     myIt = theStorage.find(aName);
     if (myIt == theStorage.end()) {
       return;
@@ -164,7 +166,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
   std::unique_ptr<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
 
   while (true) {
-    boost::lock_guard<Mutex> myLock(theMutex);
+    lock_guard<Mutex> myLock(theMutex);
     auto                     myIt = theStorage.find(aName);
     if (myIt == theStorage.end()) {
       return;
@@ -181,5 +183,5 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
   aFunctor(myList->list);
 }
 
-} // namespace support
-} // namespace oktoplus
+} // namespace sup
+} // namespace okts

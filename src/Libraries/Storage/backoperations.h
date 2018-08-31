@@ -9,7 +9,7 @@
 #include <string_view>
 #include <string>
 
-namespace oktoplus {
+namespace okts {
 namespace storage {
 
 template <class CONTAINER>
@@ -62,4 +62,4 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
 
 
 } // namespace storage
-} // namespace oktoplus
+} // namespace okts

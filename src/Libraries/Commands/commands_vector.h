@@ -7,7 +7,7 @@
 
 #include <memory>
 
-namespace oktoplus {
+namespace okts {
 namespace commands {
 
 class CommandsVector : virtual public Interface::Service
@@ -62,4 +62,4 @@ class CommandsVector : virtual public Interface::Service
 };
 
 } // namespace commands
-} // namespace oktoplus
+} // namespace okts

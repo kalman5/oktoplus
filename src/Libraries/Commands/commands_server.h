@@ -6,7 +6,7 @@
 
 #include <memory>
 
-namespace oktoplus {
+namespace okts {
 namespace commands {
 
 class CommandsServer : public CommandsList
@@ -24,4 +24,4 @@ class CommandsServer : public CommandsList
 };
 
 } // namespace commands
-} // namespace oktoplus
+} // namespace okts

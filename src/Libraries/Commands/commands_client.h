@@ -7,7 +7,7 @@
 
 #include <memory>
 
-namespace oktoplus {
+namespace okts {
 namespace commands {
 
 class CommandsClient final
@@ -36,4 +36,4 @@ class CommandsClient final
 };
 
 } // namespace commands
-} // namespace oktoplus
+} // namespace okts

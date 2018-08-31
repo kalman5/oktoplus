@@ -7,7 +7,7 @@
 
 #include <memory>
 
-namespace oktoplus {
+namespace okts {
 namespace commands {
 
 class CommandsDeque : virtual public Interface::Service
@@ -78,4 +78,4 @@ class CommandsDeque : virtual public Interface::Service
 };
 
 } // namespace commands
-} // namespace oktoplus
+} // namespace okts

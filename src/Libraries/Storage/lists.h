@@ -8,7 +8,7 @@
 #include <list>
 #include <string>
 
-namespace oktoplus {
+namespace okts {
 namespace storage {
 
 class Lists : public BackOperations<std::list<std::string>>,
@@ -23,4 +23,4 @@ class Lists : public BackOperations<std::list<std::string>>,
 };
 
 } // namespace storage
-} // namespace oktoplus
+} // namespace okts

@@ -3,6 +3,7 @@
 echo "Last build command: " $0 $@ > last_build_command.txt
 
 CURRENTDIR=${PWD##*/}
+CCOMPILER=gcc
 CXXCOMPILER=g++
 NINJABUILD=0
 USE_CLANG=0
@@ -50,13 +51,15 @@ fi
 
 if [[ ${USE_CLANG} -eq 1 ]];
 then
-  CXXCOMPILER=$(find /usr/bin/ -name "*clang++*" | sort -r | head -n 1)
+  CCOMPILER=clang
+  CXXCOMPILER=clang++
 fi
 
 CMAKECOMMAND="cmake \
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
               ${CMAKENINJAOPTION} \
               -DCMAKE_CXX_COMPILER=${CXXCOMPILER} \
+              -DCMAKE_C_COMPILER=${CCOMPILER} \
               -DCMAKE_BUILD_TYPE=${CURRENTDIR} \
               ../../"
 

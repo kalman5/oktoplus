@@ -1,6 +1,6 @@
 #include "Storage/lists.h"
 
-namespace oktoplus {
+namespace okts {
 namespace storage {
 
 Lists::Lists()
@@ -10,4 +10,4 @@ Lists::Lists()
 }
 
 } // namespace storage
-} // namespace oktoplus
+} // namespace okts

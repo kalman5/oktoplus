@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-namespace oktoplus {
+namespace okts {
 namespace storage {
 
 template <class CONTAINER>
@@ -43,4 +43,4 @@ class FrontOnlyOperations : virtual public GenericContainer<CONTAINER>
 #include "Storage/frontonlyoperations.inl"
 
 } // namespace storage
-} // namespace oktoplus
+} // namespace okts

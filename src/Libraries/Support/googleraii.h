@@ -3,8 +3,8 @@
 #include <glog/logging.h>
 #include <google/protobuf/stubs/common.h>
 
-namespace oktoplus {
-namespace support {
+namespace okts {
+namespace sup {
 
 class GoogleRaii final
 {
@@ -33,5 +33,5 @@ class GoogleRaii final
   const bool theProtobuf;
 };
 
-} // namespace support
-} // namespace oktoplus
+} // namespace sup
+} // namespace okts

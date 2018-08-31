@@ -5,7 +5,7 @@
 #include <sstream>
 #include <string_view>
 
-namespace oktoplus {
+namespace okts {
 namespace commands {
 
 CommandsClient::CommandsClient(const std::string& myEndpoint)
@@ -101,4 +101,4 @@ std::string CommandsClient::listPopFront(const std::string& aListName) {
 // }
 
 } // namespace commands
-} // namespace oktoplus
+} // namespace okts

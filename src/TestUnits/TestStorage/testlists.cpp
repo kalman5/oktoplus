@@ -4,7 +4,7 @@
 
 #include <glog/logging.h>
 
-namespace okst = oktoplus::storage;
+namespace oktss = okts::storage;
 
 class TestLists : public ::testing::Test
 {
@@ -17,11 +17,11 @@ class TestLists : public ::testing::Test
 };
 
 TEST_F(TestLists, ctor) {
-  okst::Lists myLists;
+  oktss::Lists myLists;
 }
 
 TEST_F(TestLists, push_back_front_size) {
-  okst::Lists myLists;
+  oktss::Lists myLists;
 
   // Single value
   ASSERT_EQ(1u, myLists.pushBack("l1", {"5"}));
@@ -48,7 +48,7 @@ TEST_F(TestLists, push_back_front_size) {
 }
 
 TEST_F(TestLists, push_back_on_existing) {
-  okst::Lists myLists;
+  oktss::Lists myLists;
 
   ASSERT_EQ(0u, myLists.pushBackExist("l1", {"1"}));
   ASSERT_EQ(0u, myLists.size("l1"));
@@ -71,7 +71,7 @@ TEST_F(TestLists, push_back_on_existing) {
 }
 
 TEST_F(TestLists, push_front_on_existing) {
-  okst::Lists myLists;
+  oktss::Lists myLists;
 
   ASSERT_EQ(0u, myLists.pushFrontExist("l1", {"5"}));
   ASSERT_EQ(0u, myLists.size("l1"));
@@ -94,7 +94,7 @@ TEST_F(TestLists, push_front_on_existing) {
 }
 
 TEST_F(TestLists, pop_back) {
-  okst::Lists myLists;
+  oktss::Lists myLists;
 
   ASSERT_EQ(5u, myLists.pushFront("l1", {"5", "4", "3", "2", "1"}));
 
@@ -123,7 +123,7 @@ TEST_F(TestLists, pop_back) {
 }
 
 TEST_F(TestLists, index) {
-  okst::Lists myLists;
+  oktss::Lists myLists;
 
   ASSERT_EQ(1u, myLists.pushBack("l1", {"one"}));
   ASSERT_EQ(2u, myLists.pushBack("l1", {"two"}));
@@ -145,7 +145,7 @@ TEST_F(TestLists, index) {
 }
 
 TEST_F(TestLists, insert) {
-  okst::Lists myLists;
+  oktss::Lists myLists;
 
   ASSERT_EQ(1u, myLists.pushBack("l1", {"one"}));
   ASSERT_EQ(2u, myLists.pushBack("l1", {"two"}));
@@ -155,21 +155,21 @@ TEST_F(TestLists, insert) {
 
   ASSERT_EQ(
       4,
-      myLists.insert("l1", okst::Lists::Position::BEFORE, "one", ".5").get());
+      myLists.insert("l1", oktss::Lists::Position::BEFORE, "one", ".5").get());
   ASSERT_EQ(5,
-            myLists.insert("l1", okst::Lists::Position::BEFORE, "two", "one.5")
+            myLists.insert("l1", oktss::Lists::Position::BEFORE, "two", "one.5")
                 .get());
   ASSERT_EQ(
       6,
-      myLists.insert("l1", okst::Lists::Position::AFTER, "two", "two.5").get());
+      myLists.insert("l1", oktss::Lists::Position::AFTER, "two", "two.5").get());
   ASSERT_EQ(
       7,
-      myLists.insert("l1", okst::Lists::Position::AFTER, "three", "three.5")
+      myLists.insert("l1", oktss::Lists::Position::AFTER, "three", "three.5")
           .get());
 
   // not existing pivot
   ASSERT_EQ(-1,
-            myLists.insert("l1", okst::Lists::Position::AFTER, "xxxxx", "yyyy")
+            myLists.insert("l1", oktss::Lists::Position::AFTER, "xxxxx", "yyyy")
                 .get());
 
   ASSERT_EQ(".5", myLists.index("l1", 0).get());
@@ -182,7 +182,7 @@ TEST_F(TestLists, insert) {
 }
 
 TEST_F(TestLists, range) {
-  okst::Lists myLists;
+  oktss::Lists myLists;
 
   ASSERT_EQ(1u, myLists.pushBack("l1", {"1"}));
   ASSERT_EQ(2u, myLists.pushBack("l1", {"2"}));
@@ -239,7 +239,7 @@ TEST_F(TestLists, range) {
 TEST_F(TestLists, remove) {
 
   { // Not existing element
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
     ASSERT_EQ(0u, myLists.remove("l1", 0, "7"));
     ASSERT_EQ(0u, myLists.remove("l1", -1, "7"));
@@ -251,7 +251,7 @@ TEST_F(TestLists, remove) {
   }
 
   { // all occurencies
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
     ASSERT_EQ(4u, myLists.remove("l1", 0, "3"));
 
@@ -262,7 +262,7 @@ TEST_F(TestLists, remove) {
   }
 
   { // more than in the list from beginning
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
     ASSERT_EQ(4u, myLists.remove("l1", 20, "3"));
 
@@ -273,7 +273,7 @@ TEST_F(TestLists, remove) {
   }
 
   { // same amount from left
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
     ASSERT_EQ(4u, myLists.remove("l1", 4, "3"));
 
@@ -284,7 +284,7 @@ TEST_F(TestLists, remove) {
   }
 
   { // less amount from left
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
     ASSERT_EQ(2u, myLists.remove("l1", 2, "3"));
 
@@ -295,7 +295,7 @@ TEST_F(TestLists, remove) {
   }
 
   { // more than in the list from right
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
     ASSERT_EQ(4u, myLists.remove("l1", -20, "3"));
 
@@ -306,7 +306,7 @@ TEST_F(TestLists, remove) {
   }
 
   { // same amount from right
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
     ASSERT_EQ(4u, myLists.remove("l1", -4, "3"));
 
@@ -317,7 +317,7 @@ TEST_F(TestLists, remove) {
   }
 
   { // less amount from right
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
     ASSERT_EQ(3u, myLists.remove("l1", -3, "3"));
 
@@ -331,35 +331,35 @@ TEST_F(TestLists, remove) {
 TEST_F(TestLists, set) {
 
   { // Not existing list
-    okst::Lists myLists;
+    oktss::Lists myLists;
 
-    ASSERT_EQ(okst::Lists::Status::NOT_FOUND,
+    ASSERT_EQ(oktss::Lists::Status::NOT_FOUND,
               myLists.set("xxxx", 2, "3"));
   }
 
   { // OUT OF RANGE
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
 
-    ASSERT_EQ(okst::Lists::Status::OUT_OF_RANGE,
+    ASSERT_EQ(oktss::Lists::Status::OUT_OF_RANGE,
               myLists.set("l1", 30, "3"));
 
-    ASSERT_EQ(okst::Lists::Status::OUT_OF_RANGE,
+    ASSERT_EQ(oktss::Lists::Status::OUT_OF_RANGE,
               myLists.set("l1", -30, "3"));
   }
 
   { // valid range
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"1","2","3","4","5","6","7","8"}));
 
-    ASSERT_EQ(okst::Lists::Status::OK,
+    ASSERT_EQ(oktss::Lists::Status::OK,
               myLists.set("l1", 3, "40"));
 
     ASSERT_EQ(
       std::vector<std::string>({"1","2","3","40","5","6","7","8"}),
       myLists.range("l1", -30, 30));
 
-    ASSERT_EQ(okst::Lists::Status::OK,
+    ASSERT_EQ(oktss::Lists::Status::OK,
               myLists.set("l1", -3, "60"));
 
     ASSERT_EQ(
@@ -370,7 +370,7 @@ TEST_F(TestLists, set) {
 
 TEST_F(TestLists, pop_back_push_front) {
   {
-    okst::Lists myLists;
+    oktss::Lists myLists;
 
     ASSERT_EQ(1u, myLists.pushBack("l1", {"0"}));
     ASSERT_EQ("0", myLists.popBackPushFront("l1", "l2").get());
@@ -378,7 +378,7 @@ TEST_F(TestLists, pop_back_push_front) {
   }
 
   {
-    okst::Lists myLists;
+    oktss::Lists myLists;
 
     ASSERT_EQ(2u, myLists.pushBack("l1", {"0","1"}));
     ASSERT_EQ("1", myLists.popBackPushFront("l1", "l2").get());
@@ -393,7 +393,7 @@ TEST_F(TestLists, pop_back_push_front) {
   }
 
   {
-    okst::Lists myLists;
+    oktss::Lists myLists;
 
     ASSERT_EQ(3u, myLists.pushBack("l1", {"0","1","2"}));
     ASSERT_EQ("2", myLists.popBackPushFront("l1", "l1").get());
@@ -409,7 +409,7 @@ TEST_F(TestLists, pop_back_push_front) {
 TEST_F(TestLists, trim) {
 
   {
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
 
     myLists.trim("l1", 0, 7);
@@ -420,7 +420,7 @@ TEST_F(TestLists, trim) {
   }
 
   {
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
 
     myLists.trim("l1", -8, -1);
@@ -431,7 +431,7 @@ TEST_F(TestLists, trim) {
   }
 
   {
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
 
     myLists.trim("l1", 5, 4);
@@ -443,7 +443,7 @@ TEST_F(TestLists, trim) {
   }
 
   {
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
 
     myLists.trim("l1", 15, 30);
@@ -455,7 +455,7 @@ TEST_F(TestLists, trim) {
   }
 
   {
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
 
     myLists.trim("l1", 1, 6);
@@ -466,7 +466,7 @@ TEST_F(TestLists, trim) {
   }
 
   {
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
 
     myLists.trim("l1", 5, 5);
@@ -477,7 +477,7 @@ TEST_F(TestLists, trim) {
   }
 
   {
-    okst::Lists myLists;
+    oktss::Lists myLists;
     ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
 
     myLists.trim("l1", 5, 50);

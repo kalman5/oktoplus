@@ -3,8 +3,8 @@
 
 #include <glog/logging.h>
 
-namespace okco = oktoplus::commands;
-namespace oksu = oktoplus::support;
+namespace okco = okts::commands;
+namespace oksu = okts::sup;
 
 int main(int /*argc*/, char** argv) {
 

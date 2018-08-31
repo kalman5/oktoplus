@@ -5,7 +5,7 @@
 
 #include <glog/logging.h>
 
-namespace okco = oktoplus::commands;
+namespace okco = okts::commands;
 
 class TestCommands : public ::testing::Test
 {

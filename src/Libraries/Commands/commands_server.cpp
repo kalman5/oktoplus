@@ -5,7 +5,7 @@
 #include <sstream>
 #include <string_view>
 
-namespace oktoplus {
+namespace okts {
 namespace commands {
 
 CommandsServer::CommandsServer(const std::string& myEndpoint)
@@ -40,4 +40,4 @@ void CommandsServer::shutdown() {
 }
 
 } // namespace commands
-} // namespace oktoplus
+} // namespace okts

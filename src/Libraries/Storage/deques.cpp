@@ -1,6 +1,6 @@
 #include "Storage/deques.h"
 
-namespace oktoplus {
+namespace okts {
 namespace storage {
 
 Deques::Deques()
@@ -10,4 +10,4 @@ Deques::Deques()
 }
 
 } // namespace storage
-} // namespace oktoplus
+} // namespace okts
