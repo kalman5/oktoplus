@@ -1,21 +1,17 @@
 
 
-GRP Interface | Lists REDIS Command |
+GRP Interface | Equivalent REDIS Command (for Lists) |
 ---|:---:
-listPushFront | LPUSH
-listPushBack | RPUSH
-listPopFront | LPOP
-listPopBack | RPOP
-listLength | LLEN
-listIndex | LINDEX
+ vectorPushBack | RPUSH
+ vectorPopBack | RPOP
+ vectorLength | LLEN
+ vectorIndex | LINDEX
   _ | BLPOP
- _ | BRPOP
- _ | BRPOPLPUSH
- listInsert | LINSERT
- listPushFrontExist | LPUSHX
- listRange | LRANGE
- listRemove | LREM
- listSet | LSET
- listTrim | LTRIM
- listPopBackPushFront | RPOPLPUSH
- listPushBackExist | RPUSHX
+  _ | BRPOP
+  _ | BRPOPLPUSH
+ vectorInsert | LINSERT
+ vectorRange | LRANGE
+ vectorRemove | LREM
+ vectorSet | LSET
+ vectorTrim | LTRIM
+ vectorPushBackExist | RPUSHX

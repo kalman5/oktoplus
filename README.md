@@ -18,7 +18,7 @@ Redis Commands Compatibility
   - [SETS](docs/compatibility_sets.md) 0% Completed
   - [STRINGS](docs/compatibility_strings.md) 0% Completed
   
-**Oktoplus** specific containers
+**Oktoplus** specific containers (already implemented, see specific documentation)
 
   - [DEQUES](docs/deques.md)
   - [VECTORS](docs/vectors.md)
