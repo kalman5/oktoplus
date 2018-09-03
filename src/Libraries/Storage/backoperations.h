@@ -2,12 +2,12 @@
 
 #include "Storage/genericcontainer.h"
 
-#include "Support/non_copyable.h"
+#include "Support/noncopyable.h"
 
 #include <boost/optional.hpp>
 
-#include <string_view>
 #include <string>
+#include <string_view>
 
 namespace okts {
 namespace storage {
@@ -16,17 +16,17 @@ template <class CONTAINER>
 class BackOperations : virtual public GenericContainer<CONTAINER>
 {
   using Container = CONTAINER;
-  using Base = GenericContainer<Container>;
+  using Base      = GenericContainer<Container>;
 
  public:
-  using Status = typename Base::Status;
+  using Status   = typename Base::Status;
   using Position = typename Base::Position;
 
   DISABLE_EVIL_CONSTRUCTOR(BackOperations);
 
   BackOperations()
-      : Base()
-  {}
+      : Base() {
+  }
 
   size_t pushBack(const std::string&                   aName,
                   const std::vector<std::string_view>& aValues);
@@ -39,7 +39,7 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
                                      int64_t            aIndex) const;
 
   boost::optional<int64_t> insert(const std::string& aName,
-                                  Position     aPosition,
+                                  Position           aPosition,
                                   const std::string& aPivot,
                                   const std::string& aValue);
 
@@ -59,7 +59,6 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
 };
 
 #include "Storage/backoperations.inl"
-
 
 } // namespace storage
 } // namespace okts

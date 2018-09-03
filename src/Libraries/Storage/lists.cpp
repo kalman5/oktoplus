@@ -5,8 +5,7 @@ namespace storage {
 
 Lists::Lists()
     : Base()
-    , Base2()
-{
+    , Base2() {
 }
 
 } // namespace storage

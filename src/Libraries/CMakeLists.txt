@@ -15,5 +15,6 @@ add_library (gmock_gtest SHARED
 
 
 add_subdirectory(Commands)
+add_subdirectory(Configurations)
 add_subdirectory(Storage)
 

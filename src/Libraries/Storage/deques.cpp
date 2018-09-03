@@ -5,8 +5,7 @@ namespace storage {
 
 Deques::Deques()
     : Base()
-    , Base2()
-{
+    , Base2() {
 }
 
 } // namespace storage

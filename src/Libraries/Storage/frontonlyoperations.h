@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Support/non_copyable.h"
+#include "Support/noncopyable.h"
 
 #include <boost/optional.hpp>
 #include <boost/thread/mutex.hpp>
@@ -15,13 +15,14 @@ template <class CONTAINER>
 class FrontOnlyOperations : virtual public GenericContainer<CONTAINER>
 {
   using Container = CONTAINER;
-  using Base = GenericContainer<Container>;
+  using Base      = GenericContainer<Container>;
+
  public:
   DISABLE_EVIL_CONSTRUCTOR(FrontOnlyOperations);
 
   FrontOnlyOperations()
-      : Base()
-  {}
+      : Base() {
+  }
 
   size_t pushFront(const std::string&                   aName,
                    const std::vector<std::string_view>& aValues);

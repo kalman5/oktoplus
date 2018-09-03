@@ -7,7 +7,6 @@
 namespace okts {
 namespace sup {
 
-
 #if defined(__clang__)
 
 #define THREAD_ANNOTATION_ATTRIBUTE(x) __attribute__((x))
@@ -26,20 +25,18 @@ namespace sup {
 #define GUARDED_BY(x) THREAD_ANNOTATION_ATTRIBUTE(guarded_by(x))
 #define PT_GUARDED_BY(x) THREAD_ANNOTATION_ATTRIBUTE(pt_guarded_by(x))
 
-
-using mutex MUTEX_CAPABILITY = boost::mutex;
+using mutex           MUTEX_CAPABILITY = boost::mutex;
 using recursive_mutex MUTEX_CAPABILITY = boost::recursive_mutex;
-using shared_mutex MUTEX_CAPABILITY = boost::shared_mutex;
-
-
+using shared_mutex    MUTEX_CAPABILITY = boost::shared_mutex;
 
 template <class T>
-class SCOPED_LOCKABLE unique_lock {
+class SCOPED_LOCKABLE unique_lock
+{
 
  public:
   explicit unique_lock(T& aMutex) ACQUIRE_CAPABILITY(aMutex)
-      : theLock(aMutex)
-  {}
+      : theLock(aMutex) {
+  }
 
   ~unique_lock() RELEASE_CAPABILITY = default;
 
@@ -48,12 +45,13 @@ class SCOPED_LOCKABLE unique_lock {
 };
 
 template <class T>
-class SCOPED_LOCKABLE lock_guard {
+class SCOPED_LOCKABLE lock_guard
+{
 
  public:
   explicit lock_guard(T& aMutex) ACQUIRE_CAPABILITY(aMutex)
-      : theLock(aMutex)
-  {}
+      : theLock(aMutex) {
+  }
 
   ~lock_guard() RELEASE_CAPABILITY = default;
 
@@ -61,7 +59,5 @@ class SCOPED_LOCKABLE lock_guard {
   boost::lock_guard<T> theLock;
 };
 
-
-
-}
-}
+} // namespace sup
+} // namespace okts

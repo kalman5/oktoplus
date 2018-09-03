@@ -1,17 +1,21 @@
 #include "Commands/commands_server.h"
+#include "Configurations/jsonconfiguration.h"
 #include "Support/googleraii.h"
 
 #include <glog/logging.h>
 
 namespace okco = okts::commands;
+namespace okcfg = okts::cfg;
 namespace oksu = okts::sup;
 
 int main(int /*argc*/, char** argv) {
 
   oksu::GoogleRaii myShutdowner(argv[0], true, true);
 
+  okcfg::JsonConfiguration myConfiguration("oktoplus.cfg");
+
   try {
-    okco::CommandsServer myServer("127.0.0.1:6666");
+    okco::CommandsServer myServer(myConfiguration.endpoint());
 
     myServer.wait();
 

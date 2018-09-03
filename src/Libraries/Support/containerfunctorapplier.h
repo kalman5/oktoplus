@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Support/non_copyable.h"
 #include "Support/mutex.h"
+#include "Support/noncopyable.h"
 
 #include <boost/thread/lock_guard.hpp>
 #include <boost/thread/mutex.hpp>
@@ -52,7 +52,7 @@ class ContainerFunctorApplier
   using Mutex   = mutex;
 
   mutable Mutex theMutex;
-  Storage       theStorage GUARDED_BY(theMutex);
+  Storage theStorage GUARDED_BY(theMutex);
 };
 
 template <class CONTAINER>
@@ -141,7 +141,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
 
   if (myHasBecomeEmpty) {
     lock_guard<Mutex> myLock(theMutex);
-    auto                     myIt = theStorage.find(aName);
+    auto              myIt = theStorage.find(aName);
     if (myIt == theStorage.end()) {
       return;
     }
@@ -167,7 +167,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
 
   while (true) {
     lock_guard<Mutex> myLock(theMutex);
-    auto                     myIt = theStorage.find(aName);
+    auto              myIt = theStorage.find(aName);
     if (myIt == theStorage.end()) {
       return;
     }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Support/containerfunctorapplier.h"
-#include "Support/non_copyable.h"
+#include "Support/noncopyable.h"
 
 #include <boost/optional.hpp>
 #include <boost/thread/mutex.hpp>
@@ -22,7 +22,7 @@ class GenericContainer
   enum class Position { BEFORE = 0, AFTER = 1 };
   enum class Status { OK = 0, NOT_FOUND = 1, OUT_OF_RANGE = 2 };
 
-  GenericContainer() = default;
+  GenericContainer()          = default;
   virtual ~GenericContainer() = default;
 
   size_t hostedKeys() const {
