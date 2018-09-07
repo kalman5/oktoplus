@@ -1,21 +1,43 @@
 #include "Commands/commands_server.h"
+#include "Configurations/commandlineconfiguration.h"
+#include "Configurations/defaultconfiguration.h"
 #include "Configurations/jsonconfiguration.h"
 #include "Support/googleraii.h"
 
 #include <glog/logging.h>
 
-namespace okco = okts::commands;
-namespace okcfg = okts::cfg;
+namespace okcmds = okts::cmds;
+namespace okcfgs = okts::cfgs;
 namespace oksu = okts::sup;
 
-int main(int /*argc*/, char** argv) {
+int main(int argc, char** argv) {
 
   oksu::GoogleRaii myShutdowner(argv[0], true, true);
 
-  okcfg::JsonConfiguration myConfiguration("oktoplus.cfg");
-
   try {
-    okco::CommandsServer myServer(myConfiguration.endpoint());
+    okcfgs::CommandLineConfiguration myCommandLine(argc, argv);
+
+    if (myCommandLine.helpRequested()) {
+      return EXIT_SUCCESS;
+    }
+
+    if (myCommandLine.generateFile()) {
+      okcfgs::DefaultConfiguration myDefault;
+      okcfgs::JsonConfiguration myJson(myDefault);
+      myJson.dump(myCommandLine.configurationFile());
+      return EXIT_SUCCESS;
+    }
+
+    okcfgs::OktoplusConfiguration myOktoplusConfiguration;
+
+    if (myCommandLine.configurationFileSpecified()) {
+      okcfgs::JsonConfiguration myJsonConfiguration(myCommandLine.configurationFile());
+      myOktoplusConfiguration.addConfiguration(myJsonConfiguration);
+    }
+
+    myOktoplusConfiguration.addConfiguration(myCommandLine);
+
+    okcmds::CommandsServer myServer(myOktoplusConfiguration.endpoint());
 
     myServer.wait();
 
@@ -23,7 +45,6 @@ int main(int /*argc*/, char** argv) {
 
   } catch (const std::exception& e) {
     LOG(ERROR) << "Error: " << e.what();
-
   } catch (...) {
     LOG(ERROR) << "Error: unknown";
   }

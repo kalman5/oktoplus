@@ -9,7 +9,7 @@
 #include <string>
 
 namespace okts {
-namespace storage {
+namespace stor {
 
 class Lists : public BackOperations<std::list<std::string>>,
               public FrontOnlyOperations<std::list<std::string>>

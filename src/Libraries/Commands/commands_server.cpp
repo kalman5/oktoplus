@@ -6,7 +6,7 @@
 #include <string_view>
 
 namespace okts {
-namespace commands {
+namespace cmds {
 
 CommandsServer::CommandsServer(const std::string& myEndpoint)
     : theCredentials(::grpc::InsecureServerCredentials())

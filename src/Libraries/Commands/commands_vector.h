@@ -8,7 +8,7 @@
 #include <memory>
 
 namespace okts {
-namespace commands {
+namespace cmds {
 
 class CommandsVector : virtual public Interface::Service
 {
@@ -58,7 +58,7 @@ class CommandsVector : virtual public Interface::Service
                                  const PushRequest*,
                                  PushReply*) final override;
 
-  storage::Vectors theVectors;
+  stor::Vectors theVectors;
 };
 
 } // namespace commands

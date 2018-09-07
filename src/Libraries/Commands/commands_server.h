@@ -7,7 +7,7 @@
 #include <memory>
 
 namespace okts {
-namespace commands {
+namespace cmds {
 
 class CommandsServer : public CommandsList
 {

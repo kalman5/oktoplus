@@ -11,7 +11,7 @@
 #include <string_view>
 
 namespace okts {
-namespace storage {
+namespace stor {
 
 template <class CONTAINER>
 class GenericContainer

@@ -14,5 +14,6 @@ target_link_libraries(oktoplus
   oktoplus_storage
   ${GLOG}
   ${Boost_LIBRARIES}
+  ${PROTOBUF_LIBRARIES}
 )
 

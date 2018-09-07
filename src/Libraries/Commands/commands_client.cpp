@@ -6,7 +6,7 @@
 #include <string_view>
 
 namespace okts {
-namespace commands {
+namespace cmds {
 
 CommandsClient::CommandsClient(const std::string& myEndpoint)
     : theCredentials(::grpc::InsecureChannelCredentials())

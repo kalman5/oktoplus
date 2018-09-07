@@ -8,7 +8,7 @@
 #include <memory>
 
 namespace okts {
-namespace commands {
+namespace cmds {
 
 class CommandsList : virtual public Interface::Service
 {
@@ -74,7 +74,7 @@ class CommandsList : virtual public Interface::Service
                                  const PushRequest*,
                                  PushReply*) final override;
 
-  storage::Lists theLists;
+  stor::Lists theLists;
 };
 
 } // namespace commands

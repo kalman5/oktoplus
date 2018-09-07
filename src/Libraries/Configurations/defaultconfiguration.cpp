@@ -3,14 +3,11 @@
 #include <fstream>
 
 namespace okts {
-namespace cfg {
+namespace cfgs {
 
 DefaultConfiguration::DefaultConfiguration()
-    : MainConfiguration() {
+    : OktoplusConfiguration() {
   theEndpoint = "127.0.0.1:2323";
-}
-
-void DefaultConfiguration::dump() {
 }
 
 } // namespace cfg

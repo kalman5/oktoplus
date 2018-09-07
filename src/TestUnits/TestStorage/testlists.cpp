@@ -4,7 +4,7 @@
 
 #include <glog/logging.h>
 
-namespace oktss = okts::storage;
+namespace oktss = okts::stor;
 
 class TestLists : public ::testing::Test
 {

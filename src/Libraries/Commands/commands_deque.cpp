@@ -6,7 +6,7 @@
 #include <string_view>
 
 namespace okts {
-namespace commands {
+namespace cmds {
 
 CommandsDeque::CommandsDeque()
     : theQueues() {
@@ -118,12 +118,12 @@ grpc::Status CommandsDeque::dequeInsert(grpc::ServerContext*,
   const auto& myPivot    = aRequest->pivot();
   const auto& myValue    = aRequest->value();
 
-  storage::Deques::Position myListPosition;
+  stor::Deques::Position myListPosition;
   if (myPosition ==
       InsertRequest::Position::InsertRequest_Position_BEFORE) {
-    myListPosition = storage::Deques::Position::BEFORE;
+    myListPosition = stor::Deques::Position::BEFORE;
   } else {
-    myListPosition = storage::Deques::Position::AFTER;
+    myListPosition = stor::Deques::Position::AFTER;
   }
 
   auto myRet = theQueues.insert(myName, myListPosition, myPivot, myValue);
@@ -197,11 +197,11 @@ grpc::Status CommandsDeque::dequeSet(grpc::ServerContext*,
   const auto myRet = theQueues.set(myName, myIndex, myValue);
 
   switch (myRet) {
-    case storage::Deques::Status::OK:
+    case stor::Deques::Status::OK:
       return grpc::Status::OK;
-    case storage::Deques::Status::OUT_OF_RANGE:
+    case stor::Deques::Status::OUT_OF_RANGE:
       return grpc::Status(grpc::OUT_OF_RANGE, "list out of range");
-    case storage::Deques::Status::NOT_FOUND:
+    case stor::Deques::Status::NOT_FOUND:
       return grpc::Status(grpc::NOT_FOUND, "list not found");
   };
 
@@ -209,8 +209,8 @@ grpc::Status CommandsDeque::dequeSet(grpc::ServerContext*,
 }
 
 grpc::Status CommandsDeque::dequeTrim(grpc::ServerContext*,
-                                    const TrimRequest* aRequest,
-                                    TrimReply*) {
+                                      const TrimRequest* aRequest,
+                                      TrimReply*) {
 
   const auto& myName  = aRequest->name();
   const auto  myStart = aRequest->start();

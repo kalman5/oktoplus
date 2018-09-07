@@ -11,14 +11,13 @@ target_link_libraries (testunit_testcommands
   ${Boost_LIBRARIES}
   ${GTEST}
   ${GLOG}
+  ${PROTOBUF_LIBRARIES}
 )
 
 add_executable (testcommandsunit
-  ${CMAKE_SRC_DIR}/TestUnits/TestStorage/testsubunit.cpp
+  ${CMAKE_SRC_DIR}/TestUnits/testsubunit.cpp
 )
 
 target_link_libraries (testcommandsunit
   testunit_testcommands
-  ${GTEST}
-  ${GLOG}
 )

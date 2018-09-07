@@ -5,7 +5,7 @@
 
 #include <glog/logging.h>
 
-namespace okco = okts::commands;
+namespace okcmds = okts::cmds;
 
 class TestCommands : public ::testing::Test
 {
@@ -19,15 +19,15 @@ class TestCommands : public ::testing::Test
 
 TEST_F(TestCommands, server_not_available) {
 
-  okco::CommandsClient myClient("127.0.0.1:6666");
+  okcmds::CommandsClient myClient("127.0.0.1:6666");
   ASSERT_THROW(myClient.listPushFront("List-1", {"value1", "value2"}),
                std::runtime_error);
 }
 
 TEST_F(TestCommands, set_get) {
-  okco::CommandsServer myServer("127.0.0.1:6666");
+  okcmds::CommandsServer myServer("127.0.0.1:6666");
 
-  okco::CommandsClient myClient("127.0.0.1:6666");
+  okcmds::CommandsClient myClient("127.0.0.1:6666");
 
   const std::size_t myListSize = 100;
 
@@ -42,7 +42,7 @@ TEST_F(TestCommands, set_get) {
 }
 
 TEST_F(TestCommands, DISABLED_perf) {
-  okco::CommandsClient myClient("127.0.0.1:6666");
+  okcmds::CommandsClient myClient("127.0.0.1:6666");
 
   const std::size_t myListSize = 100000;
 
@@ -62,7 +62,7 @@ TEST_F(TestCommands, DISABLED_perf) {
 }
 
 TEST_F(TestCommands, DISABLED_perf2) {
-  okco::CommandsClient myClient("127.0.0.1:6666");
+  okcmds::CommandsClient myClient("127.0.0.1:6666");
 
   const std::size_t myListSize = 100000;
 

@@ -2,14 +2,16 @@
 include_directories (${CMAKE_SRC_DIR}/Libraries)
 
 add_subdirectory(TestCommands)
+add_subdirectory(TestConfigurations)
 add_subdirectory(TestStorage)
 
 add_executable (testunit
-  ${CMAKE_SRC_DIR}/TestUnits/testunit.cpp
+  ${CMAKE_SRC_DIR}/TestUnits/testsubunit.cpp
 )
 
 set(testunit_LIBS
   testunit_testcommands
+  testunit_testconfigurations
   testunit_teststorage
 )
 

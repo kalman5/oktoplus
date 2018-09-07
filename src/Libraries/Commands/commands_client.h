@@ -8,7 +8,7 @@
 #include <memory>
 
 namespace okts {
-namespace commands {
+namespace cmds {
 
 class CommandsClient final
 {
@@ -35,5 +35,5 @@ class CommandsClient final
   std::unique_ptr<Interface::Stub> theStub;
 };
 
-} // namespace commands
+} // namespace cmd
 } // namespace okts

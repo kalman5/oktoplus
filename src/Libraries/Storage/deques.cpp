@@ -1,7 +1,7 @@
 #include "Storage/deques.h"
 
 namespace okts {
-namespace storage {
+namespace stor {
 
 Deques::Deques()
     : Base()

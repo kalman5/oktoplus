@@ -1,19 +1,28 @@
 #include "Configurations/jsonconfiguration.h"
 
+#include "Configurations/oktoplusconfiguration.h"
+
 #include <jsoncpp/json/json.h>
 
 #include <fstream>
+#include <sstream>
 
 namespace okts {
-namespace cfg {
+namespace cfgs {
 
 JsonConfiguration::JsonConfiguration(
-    const std::string& aPathConfigurationFile) {
-  std::ifstream myConfigurationStream(aPathConfigurationFile,
+    const std::string& aConfigurationFile)
+    : OktoplusConfiguration()
+    , theConfigurationFile(aConfigurationFile)
+{
+  std::ifstream myConfigurationStream(aConfigurationFile,
                                       std::ifstream::binary);
 
   if (!myConfigurationStream) {
-    throw std::runtime_error("not able to open configuration file");
+    std::stringstream myError;
+    myError << "Not able to open configuration file: '"
+            << aConfigurationFile << "'";
+    throw std::runtime_error(myError.str());
   }
 
   Json::Value myRoot;
@@ -31,7 +40,36 @@ JsonConfiguration::JsonConfiguration(
   }
 }
 
+JsonConfiguration::JsonConfiguration(const OktoplusConfiguration& aConfiguration)
+    : OktoplusConfiguration()
+    , theConfigurationFile()
+{
+  theEndpoint = aConfiguration.endpoint();
+}
+
 void JsonConfiguration::dump() {
+  if (theConfigurationFile.empty()) {
+    throw std::runtime_error("Can not json dump without a file");
+  }
+
+
+}
+
+void JsonConfiguration::dump(const std::string& aConfigurationFile) {
+
+  std::ofstream myConfigurationStream(aConfigurationFile,
+                                      std::ofstream::binary);
+
+  if (!myConfigurationStream) {
+    throw std::runtime_error("not able to open configuration file");
+  }
+
+  Json::Value myRoot;
+
+  myRoot["endpoint"] = theEndpoint;
+
+  myConfigurationStream << myRoot;
+
 }
 
 } // namespace cfg

@@ -8,7 +8,7 @@
 #include <vector>
 
 namespace okts {
-namespace storage {
+namespace stor {
 
 class Vectors : public BackOperations<std::vector<std::string>>
 {

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package okts.commands;
+package okts.cmds;
 
 message Void {
 }

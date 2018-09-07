@@ -6,7 +6,7 @@
 #include <string_view>
 
 namespace okts {
-namespace commands {
+namespace cmds {
 
 CommandsVector::CommandsVector()
     : theVectors() {
@@ -84,12 +84,12 @@ grpc::Status CommandsVector::vectorInsert(grpc::ServerContext*,
   const auto& myPivot    = aRequest->pivot();
   const auto& myValue    = aRequest->value();
 
-  storage::Vectors::Position myListPosition;
+  stor::Vectors::Position myListPosition;
   if (myPosition ==
       InsertRequest::Position::InsertRequest_Position_BEFORE) {
-    myListPosition = storage::Vectors::Position::BEFORE;
+    myListPosition = stor::Vectors::Position::BEFORE;
   } else {
-    myListPosition = storage::Vectors::Position::AFTER;
+    myListPosition = stor::Vectors::Position::AFTER;
   }
 
   auto myRet = theVectors.insert(myName, myListPosition, myPivot, myValue);
@@ -144,11 +144,11 @@ grpc::Status CommandsVector::vectorSet(grpc::ServerContext*,
   const auto myRet = theVectors.set(myName, myIndex, myValue);
 
   switch (myRet) {
-    case storage::Vectors::Status::OK:
+    case stor::Vectors::Status::OK:
       return grpc::Status::OK;
-    case storage::Vectors::Status::OUT_OF_RANGE:
+    case stor::Vectors::Status::OUT_OF_RANGE:
       return grpc::Status(grpc::OUT_OF_RANGE, "list out of range");
-    case storage::Vectors::Status::NOT_FOUND:
+    case stor::Vectors::Status::NOT_FOUND:
       return grpc::Status(grpc::NOT_FOUND, "list not found");
   };
 

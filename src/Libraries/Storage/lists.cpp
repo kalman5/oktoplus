@@ -1,7 +1,7 @@
 #include "Storage/lists.h"
 
 namespace okts {
-namespace storage {
+namespace stor {
 
 Lists::Lists()
     : Base()

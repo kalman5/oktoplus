@@ -8,7 +8,7 @@
 #include <memory>
 
 namespace okts {
-namespace commands {
+namespace cmds {
 
 class CommandsDeque : virtual public Interface::Service
 {
@@ -41,20 +41,20 @@ class CommandsDeque : virtual public Interface::Service
   // BRPOPLPUSH
 
   grpc::Status dequeIndex(grpc::ServerContext*,
-                         const IndexRequest*,
-                         GetValueReply*) final override;
+                          const IndexRequest*,
+                          GetValueReply*) final override;
 
   grpc::Status dequeInsert(grpc::ServerContext*,
-                          const InsertRequest*,
-                          InsertReply*) final override;
+                           const InsertRequest*,
+                           InsertReply*) final override;
 
   grpc::Status dequeExistPushFront(grpc::ServerContext*,
-                                  const PushRequest*,
-                                  PushReply*) final override;
+                                   const PushRequest*,
+                                   PushReply*) final override;
 
   grpc::Status dequeRange(grpc::ServerContext*,
-                         const RangeRequest*,
-                         RangeReply*) final override;
+                          const RangeRequest*,
+                          RangeReply*) final override;
 
   grpc::Status dequeRemove(grpc::ServerContext*,
                           const RemoveRequest*,
@@ -67,14 +67,14 @@ class CommandsDeque : virtual public Interface::Service
   dequeTrim(grpc::ServerContext*, const TrimRequest*, TrimReply*) final override;
 
   grpc::Status dequePopBackPushFront(grpc::ServerContext*,
-                                    const PopPushRequest*,
-                                    PopPushReply*) final override;
+                                     const PopPushRequest*,
+                                     PopPushReply*) final override;
 
   grpc::Status dequeExistPushBack(grpc::ServerContext*,
-                                 const PushRequest*,
-                                 PushReply*) final override;
+                                  const PushRequest*,
+                                  PushReply*) final override;
 
-  storage::Deques theQueues;
+  stor::Deques theQueues;
 };
 
 } // namespace commands

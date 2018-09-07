@@ -9,7 +9,7 @@
 #include <vector>
 
 namespace okts {
-namespace storage {
+namespace stor {
 
 template <class CONTAINER>
 class FrontOnlyOperations : virtual public GenericContainer<CONTAINER>

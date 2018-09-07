@@ -9,7 +9,7 @@
 #include <string>
 
 namespace okts {
-namespace storage {
+namespace stor {
 
 class Deques : public BackOperations<std::deque<std::string>>,
                public FrontOnlyOperations<std::deque<std::string>>

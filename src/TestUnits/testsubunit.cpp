@@ -1,9 +1,13 @@
+#include "Support/googleraii.h"
+
 #include <glog/logging.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include <google/protobuf/stubs/common.h>
+
+namespace oksu = okts::sup;
 
 class OktoplusEnvironment : public ::testing::Environment
 {
@@ -21,8 +25,10 @@ int main(int argc, char** argv) {
 
   try {
 
-    ::google::InitGoogleLogging(argv[0]);
-    ::google::LogToStderr();
+    oksu::GoogleRaii myShutdowner(argv[0], true, true);
+
+    //::google::InitGoogleLogging(argv[0]);
+    //::google::LogToStderr();
 
     ::testing::InitGoogleMock(&argc, argv);
     ::testing::AddGlobalTestEnvironment(new OktoplusEnvironment);
@@ -33,8 +39,8 @@ int main(int argc, char** argv) {
     // Gtest part
     myGTestProblem = RUN_ALL_TESTS();
 
-    ::google::protobuf::ShutdownProtobufLibrary();
-    ::google::ShutdownGoogleLogging();
+    //::google::protobuf::ShutdownProtobufLibrary();
+    //::google::ShutdownGoogleLogging();
   } catch (...) {
     std::cerr << "Unspecified error thrown" << std::endl;
     return -1;
