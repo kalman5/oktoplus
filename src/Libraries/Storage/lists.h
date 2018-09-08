@@ -23,5 +23,5 @@ class Lists : public BackOperations<std::list<std::string>>,
   Lists();
 };
 
-} // namespace storage
+} // namespace stor
 } // namespace okts

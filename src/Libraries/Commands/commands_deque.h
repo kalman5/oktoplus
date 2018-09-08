@@ -17,24 +17,24 @@ class CommandsDeque : virtual public Interface::Service
 
  private:
   grpc::Status dequePushFront(grpc::ServerContext*,
+                              const PushRequest*,
+                              PushReply*) final override;
+
+  grpc::Status dequePushBack(grpc::ServerContext*,
                              const PushRequest*,
                              PushReply*) final override;
 
-  grpc::Status dequePushBack(grpc::ServerContext*,
-                            const PushRequest*,
-                            PushReply*) final override;
-
   grpc::Status dequePopFront(grpc::ServerContext*,
+                             const GetValueRequest*,
+                             GetValueReply*) final override;
+
+  grpc::Status dequePopBack(grpc::ServerContext*,
                             const GetValueRequest*,
                             GetValueReply*) final override;
 
-  grpc::Status dequePopBack(grpc::ServerContext*,
-                           const GetValueRequest*,
-                           GetValueReply*) final override;
-
   grpc::Status dequeLength(grpc::ServerContext*,
-                          const LengthRequest*,
-                          LengthReply*) final override;
+                           const LengthRequest*,
+                           LengthReply*) final override;
 
   // BLPOP
   // BRPOP
@@ -57,14 +57,15 @@ class CommandsDeque : virtual public Interface::Service
                           RangeReply*) final override;
 
   grpc::Status dequeRemove(grpc::ServerContext*,
-                          const RemoveRequest*,
-                          RemoveReply*) final override;
+                           const RemoveRequest*,
+                           RemoveReply*) final override;
 
   grpc::Status
   dequeSet(grpc::ServerContext*, const SetRequest*, SetReply*) final override;
 
-  grpc::Status
-  dequeTrim(grpc::ServerContext*, const TrimRequest*, TrimReply*) final override;
+  grpc::Status dequeTrim(grpc::ServerContext*,
+                         const TrimRequest*,
+                         TrimReply*) final override;
 
   grpc::Status dequePopBackPushFront(grpc::ServerContext*,
                                      const PopPushRequest*,
@@ -77,5 +78,5 @@ class CommandsDeque : virtual public Interface::Service
   stor::Deques theQueues;
 };
 
-} // namespace commands
+} // namespace cmds
 } // namespace okts

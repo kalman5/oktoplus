@@ -100,5 +100,5 @@ std::string CommandsClient::listPopFront(const std::string& aListName) {
 //   return grpc::Status::OK;
 // }
 
-} // namespace commands
+} // namespace cmds
 } // namespace okts

@@ -35,5 +35,5 @@ class CommandsClient final
   std::unique_ptr<Interface::Stub> theStub;
 };
 
-} // namespace cmd
+} // namespace cmds
 } // namespace okts

@@ -23,5 +23,5 @@ class Deques : public BackOperations<std::deque<std::string>>,
   Deques();
 };
 
-} // namespace storage
+} // namespace stor
 } // namespace okts

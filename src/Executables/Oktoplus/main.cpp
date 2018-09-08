@@ -8,7 +8,7 @@
 
 namespace okcmds = okts::cmds;
 namespace okcfgs = okts::cfgs;
-namespace oksu = okts::sup;
+namespace oksu   = okts::sup;
 
 int main(int argc, char** argv) {
 
@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
 
     if (myCommandLine.generateFile()) {
       okcfgs::DefaultConfiguration myDefault;
-      okcfgs::JsonConfiguration myJson(myDefault);
+      okcfgs::JsonConfiguration    myJson(myDefault);
       myJson.dump(myCommandLine.configurationFile());
       return EXIT_SUCCESS;
     }
@@ -31,7 +31,8 @@ int main(int argc, char** argv) {
     okcfgs::OktoplusConfiguration myOktoplusConfiguration;
 
     if (myCommandLine.configurationFileSpecified()) {
-      okcfgs::JsonConfiguration myJsonConfiguration(myCommandLine.configurationFile());
+      okcfgs::JsonConfiguration myJsonConfiguration(
+          myCommandLine.configurationFile());
       myOktoplusConfiguration.addConfiguration(myJsonConfiguration);
     }
 

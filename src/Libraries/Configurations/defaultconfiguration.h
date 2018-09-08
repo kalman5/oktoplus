@@ -17,5 +17,5 @@ class DefaultConfiguration : public OktoplusConfiguration
   ~DefaultConfiguration() override = default;
 };
 
-} // namespace cfg
+} // namespace cfgs
 } // namespace okts

@@ -13,8 +13,8 @@ CommandsDeque::CommandsDeque()
 }
 
 grpc::Status CommandsDeque::dequePushFront(grpc::ServerContext*,
-                                         const PushRequest* aRequest,
-                                         PushReply*         aReply) {
+                                           const PushRequest* aRequest,
+                                           PushReply*         aReply) {
 
   std::vector<std::string_view> myStrings;
   myStrings.reserve(aRequest->values_size());
@@ -32,8 +32,8 @@ grpc::Status CommandsDeque::dequePushFront(grpc::ServerContext*,
 }
 
 grpc::Status CommandsDeque::dequePushBack(grpc::ServerContext*,
-                                        const PushRequest* aRequest,
-                                        PushReply*         aReply) {
+                                          const PushRequest* aRequest,
+                                          PushReply*         aReply) {
 
   std::vector<std::string_view> myStrings;
   myStrings.reserve(aRequest->values_size());
@@ -51,8 +51,8 @@ grpc::Status CommandsDeque::dequePushBack(grpc::ServerContext*,
 }
 
 grpc::Status CommandsDeque::dequePopFront(grpc::ServerContext*,
-                                        const GetValueRequest* aRequest,
-                                        GetValueReply*         aReply) {
+                                          const GetValueRequest* aRequest,
+                                          GetValueReply*         aReply) {
 
   const auto& myName = aRequest->name();
 
@@ -66,8 +66,8 @@ grpc::Status CommandsDeque::dequePopFront(grpc::ServerContext*,
 }
 
 grpc::Status CommandsDeque::dequePopBack(grpc::ServerContext*,
-                                       const GetValueRequest* aRequest,
-                                       GetValueReply*         aReply) {
+                                         const GetValueRequest* aRequest,
+                                         GetValueReply*         aReply) {
   const std::string& myName = aRequest->name();
 
   auto myRet = theQueues.popBack(myName);
@@ -80,8 +80,8 @@ grpc::Status CommandsDeque::dequePopBack(grpc::ServerContext*,
 }
 
 grpc::Status CommandsDeque::dequeLength(grpc::ServerContext*,
-                                      const LengthRequest* aRequest,
-                                      LengthReply*         aReply) {
+                                        const LengthRequest* aRequest,
+                                        LengthReply*         aReply) {
   const auto& myName = aRequest->name();
 
   auto myRet = theQueues.size(myName);
@@ -96,8 +96,8 @@ grpc::Status CommandsDeque::dequeLength(grpc::ServerContext*,
 // BRPOPLPUSH
 
 grpc::Status CommandsDeque::dequeIndex(grpc::ServerContext*,
-                                     const IndexRequest* aRequest,
-                                     GetValueReply*  aReply) {
+                                       const IndexRequest* aRequest,
+                                       GetValueReply*      aReply) {
   const auto& myName  = aRequest->name();
   const auto  myIndex = aRequest->index();
 
@@ -111,16 +111,15 @@ grpc::Status CommandsDeque::dequeIndex(grpc::ServerContext*,
 }
 
 grpc::Status CommandsDeque::dequeInsert(grpc::ServerContext*,
-                                      const InsertRequest* aRequest,
-                                      InsertReply*         aReply) {
+                                        const InsertRequest* aRequest,
+                                        InsertReply*         aReply) {
   const auto& myName     = aRequest->name();
   const auto  myPosition = aRequest->position();
   const auto& myPivot    = aRequest->pivot();
   const auto& myValue    = aRequest->value();
 
   stor::Deques::Position myListPosition;
-  if (myPosition ==
-      InsertRequest::Position::InsertRequest_Position_BEFORE) {
+  if (myPosition == InsertRequest::Position::InsertRequest_Position_BEFORE) {
     myListPosition = stor::Deques::Position::BEFORE;
   } else {
     myListPosition = stor::Deques::Position::AFTER;
@@ -136,8 +135,8 @@ grpc::Status CommandsDeque::dequeInsert(grpc::ServerContext*,
 }
 
 grpc::Status CommandsDeque::dequeExistPushFront(grpc::ServerContext*,
-                                              const PushRequest* aRequest,
-                                              PushReply*         aReply) {
+                                                const PushRequest* aRequest,
+                                                PushReply*         aReply) {
 
   std::vector<std::string_view> myStrings;
   myStrings.reserve(aRequest->values_size());
@@ -155,8 +154,8 @@ grpc::Status CommandsDeque::dequeExistPushFront(grpc::ServerContext*,
 }
 
 grpc::Status CommandsDeque::dequeRange(grpc::ServerContext*,
-                                     const RangeRequest* aRequest,
-                                     RangeReply*         aReply) {
+                                       const RangeRequest* aRequest,
+                                       RangeReply*         aReply) {
 
   const auto& myName  = aRequest->name();
   const auto  myStart = aRequest->start();
@@ -172,8 +171,8 @@ grpc::Status CommandsDeque::dequeRange(grpc::ServerContext*,
 }
 
 grpc::Status CommandsDeque::dequeRemove(grpc::ServerContext*,
-                                      const RemoveRequest* aRequest,
-                                      RemoveReply*         aReply) {
+                                        const RemoveRequest* aRequest,
+                                        RemoveReply*         aReply) {
 
   const auto& myName    = aRequest->name();
   const auto  myCounter = aRequest->count();
@@ -187,8 +186,8 @@ grpc::Status CommandsDeque::dequeRemove(grpc::ServerContext*,
 }
 
 grpc::Status CommandsDeque::dequeSet(grpc::ServerContext*,
-                                   const SetRequest* aRequest,
-                                   SetReply*) {
+                                     const SetRequest* aRequest,
+                                     SetReply*) {
 
   const auto& myName  = aRequest->name();
   const auto  myIndex = aRequest->index();
@@ -239,8 +238,8 @@ CommandsDeque::dequePopBackPushFront(grpc::ServerContext*,
 }
 
 grpc::Status CommandsDeque::dequeExistPushBack(grpc::ServerContext*,
-                                             const PushRequest* aRequest,
-                                             PushReply*         aReply) {
+                                               const PushRequest* aRequest,
+                                               PushReply*         aReply) {
 
   std::vector<std::string_view> myStrings;
   myStrings.reserve(aRequest->values_size());
@@ -257,5 +256,5 @@ grpc::Status CommandsDeque::dequeExistPushBack(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-} // namespace commands
+} // namespace cmds
 } // namespace okts

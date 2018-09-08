@@ -9,7 +9,7 @@
 namespace okts {
 namespace cfgs {
 
-//class OktoplusConfiguration;
+// class OktoplusConfiguration;
 
 class JsonConfiguration : public OktoplusConfiguration
 {
@@ -23,9 +23,10 @@ class JsonConfiguration : public OktoplusConfiguration
 
   void dump();
   void dump(const std::string& aPath);
+
  private:
   const std::string theConfigurationFile;
 };
 
-} // namespace cfg
+} // namespace cfgs
 } // namespace okts

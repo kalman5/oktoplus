@@ -8,5 +8,5 @@ Deques::Deques()
     , Base2() {
 }
 
-} // namespace storage
+} // namespace stor
 } // namespace okts

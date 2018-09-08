@@ -23,5 +23,5 @@ class CommandsServer : public CommandsList
   std::unique_ptr<::grpc::Server>            theServer;
 };
 
-} // namespace commands
+} // namespace cmds
 } // namespace okts

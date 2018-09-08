@@ -24,5 +24,5 @@ class OktoplusConfiguration
   std::string theEndpoint;
 };
 
-} // namespace cfg
+} // namespace cfgs
 } // namespace okts

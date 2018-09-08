@@ -38,7 +38,4 @@ TEST_F(TestConfiguration, ctor) {
     myOktoplusConfiguration.addConfiguration(myJsonConfiguration);
     ASSERT_EQ(myDefault.endpoint(), myOktoplusConfiguration.endpoint());
   }
-
 }
-
-

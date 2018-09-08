@@ -33,5 +33,5 @@ class GenericContainer
   sup::ContainerFunctorApplier<CONTAINER> theApplyer;
 };
 
-} // namespace storage
+} // namespace stor
 } // namespace okts

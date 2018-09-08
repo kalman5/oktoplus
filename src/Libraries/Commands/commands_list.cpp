@@ -97,7 +97,7 @@ grpc::Status CommandsList::listLength(grpc::ServerContext*,
 
 grpc::Status CommandsList::listIndex(grpc::ServerContext*,
                                      const IndexRequest* aRequest,
-                                     GetValueReply*  aReply) {
+                                     GetValueReply*      aReply) {
   const auto& myName  = aRequest->name();
   const auto  myIndex = aRequest->index();
 
@@ -119,8 +119,7 @@ grpc::Status CommandsList::listInsert(grpc::ServerContext*,
   const auto& myValue    = aRequest->value();
 
   stor::Lists::Position myListPosition;
-  if (myPosition ==
-      InsertRequest::Position::InsertRequest_Position_BEFORE) {
+  if (myPosition == InsertRequest::Position::InsertRequest_Position_BEFORE) {
     myListPosition = stor::Lists::Position::BEFORE;
   } else {
     myListPosition = stor::Lists::Position::AFTER;
@@ -221,10 +220,9 @@ grpc::Status CommandsList::listTrim(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-grpc::Status
-CommandsList::listPopBackPushFront(grpc::ServerContext*,
-                                   const PopPushRequest* aRequest,
-                                   PopPushReply*         aReply) {
+grpc::Status CommandsList::listPopBackPushFront(grpc::ServerContext*,
+                                                const PopPushRequest* aRequest,
+                                                PopPushReply*         aReply) {
 
   const auto& mySourceName      = aRequest->source_name();
   const auto& myDestinationName = aRequest->destination_name();
@@ -257,5 +255,5 @@ grpc::Status CommandsList::listExistPushBack(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-} // namespace commands
+} // namespace cmds
 } // namespace okts

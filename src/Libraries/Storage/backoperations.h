@@ -60,5 +60,5 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
 
 #include "Storage/backoperations.inl"
 
-} // namespace storage
+} // namespace stor
 } // namespace okts

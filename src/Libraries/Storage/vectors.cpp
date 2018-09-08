@@ -7,5 +7,5 @@ Vectors::Vectors()
     : Base() {
 }
 
-} // namespace storage
+} // namespace stor
 } // namespace okts

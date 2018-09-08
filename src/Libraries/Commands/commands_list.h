@@ -77,5 +77,5 @@ class CommandsList : virtual public Interface::Service
   stor::Lists theLists;
 };
 
-} // namespace commands
+} // namespace cmds
 } // namespace okts

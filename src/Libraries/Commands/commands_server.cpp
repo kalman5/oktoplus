@@ -39,5 +39,5 @@ void CommandsServer::shutdown() {
   theServer->Shutdown();
 }
 
-} // namespace commands
+} // namespace cmds
 } // namespace okts

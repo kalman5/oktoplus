@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<results version="2">
+    <cppcheck version="1.84"/>
+    <errors>
+        <error id="passedByValue" severity="performance" msg="Function parameter &apos;aValues&apos; should be passed by const reference." verbose="Parameter &apos;aValues&apos; is passed by value. It could be passed as a const reference which is usually faster and recommended in C++." cwe="398">
+            <location file="../src/Libraries/Commands/commands_client.cpp" line="18"/>
+        </error>
+        <error id="passedByValue" severity="performance" msg="Function parameter &apos;myValues&apos; should be passed by const reference." verbose="Parameter &apos;myValues&apos; is passed by value. It could be passed as a const reference which is usually faster and recommended in C++." cwe="398">
+            <location file="../src/Libraries/Commands/commands_client.h" line="19"/>
+        </error>
+        <error id="unmatchedSuppression" severity="information" msg="Unmatched suppression: syntaxError" verbose="Unmatched suppression: syntaxError"/>
+        <error id="unmatchedSuppression" severity="information" msg="Unmatched suppression: unusedPrivateFunction" verbose="Unmatched suppression: unusedPrivateFunction"/>
+    </errors>
+</results>

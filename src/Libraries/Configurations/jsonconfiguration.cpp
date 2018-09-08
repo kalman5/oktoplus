@@ -10,18 +10,16 @@
 namespace okts {
 namespace cfgs {
 
-JsonConfiguration::JsonConfiguration(
-    const std::string& aConfigurationFile)
+JsonConfiguration::JsonConfiguration(const std::string& aConfigurationFile)
     : OktoplusConfiguration()
-    , theConfigurationFile(aConfigurationFile)
-{
+    , theConfigurationFile(aConfigurationFile) {
   std::ifstream myConfigurationStream(aConfigurationFile,
                                       std::ifstream::binary);
 
   if (!myConfigurationStream) {
     std::stringstream myError;
-    myError << "Not able to open configuration file: '"
-            << aConfigurationFile << "'";
+    myError << "Not able to open configuration file: '" << aConfigurationFile
+            << "'";
     throw std::runtime_error(myError.str());
   }
 
@@ -40,10 +38,10 @@ JsonConfiguration::JsonConfiguration(
   }
 }
 
-JsonConfiguration::JsonConfiguration(const OktoplusConfiguration& aConfiguration)
+JsonConfiguration::JsonConfiguration(
+    const OktoplusConfiguration& aConfiguration)
     : OktoplusConfiguration()
-    , theConfigurationFile()
-{
+    , theConfigurationFile() {
   theEndpoint = aConfiguration.endpoint();
 }
 
@@ -51,8 +49,6 @@ void JsonConfiguration::dump() {
   if (theConfigurationFile.empty()) {
     throw std::runtime_error("Can not json dump without a file");
   }
-
-
 }
 
 void JsonConfiguration::dump(const std::string& aConfigurationFile) {
@@ -69,8 +65,7 @@ void JsonConfiguration::dump(const std::string& aConfigurationFile) {
   myRoot["endpoint"] = theEndpoint;
 
   myConfigurationStream << myRoot;
-
 }
 
-} // namespace cfg
+} // namespace cfgs
 } // namespace okts

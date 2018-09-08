@@ -21,6 +21,8 @@ CommandLineConfiguration::CommandLineConfiguration(int aArgc, char** aArgv)
   DefaultConfiguration myDefaultConfiguration;
 
   bpo::options_description desc("Allowed options");
+
+  // clang-format off
   desc.add_options()
       ("help", "produce help message")
       ("template,m", "generate a default json configuration file")
@@ -28,9 +30,11 @@ CommandLineConfiguration::CommandLineConfiguration(int aArgc, char** aArgv)
        bpo::value<std::string>(&theConfigurationFilePath),
        "configuration file path")
       ("endpoint,e",
-       bpo::value<std::string>(&theEndpoint)->default_value(myDefaultConfiguration.endpoint()),
+       bpo::value<std::string>(&theEndpoint)
+                 ->default_value(myDefaultConfiguration.endpoint()),
        "set end point")
   ;
+  // clang-format on
 
   bpo::variables_map vm;
   bpo::store(bpo::parse_command_line(aArgc, aArgv, desc), vm);
@@ -53,5 +57,3 @@ CommandLineConfiguration::CommandLineConfiguration(int aArgc, char** aArgv)
 
 } // namespace cfgs
 } // namespace okts
-
-

@@ -43,5 +43,5 @@ class FrontOnlyOperations : virtual public GenericContainer<CONTAINER>
 
 #include "Storage/frontonlyoperations.inl"
 
-} // namespace storage
+} // namespace stor
 } // namespace okts

@@ -10,5 +10,5 @@ DefaultConfiguration::DefaultConfiguration()
   theEndpoint = "127.0.0.1:2323";
 }
 
-} // namespace cfg
+} // namespace cfgs
 } // namespace okts

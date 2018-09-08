@@ -20,5 +20,5 @@ class Vectors : public BackOperations<std::vector<std::string>>
   Vectors();
 };
 
-} // namespace storage
+} // namespace stor
 } // namespace okts

@@ -159,9 +159,9 @@ TEST_F(TestLists, insert) {
   ASSERT_EQ(5,
             myLists.insert("l1", oktss::Lists::Position::BEFORE, "two", "one.5")
                 .get());
-  ASSERT_EQ(
-      6,
-      myLists.insert("l1", oktss::Lists::Position::AFTER, "two", "two.5").get());
+  ASSERT_EQ(6,
+            myLists.insert("l1", oktss::Lists::Position::AFTER, "two", "two.5")
+                .get());
   ASSERT_EQ(
       7,
       myLists.insert("l1", oktss::Lists::Position::AFTER, "three", "three.5")
@@ -190,141 +190,117 @@ TEST_F(TestLists, range) {
 
   ASSERT_EQ(3u, myLists.size("l1"));
 
-  ASSERT_EQ(
-    std::vector<std::string>({"1", "2", "3"}),
-    myLists.range("l1", 0, 2));
+  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
+            myLists.range("l1", 0, 2));
 
-  ASSERT_EQ(
-    std::vector<std::string>({"1", "2", "3"}),
-    myLists.range("l1", 0, 20));
+  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
+            myLists.range("l1", 0, 20));
 
-  ASSERT_EQ(
-    std::vector<std::string>({"2", "3"}),
-    myLists.range("l1", 1, 2));
+  ASSERT_EQ(std::vector<std::string>({"2", "3"}), myLists.range("l1", 1, 2));
 
-  ASSERT_EQ(
-    std::vector<std::string>({"2", "3"}),
-    myLists.range("l1", 1, 20));
+  ASSERT_EQ(std::vector<std::string>({"2", "3"}), myLists.range("l1", 1, 20));
 
-  ASSERT_EQ(
-    std::vector<std::string>(),
-    myLists.range("l1", 10, 20));
+  ASSERT_EQ(std::vector<std::string>(), myLists.range("l1", 10, 20));
 
-  ASSERT_EQ(
-    std::vector<std::string>({"1", "2", "3"}),
-    myLists.range("l1", -3, -1));
+  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
+            myLists.range("l1", -3, -1));
 
-  ASSERT_EQ(
-    std::vector<std::string>({"1", "2", "3"}),
-    myLists.range("l1", -30, -1));
+  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
+            myLists.range("l1", -30, -1));
 
-  ASSERT_EQ(
-    std::vector<std::string>({"1", "2"}),
-    myLists.range("l1", -30, -2));
+  ASSERT_EQ(std::vector<std::string>({"1", "2"}), myLists.range("l1", -30, -2));
 
-  ASSERT_EQ(
-    std::vector<std::string>(),
-    myLists.range("l1", -30, -10));
+  ASSERT_EQ(std::vector<std::string>(), myLists.range("l1", -30, -10));
 
-  ASSERT_EQ(
-    std::vector<std::string>({"1", "2"}),
-    myLists.range("l1", -30, 1));
+  ASSERT_EQ(std::vector<std::string>({"1", "2"}), myLists.range("l1", -30, 1));
 
-  ASSERT_EQ(
-    std::vector<std::string>({"1", "2", "3"}),
-    myLists.range("l1", -30, 30));
+  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
+            myLists.range("l1", -30, 30));
 }
-
 
 TEST_F(TestLists, remove) {
 
   { // Not existing element
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(0u, myLists.remove("l1", 0, "7"));
     ASSERT_EQ(0u, myLists.remove("l1", -1, "7"));
     ASSERT_EQ(0u, myLists.remove("l1", 1, "7"));
 
     ASSERT_EQ(
-      std::vector<std::string>({"1","3","3","3","4","3","6","6"}),
-      myLists.range("l1", -30, 30));
+        std::vector<std::string>({"1", "3", "3", "3", "4", "3", "6", "6"}),
+        myLists.range("l1", -30, 30));
   }
 
   { // all occurencies
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myLists.remove("l1", 0, "3"));
 
-
-    ASSERT_EQ(
-      std::vector<std::string>({"1","4","6","6"}),
-      myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
+              myLists.range("l1", -30, 30));
   }
 
   { // more than in the list from beginning
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myLists.remove("l1", 20, "3"));
 
-
-    ASSERT_EQ(
-      std::vector<std::string>({"1","4","6","6"}),
-      myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
+              myLists.range("l1", -30, 30));
   }
 
   { // same amount from left
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myLists.remove("l1", 4, "3"));
 
-
-    ASSERT_EQ(
-      std::vector<std::string>({"1","4","6","6"}),
-      myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
+              myLists.range("l1", -30, 30));
   }
 
   { // less amount from left
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(2u, myLists.remove("l1", 2, "3"));
 
-
-    ASSERT_EQ(
-      std::vector<std::string>({"1","3","4","3","6","6"}),
-      myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({"1", "3", "4", "3", "6", "6"}),
+              myLists.range("l1", -30, 30));
   }
 
   { // more than in the list from right
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myLists.remove("l1", -20, "3"));
 
-
-    ASSERT_EQ(
-      std::vector<std::string>({"1","4","6","6"}),
-      myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
+              myLists.range("l1", -30, 30));
   }
 
   { // same amount from right
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myLists.remove("l1", -4, "3"));
 
-
-    ASSERT_EQ(
-      std::vector<std::string>({"1","4","6","6"}),
-      myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
+              myLists.range("l1", -30, 30));
   }
 
   { // less amount from right
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(3u, myLists.remove("l1", -3, "3"));
 
-
-    ASSERT_EQ(
-      std::vector<std::string>({"1","3","4","6","6"}),
-      myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({"1", "3", "4", "6", "6"}),
+              myLists.range("l1", -30, 30));
   }
 }
 
@@ -333,38 +309,35 @@ TEST_F(TestLists, set) {
   { // Not existing list
     oktss::Lists myLists;
 
-    ASSERT_EQ(oktss::Lists::Status::NOT_FOUND,
-              myLists.set("xxxx", 2, "3"));
+    ASSERT_EQ(oktss::Lists::Status::NOT_FOUND, myLists.set("xxxx", 2, "3"));
   }
 
   { // OUT OF RANGE
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","3","3","3","4","3","6","6"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
 
-    ASSERT_EQ(oktss::Lists::Status::OUT_OF_RANGE,
-              myLists.set("l1", 30, "3"));
+    ASSERT_EQ(oktss::Lists::Status::OUT_OF_RANGE, myLists.set("l1", 30, "3"));
 
-    ASSERT_EQ(oktss::Lists::Status::OUT_OF_RANGE,
-              myLists.set("l1", -30, "3"));
+    ASSERT_EQ(oktss::Lists::Status::OUT_OF_RANGE, myLists.set("l1", -30, "3"));
   }
 
   { // valid range
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"1","2","3","4","5","6","7","8"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"1", "2", "3", "4", "5", "6", "7", "8"}));
 
-    ASSERT_EQ(oktss::Lists::Status::OK,
-              myLists.set("l1", 3, "40"));
-
-    ASSERT_EQ(
-      std::vector<std::string>({"1","2","3","40","5","6","7","8"}),
-      myLists.range("l1", -30, 30));
-
-    ASSERT_EQ(oktss::Lists::Status::OK,
-              myLists.set("l1", -3, "60"));
+    ASSERT_EQ(oktss::Lists::Status::OK, myLists.set("l1", 3, "40"));
 
     ASSERT_EQ(
-      std::vector<std::string>({"1","2","3","40","5","60","7","8"}),
-      myLists.range("l1", -30, 30));
+        std::vector<std::string>({"1", "2", "3", "40", "5", "6", "7", "8"}),
+        myLists.range("l1", -30, 30));
+
+    ASSERT_EQ(oktss::Lists::Status::OK, myLists.set("l1", -3, "60"));
+
+    ASSERT_EQ(
+        std::vector<std::string>({"1", "2", "3", "40", "5", "60", "7", "8"}),
+        myLists.range("l1", -30, 30));
   }
 }
 
@@ -380,7 +353,7 @@ TEST_F(TestLists, pop_back_push_front) {
   {
     oktss::Lists myLists;
 
-    ASSERT_EQ(2u, myLists.pushBack("l1", {"0","1"}));
+    ASSERT_EQ(2u, myLists.pushBack("l1", {"0", "1"}));
     ASSERT_EQ("1", myLists.popBackPushFront("l1", "l2").get());
     ASSERT_EQ(2u, myLists.hostedKeys());
 
@@ -395,7 +368,7 @@ TEST_F(TestLists, pop_back_push_front) {
   {
     oktss::Lists myLists;
 
-    ASSERT_EQ(3u, myLists.pushBack("l1", {"0","1","2"}));
+    ASSERT_EQ(3u, myLists.pushBack("l1", {"0", "1", "2"}));
     ASSERT_EQ("2", myLists.popBackPushFront("l1", "l1").get());
     ASSERT_EQ("1", myLists.popBackPushFront("l1", "l1").get());
 
@@ -410,80 +383,79 @@ TEST_F(TestLists, trim) {
 
   {
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"0", "1", "2", "3", "4", "5", "6", "7"}));
 
     myLists.trim("l1", 0, 7);
 
     ASSERT_EQ(
-      std::vector<std::string>({"0","1","2","3","4","5","6","7"}),
-      myLists.range("l1", -30, 30));
+        std::vector<std::string>({"0", "1", "2", "3", "4", "5", "6", "7"}),
+        myLists.range("l1", -30, 30));
   }
 
   {
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"0", "1", "2", "3", "4", "5", "6", "7"}));
 
     myLists.trim("l1", -8, -1);
 
     ASSERT_EQ(
-      std::vector<std::string>({"0","1","2","3","4","5","6","7"}),
-      myLists.range("l1", -30, 30));
+        std::vector<std::string>({"0", "1", "2", "3", "4", "5", "6", "7"}),
+        myLists.range("l1", -30, 30));
   }
 
   {
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"0", "1", "2", "3", "4", "5", "6", "7"}));
 
     myLists.trim("l1", 5, 4);
 
-    ASSERT_EQ(
-      std::vector<std::string>({}),
-      myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({}), myLists.range("l1", -30, 30));
     ASSERT_EQ(0u, myLists.hostedKeys());
   }
 
   {
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"0", "1", "2", "3", "4", "5", "6", "7"}));
 
     myLists.trim("l1", 15, 30);
 
-    ASSERT_EQ(
-      std::vector<std::string>({}),
-      myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({}), myLists.range("l1", -30, 30));
     ASSERT_EQ(0u, myLists.hostedKeys());
   }
 
   {
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"0", "1", "2", "3", "4", "5", "6", "7"}));
 
     myLists.trim("l1", 1, 6);
 
-    ASSERT_EQ(
-      std::vector<std::string>({"1","2","3","4","5","6"}),
-      myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({"1", "2", "3", "4", "5", "6"}),
+              myLists.range("l1", -30, 30));
   }
 
   {
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"0", "1", "2", "3", "4", "5", "6", "7"}));
 
     myLists.trim("l1", 5, 5);
 
-    ASSERT_EQ(
-      std::vector<std::string>({"5"}),
-      myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({"5"}), myLists.range("l1", -30, 30));
   }
 
   {
     oktss::Lists myLists;
-    ASSERT_EQ(8u, myLists.pushBack("l1", {"0","1","2","3","4","5","6","7"}));
+    ASSERT_EQ(8u,
+              myLists.pushBack("l1", {"0", "1", "2", "3", "4", "5", "6", "7"}));
 
     myLists.trim("l1", 5, 50);
 
-    ASSERT_EQ(
-      std::vector<std::string>({"5","6","7"}),
-      myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({"5", "6", "7"}),
+              myLists.range("l1", -30, 30));
   }
 }
