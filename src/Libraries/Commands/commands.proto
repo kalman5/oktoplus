@@ -1,6 +1,8 @@
 syntax = "proto3";
 
 import "types.proto";
+import "list_messages.proto";
+import "set_messages.proto";
 
 package okts.cmds;
 
@@ -61,126 +63,25 @@ service Interface {
   rpc dequeTrim(TrimRequest)                    returns (TrimReply)     { }  // LTRIM
   rpc dequePopBackPushFront(PopPushRequest)     returns (PopPushReply)  { }  // RPOPLPUSH
   rpc dequeExistPushBack(PushRequest)           returns (PushReply)     { }  // RPUSHX
-}
 
-//////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////
 
-message PushRequest {
-  string name            = 1;
-  repeated string values = 2;
-}
+  // SET
 
-message PushReply {
-  ResultInfo info = 1;
-  uint64     size = 2;
-}
+  rpc setAdd(SetAddRequest)   returns (SetAddReply)  { }     // SADD
+  rpc setCard(SetCardRequest) returns (SetCardReply) { }     // SCARD
+  rpc setDiff(SetDiffRequest) returns (SetDiffReply) { }     // SDIFF
+    // SDIFFSTORE
+    // SINTER
+    // SINTERSTORE
+    // SISMEMBER
+    // SMEMBERS
+    // SMOVE
+    // SPOP
+    // SRANDMEMBER
+    // SREM
+    // SSCAN
+    // SUNION
+    // SUNIONSTORE
 
-//////////////////////////////////////////////////////
-
-message GetValueRequest {
-  string name = 1;
-}
-
-message GetValueReply {
-  ResultInfo info  = 1;
-  string     value = 2;
-}
-
-//////////////////////////////////////////////////////
-
-message LengthRequest {
-  string name = 1;
-}
-
-message LengthReply {
-  ResultInfo info  = 1;
-  uint64     value = 2;
-}
-
-//////////////////////////////////////////////////////
-
-message IndexRequest {
-  string name  = 1;
-  int64  index = 2;
-}
-
-//////////////////////////////////////////////////////
-
-message InsertRequest {
-  enum Position {
-    BEFORE          = 0;
-    AFTER           = 1;
-  }
-
-  string   name     = 1;
-  Position position = 2;
-  string   pivot    = 3;
-  string   value    = 4;
-}
-
-message InsertReply {
-  ResultInfo info  = 1;
-  int64      size  = 2;
-}
-
-//////////////////////////////////////////////////////
-
-message RangeRequest {
-  string name  = 1;
-  int64  start = 2;
-  int64  stop  = 3;
-}
-
-message RangeReply {
-  ResultInfo      info   = 1;
-  repeated string values = 2;
-}
-
-//////////////////////////////////////////////////////
-
-message RemoveRequest {
-  string name  = 1;
-  int64  count = 2;
-  string value = 3;
-}
-
-message RemoveReply {
-  ResultInfo info    = 1;
-  int64      removed = 2;
-}
-
-//////////////////////////////////////////////////////
-
-message SetRequest {
-  string name  = 1;
-  int64  index = 2;
-  string value = 3;
-}
-
-message SetReply {
-  ResultInfo info = 1;
-}
-
-//////////////////////////////////////////////////////
-
-message TrimRequest {
-  string name  = 1;
-  int64  start = 2;
-  int64  stop  = 3;
-}
-
-message TrimReply {
-  ResultInfo info = 1;
-}
-
-//////////////////////////////////////////////////////
-
-message PopPushRequest {
-  string source_name      = 1;
-  string destination_name = 2;
-}
-
-message PopPushReply {
-  ResultInfo info  = 1;
-  string     value = 2;
 }

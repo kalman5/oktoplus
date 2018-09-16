@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+import "types.proto";
+
+package okts.cmds;
+
+
+//////////////////////////////////////////////////////
+
+message SetAddRequest {
+  string name            = 1;
+  repeated string values = 2;
+}
+
+message SetAddReply {
+  ResultInfo info = 1;
+  uint64     size = 2;
+}
+
+//////////////////////////////////////////////////////
+
+message SetCardRequest {
+  string name            = 1;
+}
+
+message SetCardReply {
+  ResultInfo info = 1;
+  uint64     size = 2;
+}
+
+//////////////////////////////////////////////////////
+
+message SetDiffRequest {
+  string name            = 1;
+  repeated string values = 2;
+}
+
+message SetDiffReply {
+  ResultInfo info = 1;
+  repeated string values = 2;
+}

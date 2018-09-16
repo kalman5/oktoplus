@@ -1,6 +1,8 @@
 #pragma once
 
+#include "Commands/commands_deque.h"
 #include "Commands/commands_list.h"
+#include "Commands/commands_vector.h"
 
 #include <grpc++/grpc++.h>
 
@@ -9,7 +11,9 @@
 namespace okts {
 namespace cmds {
 
-class CommandsServer : public CommandsList
+class CommandsServer : public CommandsDeque,
+                       public CommandsList,
+                       public CommandsVector
 {
  public:
   CommandsServer(const std::string& myEndpoint);
