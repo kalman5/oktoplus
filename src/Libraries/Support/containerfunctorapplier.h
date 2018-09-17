@@ -42,10 +42,10 @@ class ContainerFunctorApplier
   struct ProtectedContainer {
     ProtectedContainer()
         : mutex(new ContainerMutex())
-        , list() {
+        , storage() {
     }
     std::unique_ptr<ContainerMutex> mutex;
-    Container                       list;
+    Container                       storage;
   };
 
   using Storage = std::unordered_map<std::string, ProtectedContainer>;
@@ -80,7 +80,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
   }
 
   assert(mySecondLevelLock->owns_lock());
-  aFunctor(myContainer->list);
+  aFunctor(myContainer->storage);
 }
 
 template <class CONTAINER>
@@ -135,8 +135,8 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
     }
 
     assert(mySecondLevelLock->owns_lock());
-    aFunctor(myContainer->list);
-    myHasBecomeEmpty = myContainer->list.empty();
+    aFunctor(myContainer->storage);
+    myHasBecomeEmpty = myContainer->storage.empty();
   }
 
   if (myHasBecomeEmpty) {
@@ -148,7 +148,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
     std::unique_ptr<ContainerMutex>   myMutex;
     boost::lock_guard<ContainerMutex> mySecondLevelLock(*myIt->second.mutex);
 
-    if (not myIt->second.list.empty()) {
+    if (not myIt->second.storage.empty()) {
       return;
     }
 
@@ -180,7 +180,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
   }
 
   assert(mySecondLevelLock->owns_lock());
-  aFunctor(myList->list);
+  aFunctor(myList->storage);
 }
 
 } // namespace sup

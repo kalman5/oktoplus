@@ -1,22 +1,24 @@
 
 template <class CONTAINER>
-size_t BackOperations<CONTAINER>::pushBack(const std::string&                 aName,
-                                           const std::vector<std::string_view>& aValues) {
+size_t BackOperations<CONTAINER>::pushBack(
+    const std::string& aName, const std::vector<std::string_view>& aValues) {
 
   size_t myRet;
 
-  Base::theApplyer.performOnNew(aName, [&myRet, &aValues](Container& aContainer) {
-    for (const auto& myString : aValues) {
-      aContainer.push_back(std::string(myString));
-    }
-    myRet = aContainer.size();
-  });
+  Base::theApplyer.performOnNew(aName,
+                                [&myRet, &aValues](Container& aContainer) {
+                                  for (const auto& myString : aValues) {
+                                    aContainer.push_back(std::string(myString));
+                                  }
+                                  myRet = aContainer.size();
+                                });
 
   return myRet;
 }
 
 template <class CONTAINER>
-boost::optional<std::string> BackOperations<CONTAINER>::popBack(const std::string& aName) {
+boost::optional<std::string>
+BackOperations<CONTAINER>::popBack(const std::string& aName) {
 
   boost::optional<std::string> myRet;
 
@@ -31,49 +33,52 @@ boost::optional<std::string> BackOperations<CONTAINER>::popBack(const std::strin
   return myRet;
 }
 
-
 template <class CONTAINER>
 size_t BackOperations<CONTAINER>::size(const std::string& aName) const {
 
   size_t myRet = 0;
 
   Base::theApplyer.performOnExisting(
-      aName, [&myRet](const Container& aContainer) { myRet = aContainer.size(); });
+      aName,
+      [&myRet](const Container& aContainer) { myRet = aContainer.size(); });
 
   return myRet;
 }
 
 template <class CONTAINER>
-boost::optional<std::string> BackOperations<CONTAINER>::index(const std::string& aName,
-                                                              int64_t            aIndex) const {
+boost::optional<std::string>
+BackOperations<CONTAINER>::index(const std::string& aName,
+                                 int64_t            aIndex) const {
 
   boost::optional<std::string> myRet;
 
-  Base::theApplyer.performOnExisting(aName, [&myRet, aIndex](const Container& aContainer) {
-    if (aIndex >= 0) {
-      if (size_t(aIndex) < aContainer.size()) {
-        auto myIt = aContainer.begin();
-        std::advance(myIt, aIndex);
-        myRet = *myIt;
-      }
-    } else {
-      auto myReverseIndex = size_t(std::abs(aIndex + 1));
-      if (myReverseIndex < aContainer.size()) {
-        auto myIt = aContainer.rbegin();
-        std::advance(myIt, myReverseIndex);
-        myRet = *myIt;
-      }
-    }
-  });
+  Base::theApplyer.performOnExisting(
+      aName, [&myRet, aIndex](const Container& aContainer) {
+        if (aIndex >= 0) {
+          if (size_t(aIndex) < aContainer.size()) {
+            auto myIt = aContainer.begin();
+            std::advance(myIt, aIndex);
+            myRet = *myIt;
+          }
+        } else {
+          auto myReverseIndex = size_t(std::abs(aIndex + 1));
+          if (myReverseIndex < aContainer.size()) {
+            auto myIt = aContainer.rbegin();
+            std::advance(myIt, myReverseIndex);
+            myRet = *myIt;
+          }
+        }
+      });
 
   return myRet;
 }
 
 template <class CONTAINER>
-boost::optional<int64_t> BackOperations<CONTAINER>::insert(const std::string& aName,
-                                         Position           aPosition,
-                                         const std::string& aPivot,
-                                         const std::string& aValue) {
+boost::optional<int64_t>
+BackOperations<CONTAINER>::insert(const std::string& aName,
+                                  Position           aPosition,
+                                  const std::string& aPivot,
+                                  const std::string& aValue) {
   boost::optional<int64_t> myRet;
 
   Base::theApplyer.performOnExisting(
@@ -96,8 +101,8 @@ boost::optional<int64_t> BackOperations<CONTAINER>::insert(const std::string& aN
 }
 
 template <class CONTAINER>
-std::vector<std::string>
-BackOperations<CONTAINER>::range(const std::string& aName, int64_t aStart, int64_t aStop) const {
+std::vector<std::string> BackOperations<CONTAINER>::range(
+    const std::string& aName, int64_t aStart, int64_t aStop) const {
 
   std::vector<std::string> myRet;
 
@@ -150,60 +155,61 @@ BackOperations<CONTAINER>::range(const std::string& aName, int64_t aStart, int64
 
 template <class CONTAINER>
 size_t BackOperations<CONTAINER>::remove(const std::string& aName,
-                     int64_t            aCount,
-                     const std::string& aValue) {
+                                         int64_t            aCount,
+                                         const std::string& aValue) {
   size_t myRet = 0;
 
-  Base::theApplyer.performOnExisting(aName, [&myRet, aCount, &aValue](Container& aContainer) {
-    if (aCount == 0) {
-      size_t myRemoved = 0;
-      for (auto myIt = aContainer.begin(); myIt != aContainer.end();) {
-        if (*myIt == aValue) {
-          myIt = aContainer.erase(myIt);
-          ++myRemoved;
+  Base::theApplyer.performOnExisting(
+      aName, [&myRet, aCount, &aValue](Container& aContainer) {
+        if (aCount == 0) {
+          size_t myRemoved = 0;
+          for (auto myIt = aContainer.begin(); myIt != aContainer.end();) {
+            if (*myIt == aValue) {
+              myIt = aContainer.erase(myIt);
+              ++myRemoved;
+            } else {
+              ++myIt;
+            }
+          }
+          myRet = myRemoved;
         } else {
-          ++myIt;
-        }
-      }
-      myRet = myRemoved;
-    } else {
 
-      auto myToRemove = std::abs(aCount);
+          auto myToRemove = std::abs(aCount);
 
-      if (aCount > 0) {
-        for (auto myIt = aContainer.begin();
-             myIt != aContainer.end() and myToRemove > 0;) {
-          if (*myIt == aValue) {
-            myIt = aContainer.erase(myIt);
-            --myToRemove;
+          if (aCount > 0) {
+            for (auto myIt = aContainer.begin();
+                 myIt != aContainer.end() and myToRemove > 0;) {
+              if (*myIt == aValue) {
+                myIt = aContainer.erase(myIt);
+                --myToRemove;
+              } else {
+                ++myIt;
+              }
+            }
           } else {
-            ++myIt;
+            for (auto myIt = aContainer.rbegin();
+                 myIt != aContainer.rend() and myToRemove > 0;) {
+              if (*myIt == aValue) {
+                myIt = typename Container::reverse_iterator(
+                    aContainer.erase(std::next(myIt).base()));
+                --myToRemove;
+              } else {
+                ++myIt;
+              }
+            }
           }
-        }
-      } else {
-        for (auto myIt = aContainer.rbegin();
-             myIt != aContainer.rend() and myToRemove > 0;) {
-          if (*myIt == aValue) {
-            myIt = typename Container::reverse_iterator(aContainer.erase(std::next(myIt).base()));
-            --myToRemove;
-          } else {
-            ++myIt;
-          }
-        }
-      }
 
-      assert(std::abs(aCount) >= myToRemove);
-      myRet = std::abs(aCount) - myToRemove;
-    }
-  });
+          assert(std::abs(aCount) >= myToRemove);
+          myRet = std::abs(aCount) - myToRemove;
+        }
+      });
 
   return myRet;
 }
 
 template <class CONTAINER>
-typename BackOperations<CONTAINER>::Status BackOperations<CONTAINER>::set(const std::string& aName,
-                         int64_t            aIndex,
-                         const std::string& aValue) {
+typename BackOperations<CONTAINER>::Status BackOperations<CONTAINER>::set(
+    const std::string& aName, int64_t aIndex, const std::string& aValue) {
 
   Status myRet = Status::OK;
 
@@ -238,68 +244,72 @@ typename BackOperations<CONTAINER>::Status BackOperations<CONTAINER>::set(const 
 }
 
 template <class CONTAINER>
-void BackOperations<CONTAINER>::trim(const std::string& aName, int64_t aStart, int64_t aStop) {
+void BackOperations<CONTAINER>::trim(const std::string& aName,
+                                     int64_t            aStart,
+                                     int64_t            aStop) {
 
-  Base::theApplyer.performOnExisting(aName, [aStart, aStop](Container& aContainer) {
-    if (aContainer.empty()) {
-      return;
-    }
+  Base::theApplyer.performOnExisting(
+      aName, [aStart, aStop](Container& aContainer) {
+        if (aContainer.empty()) {
+          return;
+        }
 
-    auto myStart = aStart;
-    auto myStop  = aStop;
+        auto myStart = aStart;
+        auto myStop  = aStop;
 
-    if (aStart > 0 and size_t(aStart) >= aContainer.size()) {
-      aContainer.clear();
-      return;
-    } else if (aStart < 0) {
-      if (size_t(-aStart) > aContainer.size()) {
-        myStart = 0;
-      } else {
-        myStart = aContainer.size() + aStart;
-      }
-    }
+        if (aStart > 0 and size_t(aStart) >= aContainer.size()) {
+          aContainer.clear();
+          return;
+        } else if (aStart < 0) {
+          if (size_t(-aStart) > aContainer.size()) {
+            myStart = 0;
+          } else {
+            myStart = aContainer.size() + aStart;
+          }
+        }
 
-    if (aStop > 0 and size_t(aStop) >= aContainer.size()) {
-      myStop = aContainer.size() - 1;
-    } else if (aStop < 0) {
-      if (size_t(-aStop) > aContainer.size()) {
-        return;
-      } else {
-        myStop = aContainer.size() + aStop;
-      }
-    }
+        if (aStop > 0 and size_t(aStop) >= aContainer.size()) {
+          myStop = aContainer.size() - 1;
+        } else if (aStop < 0) {
+          if (size_t(-aStop) > aContainer.size()) {
+            return;
+          } else {
+            myStop = aContainer.size() + aStop;
+          }
+        }
 
-    if (myStart > myStop) {
-      aContainer.clear();
-      return;
-    }
+        if (myStart > myStop) {
+          aContainer.clear();
+          return;
+        }
 
-    if (myStart == 0 and size_t(myStop + 1) == aContainer.size()) {
-      return;
-    }
+        if (myStart == 0 and size_t(myStop + 1) == aContainer.size()) {
+          return;
+        }
 
-    auto myItStart = aContainer.begin();
-    std::advance(myItStart, myStart);
-    auto myItStop = aContainer.begin();
-    std::advance(myItStop, myStop + 1);
+        auto myItStart = aContainer.begin();
+        std::advance(myItStart, myStart);
+        auto myItStop = aContainer.begin();
+        std::advance(myItStop, myStop + 1);
 
-    aContainer.erase(aContainer.begin(), myItStart);
-    aContainer.erase(myItStop, aContainer.end());
-  });
+        aContainer.erase(aContainer.begin(), myItStart);
+        aContainer.erase(myItStop, aContainer.end());
+      });
 }
 
 template <class CONTAINER>
-size_t BackOperations<CONTAINER>::pushBackExist(const std::string&                   aName,
-                            const std::vector<std::string_view>& aValues) {
+size_t BackOperations<CONTAINER>::pushBackExist(
+    const std::string& aName, const std::vector<std::string_view>& aValues) {
 
   size_t myRet = 0;
 
-  Base::theApplyer.performOnExisting(aName, [&myRet, &aValues](Container& aContainer) {
-    for (const auto& myString : aValues) {
-      aContainer.push_back(std::string(myString));
-    }
-    myRet = aContainer.size();
-  });
+  Base::theApplyer.performOnExisting(
+      aName, [&myRet, &aValues](Container& aContainer) {
+        for (const auto& myString : aValues) {
+          aContainer.push_back(std::string(myString));
+        }
+        myRet = aContainer.size();
+      });
 
   return myRet;
 }
