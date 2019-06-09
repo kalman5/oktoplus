@@ -34,9 +34,9 @@ int main(int argc, char** argv) {
       okcfgs::JsonConfiguration myJsonConfiguration(
           myCommandLine.configurationFile());
       myOktoplusConfiguration.addConfiguration(myJsonConfiguration);
+    } else {
+      throw std::runtime_error("Configuration file was not specified");
     }
-
-    myOktoplusConfiguration.addConfiguration(myCommandLine);
 
     okcmds::CommandsServer myServer(myOktoplusConfiguration.endpoint());
 

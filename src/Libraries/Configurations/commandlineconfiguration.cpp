@@ -13,8 +13,8 @@ namespace okts {
 namespace cfgs {
 
 CommandLineConfiguration::CommandLineConfiguration(int aArgc, char** aArgv)
-    : OktoplusConfiguration()
-    , theGenerateDefaultConfigurationFile(false)
+    : theGenerateDefaultConfigurationFile(false)
+    , theHelpRequested(false)
     , theConfigurationFilePath("oktoplus.cfg")
     , theConfigurationFileSpecified(false) {
 
@@ -29,10 +29,6 @@ CommandLineConfiguration::CommandLineConfiguration(int aArgc, char** aArgv)
       ("conf,c",
        bpo::value<std::string>(&theConfigurationFilePath),
        "configuration file path")
-      ("endpoint,e",
-       bpo::value<std::string>(&theEndpoint)
-                 ->default_value(myDefaultConfiguration.endpoint()),
-       "set end point")
   ;
   // clang-format on
 
@@ -41,6 +37,7 @@ CommandLineConfiguration::CommandLineConfiguration(int aArgc, char** aArgv)
   bpo::notify(vm);
 
   if (vm.count("help")) {
+    theHelpRequested = true;
     std::cout << desc << std::endl;
     return;
   }
@@ -50,7 +47,6 @@ CommandLineConfiguration::CommandLineConfiguration(int aArgc, char** aArgv)
   }
 
   if (vm.count("conf")) {
-    std::cout << "specified" << std::endl;
     theConfigurationFileSpecified = true;
   }
 }
