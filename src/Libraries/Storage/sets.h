@@ -18,6 +18,8 @@ class Sets : public GenericContainer<std::unordered_set<std::string>>
  public:
   DISABLE_EVIL_CONSTRUCTOR(Sets);
 
+  Sets();
+
   size_t add(const std::string&                   aName,
              const std::vector<std::string_view>& aValues);
 
@@ -25,8 +27,6 @@ class Sets : public GenericContainer<std::unordered_set<std::string>>
 
   std::unordered_set<std::string>
   diff(const std::vector<std::string_view>& aNames);
-
-  Sets();
 };
 
 } // namespace stor

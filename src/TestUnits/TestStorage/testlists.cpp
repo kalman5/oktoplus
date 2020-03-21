@@ -9,11 +9,6 @@ namespace oktss = okts::stor;
 class TestLists : public ::testing::Test
 {
  public:
-  TestLists() {
-  }
-
-  void SetUp() override {
-  }
 };
 
 TEST_F(TestLists, ctor) {

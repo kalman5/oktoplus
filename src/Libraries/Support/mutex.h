@@ -7,7 +7,7 @@
 namespace okts {
 namespace sup {
 
-#if defined(__clang__)
+#if defined(__clang__) and 0
 
 #define THREAD_ANNOTATION_ATTRIBUTE(x) __attribute__((x))
 

@@ -1,6 +1,3 @@
-# Includes path
-include_directories (${CMAKE_SRC_DIR}/Libraries)
-
 add_subdirectory(TestCommands)
 add_subdirectory(TestConfigurations)
 add_subdirectory(TestStorage)

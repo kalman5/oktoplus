@@ -101,6 +101,6 @@ else
   echo
   echo
 
-  #make -j ${CPUNUM} 
+  make -j ${CPUNUM} 
 fi
 

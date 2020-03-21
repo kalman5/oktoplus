@@ -1,6 +1,3 @@
-# Includes pathn
-include_directories(${CMAKE_SRC_DIR}/Libraries)
-
 include_directories(
   ${CMAKE_SRC_DIR}/../externals/gtest/googlemock
   ${CMAKE_SRC_DIR}/../externals/gtest/googlemock/include
