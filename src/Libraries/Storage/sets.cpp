@@ -22,7 +22,7 @@ size_t Sets::add(const std::string&                   aName,
   return myRet;
 }
 
-size_t Sets::cardinality(const std::string& aName) {
+size_t Sets::cardinality(const std::string& aName) const {
 
   size_t myRet = 0;
 
