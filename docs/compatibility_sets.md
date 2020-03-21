@@ -2,9 +2,9 @@
 
 GRP Interface | Sets REDIS Command |
 ---|:---:
-_ | SADD
-_ | SCARD
-_ | SDIFF
+setAdd | SADD
+setCard | SCARD
+setDiff | SDIFF
 _ | SDIFFSTORE
 _ | SINTER
 _ | SINTERSTORE
