@@ -49,10 +49,11 @@ class ContainerFunctorApplier
   };
 
   using Storage = std::unordered_map<std::string, ProtectedContainer>;
-  using Mutex   = mutex;
 
   mutable Mutex theMutex;
-  Storage theStorage GUARDED_BY(theMutex);
+  Storage       theStorage __attribute__((guarded_by(theMutex)));
+
+  // Storage theStorage GUARDED_BY(theMutex);
 };
 
 template <class CONTAINER>
