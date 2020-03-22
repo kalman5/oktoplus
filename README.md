@@ -15,7 +15,7 @@ If this reminds you of REDIS then you are right, I was inspired by it, however:
 Redis Commands Compatibility
 
   - [LISTS](docs/compatibility_lists.md) 82% Completed
-  - [SETS](docs/compatibility_sets.md) 0% Completed
+  - [SETS](docs/compatibility_sets.md) 18% Completed
   - [STRINGS](docs/compatibility_strings.md) 0% Completed
   
 **Oktoplus** specific containers (already implemented, see specific documentation)
