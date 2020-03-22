@@ -10,12 +10,13 @@ USE_CLANG=0
 
 OPTIONERROR=0
 OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
-while getopts "h?cn" opt; do
+while getopts "h?cnp:" opt; do
   case "$opt" in
     h|\?)
       cat << EOF
 Accepted options:
   -c: to compile with clang
+  -p: path to a specific c++ compiler
   -h: show this help
   -n: to enable ninjabuild (executable must be in /usr/local/bin or /usr/bin)
 EOF
@@ -25,6 +26,9 @@ EOF
         echo "Selecting clang"        
       ;;
     n)  NINJABUILD=1
+      ;;
+    p)  CXXCOMPILER="$OPTARG"
+        CXXCOMPILER_SET=1
       ;;
   esac
 done
@@ -49,7 +53,7 @@ else
   echo "NINJABUILD OFF"
 fi
 
-if [[ ${USE_CLANG} -eq 1 ]];
+if [[ ${USE_CLANG} -eq 1 &&  $CXXCOMPILER_SET -ne 1 ]];
 then
   CCOMPILER=clang
   CXXCOMPILER=clang++
