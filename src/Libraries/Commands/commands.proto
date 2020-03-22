@@ -1,6 +1,5 @@
 syntax = "proto3";
 
-import "types.proto";
 import "list_messages.proto";
 import "set_messages.proto";
 
