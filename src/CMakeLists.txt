@@ -17,14 +17,16 @@ list(APPEND CMAKE_MODULE_PATH "${Oktoplus_SOURCE_DIR}/cmake")
 
 # GMOCK/GTEST
 set(GTEST gmock_gtest)
-
 include_directories(${Oktoplus_SOURCE_DIR}/externals/gtest/googlemock/include)
 include_directories(${Oktoplus_SOURCE_DIR}/externals/gtest/googletest/include)
+
+# ABSEIL
+include_directories(SYSTEM ${Oktoplus_SOURCE_DIR}/externals/abseil-cpp)
 
 # Boost libraries
 set(Boost_USE_STATIC_LIBS FALSE)
 set(Boost_MULTITHREADED TRUE)
-find_package(Boost 1.55.0 REQUIRED COMPONENTS regex date_time filesystem program_options system signals thread chrono)
+find_package(Boost 1.55.0 REQUIRED COMPONENTS regex date_time filesystem program_options system thread chrono)
 message("***** Boost Libraries *****")
 message("${Boost_LIBRARIES}")
 message("***************************")
