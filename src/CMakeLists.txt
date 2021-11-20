@@ -3,15 +3,9 @@ set(CMAKE_SRC_DIR "${Oktoplus_SOURCE_DIR}/src")
 #include path for protobuf generated headers
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/Libraries)
 
-
 # Libraries
 find_library(GLOG     glog)
-#find_library(CRYPTO++ crypto++)
-find_library(JSONCPP    jsoncpp)   # This will permit to store jsons
-#find_library(FFTW3      fftw3f)    # This will permit eventually to perform FFT operations on series
-
-#find_path(FFTW3_INCLUDE_PATH fftw3.h)
-#INCLUDE_DIRECTORIES(${FFTW3_INCLUDE_PATH})
+find_library(JSONCPP  jsoncpp)
 
 list(APPEND CMAKE_MODULE_PATH "${Oktoplus_SOURCE_DIR}/cmake")
 
@@ -26,7 +20,7 @@ include_directories(SYSTEM ${Oktoplus_SOURCE_DIR}/externals/abseil-cpp)
 # Boost libraries
 set(Boost_USE_STATIC_LIBS FALSE)
 set(Boost_MULTITHREADED TRUE)
-find_package(Boost 1.55.0 REQUIRED COMPONENTS regex date_time filesystem program_options system thread chrono)
+find_package(Boost 1.68.0 REQUIRED COMPONENTS regex date_time filesystem program_options system thread chrono)
 message("***** Boost Libraries *****")
 message("${Boost_LIBRARIES}")
 message("***************************")
@@ -44,19 +38,19 @@ if(${CMAKE_CXX_COMPILER} MATCHES "(.*)clang(.*)")
   SET(CLANG_SPECIFIC_WARNINGS "-Wthread-safety")
 else()
   message("\nSPECIFIC WARNINGS FOR GCC")
-  #SET(PRJ_NO_WARNINGS "-Wno-overloaded-virtual -Wno-deprecated-declarations -Wno-vla -Wno-vla-extension -Wno-long-long -Wno-maybe-uninitialized -Wno-unused-local-typedefs")
 endif()
 
-#set (CMAKE_CXX_STANDARD 17) # c++17 (old version of cmake does not supports c++17
+# c++17
+set (CMAKE_CXX_STANDARD 17)
 
-set(PRJ_COMMONS "-Wall -Wextra -Wpedantic -Werror -pthread -fPIC -fno-strict-aliasing ${CLANG_SPECIFIC_WARNINGS} -Wcast-qual -std=c++17")
+set(PRJ_COMMONS "-Wall -Wextra -Wpedantic -Werror -pthread -fPIC -fno-strict-aliasing ${CLANG_SPECIFIC_WARNINGS} -Wcast-qual")
+
+#enable thread safety analysis
+add_compile_definitions(BOOST_THREAD_ENABLE_THREAD_SAFETY_ANALYSIS)
 
 set(CMAKE_CXX_FLAGS_DEBUG     "-O0 -g3 ${PRJ_COMMONS}"                                    )
 set(CMAKE_CXX_FLAGS_OPTIMIZED "-O3 -g3 ${PRJ_COMMONS} -DNDEBUG -funroll-loops -ffast-math")
 
-if(NOT APPLE)
-  set(CMAKE_EXE_LINKER_FLAGS    "-Wl,--no-as-needed")
-endif()
 #################################################################
 
 # summary
