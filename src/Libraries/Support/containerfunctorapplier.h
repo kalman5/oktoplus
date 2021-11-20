@@ -9,6 +9,7 @@
 #include <absl/base/thread_annotations.h>
 
 #include <functional>
+#include <optional>
 #include <unordered_map>
 
 namespace okts {
@@ -67,14 +68,13 @@ template <class CONTAINER>
 void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
                                                       const Functor& aFunctor) {
 
-  ProtectedContainer*                                 myContainer = nullptr;
-  std::unique_ptr<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
+  ProtectedContainer*                               myContainer = nullptr;
+  std::optional<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
 
   while (true) {
     boost::lock_guard myLock(theMutex);
     myContainer = &theStorage[aName];
-    mySecondLevelLock.reset(new boost::unique_lock<ContainerMutex>(
-        *myContainer->mutex, boost::try_to_lock_t()));
+    mySecondLevelLock.emplace(*myContainer->mutex, boost::try_to_lock_t());
     if (mySecondLevelLock->owns_lock()) {
       break;
     }
@@ -117,8 +117,8 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
   bool myHasBecomeEmpty = false;
 
   {
-    ProtectedContainer*                                 myContainer = nullptr;
-    std::unique_ptr<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
+    ProtectedContainer*                               myContainer = nullptr;
+    std::optional<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
 
     while (true) {
       boost::lock_guard myLock(theMutex);
@@ -128,8 +128,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
         return;
       }
       myContainer = &myIt->second;
-      mySecondLevelLock.reset(new boost::unique_lock<ContainerMutex>(
-          *myContainer->mutex, boost::try_to_lock_t()));
+      mySecondLevelLock.emplace(*myContainer->mutex, boost::try_to_lock_t());
       if (mySecondLevelLock->owns_lock()) {
         break;
       }
@@ -164,7 +163,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
 
   const ProtectedContainer* myList = nullptr;
 
-  std::unique_ptr<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
+  std::optional<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
 
   while (true) {
     boost::lock_guard myLock(theMutex);
@@ -173,8 +172,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
       return;
     }
     myList = &myIt->second;
-    mySecondLevelLock.reset(new boost::unique_lock<ContainerMutex>(
-        *myList->mutex, boost::try_to_lock_t()));
+    mySecondLevelLock.emplace(*myList->mutex, boost::try_to_lock_t());
     if (mySecondLevelLock->owns_lock()) {
       break;
     }

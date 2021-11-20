@@ -49,6 +49,7 @@ set(PRJ_COMMONS "-Wall -Wextra -Wpedantic -Werror -pthread -fPIC -fno-strict-ali
 add_compile_definitions(BOOST_THREAD_ENABLE_THREAD_SAFETY_ANALYSIS)
 
 set(CMAKE_CXX_FLAGS_DEBUG     "-O0 -g3 ${PRJ_COMMONS}"                                    )
+set(CMAKE_CXX_FLAGS_CLANG     "${CMAKE_CXX_FLAGS_DEBUG}"                                  )
 set(CMAKE_CXX_FLAGS_OPTIMIZED "-O3 -g3 ${PRJ_COMMONS} -DNDEBUG -funroll-loops -ffast-math")
 
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,--no-as-needed")
