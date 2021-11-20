@@ -2,9 +2,9 @@
 
 #include "Support/noncopyable.h"
 
-#include <boost/optional.hpp>
 #include <boost/thread/mutex.hpp>
 
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -27,12 +27,12 @@ class FrontOnlyOperations : virtual public GenericContainer<CONTAINER>
   size_t pushFront(const std::string&                   aName,
                    const std::vector<std::string_view>& aValues);
 
-  boost::optional<std::string> popFront(const std::string& aName);
+  std::optional<std::string> popFront(const std::string& aName);
 
   size_t pushFrontExist(const std::string&                   aName,
                         const std::vector<std::string_view>& aValues);
 
-  boost::optional<std::string>
+  std::optional<std::string>
   popBackPushFront(const std::string& aSourceName,
                    const std::string& aDestinationName);
 

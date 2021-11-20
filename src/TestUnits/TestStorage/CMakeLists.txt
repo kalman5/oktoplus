@@ -1,6 +1,3 @@
-
-include_directories (${CMAKE_SRC_DIR}/Libraries)
-
 add_library (testunit_teststorage SHARED
   testlists.cpp
   testsets.cpp
@@ -9,7 +6,6 @@ add_library (testunit_teststorage SHARED
 target_link_libraries (testunit_teststorage
   oktoplus_storage
 
-  ${Boost_LIBRARIES}
   ${GTEST}
   ${GLOG}
   ${PROTOBUF_LIBRARIES}

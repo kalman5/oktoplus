@@ -4,8 +4,7 @@
 
 #include "Support/noncopyable.h"
 
-#include <boost/optional.hpp>
-
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -31,17 +30,17 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
   size_t pushBack(const std::string&                   aName,
                   const std::vector<std::string_view>& aValues);
 
-  boost::optional<std::string> popBack(const std::string& aName);
+  std::optional<std::string> popBack(const std::string& aName);
 
   size_t size(const std::string& aName) const;
 
-  boost::optional<std::string> index(const std::string& aName,
-                                     int64_t            aIndex) const;
+  std::optional<std::string> index(const std::string& aName,
+                                   int64_t            aIndex) const;
 
-  boost::optional<int64_t> insert(const std::string& aName,
-                                  Position           aPosition,
-                                  const std::string& aPivot,
-                                  const std::string& aValue);
+  std::optional<int64_t> insert(const std::string& aName,
+                                Position           aPosition,
+                                const std::string& aPivot,
+                                const std::string& aValue);
 
   std::vector<std::string>
   range(const std::string& aName, int64_t aStart, int64_t aStop) const;

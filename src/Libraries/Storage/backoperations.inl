@@ -17,10 +17,10 @@ size_t BackOperations<CONTAINER>::pushBack(
 }
 
 template <class CONTAINER>
-boost::optional<std::string>
+std::optional<std::string>
 BackOperations<CONTAINER>::popBack(const std::string& aName) {
 
-  boost::optional<std::string> myRet;
+  std::optional<std::string> myRet;
 
   Base::theApplyer.performOnExisting(aName, [&myRet](Container& aContainer) {
     if (aContainer.empty()) {
@@ -46,11 +46,11 @@ size_t BackOperations<CONTAINER>::size(const std::string& aName) const {
 }
 
 template <class CONTAINER>
-boost::optional<std::string>
+std::optional<std::string>
 BackOperations<CONTAINER>::index(const std::string& aName,
                                  int64_t            aIndex) const {
 
-  boost::optional<std::string> myRet;
+  std::optional<std::string> myRet;
 
   Base::theApplyer.performOnExisting(
       aName, [&myRet, aIndex](const Container& aContainer) {
@@ -74,12 +74,12 @@ BackOperations<CONTAINER>::index(const std::string& aName,
 }
 
 template <class CONTAINER>
-boost::optional<int64_t>
+std::optional<int64_t>
 BackOperations<CONTAINER>::insert(const std::string& aName,
                                   Position           aPosition,
                                   const std::string& aPivot,
                                   const std::string& aValue) {
-  boost::optional<int64_t> myRet;
+  std::optional<int64_t> myRet;
 
   Base::theApplyer.performOnExisting(
       aName, [&myRet, aPosition, &aPivot, &aValue](Container& aContainer) {

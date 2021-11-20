@@ -59,7 +59,7 @@ grpc::Status CommandsList::listPopFront(grpc::ServerContext*,
   auto myRet = theLists.popFront(myName);
 
   if (myRet) {
-    aReply->set_value(myRet.get());
+    aReply->set_value(myRet.value());
   }
 
   return grpc::Status::OK;
@@ -73,7 +73,7 @@ grpc::Status CommandsList::listPopBack(grpc::ServerContext*,
   auto myRet = theLists.popBack(myName);
 
   if (myRet) {
-    aReply->set_value(myRet.get());
+    aReply->set_value(myRet.value());
   }
 
   return grpc::Status::OK;
@@ -104,7 +104,7 @@ grpc::Status CommandsList::listIndex(grpc::ServerContext*,
   auto myRet = theLists.index(myName, myIndex);
 
   if (myRet) {
-    aReply->set_value(myRet.get());
+    aReply->set_value(myRet.value());
   }
 
   return grpc::Status::OK;
@@ -128,7 +128,7 @@ grpc::Status CommandsList::listInsert(grpc::ServerContext*,
   auto myRet = theLists.insert(myName, myListPosition, myPivot, myValue);
 
   if (myRet) {
-    aReply->set_size(myRet.get());
+    aReply->set_size(myRet.value());
   }
 
   return grpc::Status::OK;
@@ -230,7 +230,7 @@ grpc::Status CommandsList::listPopBackPushFront(grpc::ServerContext*,
   auto myRet = theLists.popBackPushFront(mySourceName, myDestinationName);
 
   if (myRet) {
-    aReply->set_value(myRet.get());
+    aReply->set_value(myRet.value());
   }
 
   return grpc::Status::OK;

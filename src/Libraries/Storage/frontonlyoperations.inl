@@ -17,10 +17,10 @@ size_t FrontOnlyOperations<CONTAINER>::pushFront(
 }
 
 template <class CONTAINER>
-boost::optional<std::string>
+std::optional<std::string>
 FrontOnlyOperations<CONTAINER>::popFront(const std::string& aName) {
 
-  boost::optional<std::string> myRet;
+  std::optional<std::string> myRet;
 
   Base::theApplyer.performOnExisting(aName, [&myRet](Container& aContainer) {
     if (aContainer.empty()) {
@@ -51,10 +51,10 @@ size_t FrontOnlyOperations<CONTAINER>::pushFrontExist(
 }
 
 template <class CONTAINER>
-boost::optional<std::string> FrontOnlyOperations<CONTAINER>::popBackPushFront(
+std::optional<std::string> FrontOnlyOperations<CONTAINER>::popBackPushFront(
     const std::string& aSourceName, const std::string& aDestinationName) {
 
-  boost::optional<std::string> myRet;
+  std::optional<std::string> myRet;
 
   // clang-format off
   // This mutex is required to avoid a dead lock in case two different
@@ -66,8 +66,7 @@ boost::optional<std::string> FrontOnlyOperations<CONTAINER>::popBackPushFront(
   //       containers
   // clang-format on
 
-  const boost::lock_guard<PopBackPushFrontMutex> myLock(
-      thePopBackPushFrontMutex);
+  const boost::lock_guard myLock(thePopBackPushFrontMutex);
 
   Base::theApplyer.performOnExisting(
       aSourceName,
@@ -78,7 +77,7 @@ boost::optional<std::string> FrontOnlyOperations<CONTAINER>::popBackPushFront(
         myRet = aSourceContainer.back();
         aSourceContainer.pop_back();
 
-        const std::string myValue = myRet.get();
+        const std::string myValue = myRet.value();
 
         Base::theApplyer.performOnNew(
             aDestinationName, [&myValue](Container& aDestinationContainer) {

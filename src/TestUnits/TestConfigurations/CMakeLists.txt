@@ -1,8 +1,5 @@
-
-include_directories (${CMAKE_SRC_DIR}/Libraries)
-
 add_library (testunit_testconfigurations SHARED
-  ${CMAKE_SRC_DIR}/TestUnits/TestConfigurations/testconfiguration.cpp
+  testconfiguration.cpp
 )
 
 target_link_libraries (testunit_testconfigurations

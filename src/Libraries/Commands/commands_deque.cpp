@@ -59,7 +59,7 @@ grpc::Status CommandsDeque::dequePopFront(grpc::ServerContext*,
   auto myRet = theQueues.popFront(myName);
 
   if (myRet) {
-    aReply->set_value(myRet.get());
+    aReply->set_value(myRet.value());
   }
 
   return grpc::Status::OK;
@@ -73,7 +73,7 @@ grpc::Status CommandsDeque::dequePopBack(grpc::ServerContext*,
   auto myRet = theQueues.popBack(myName);
 
   if (myRet) {
-    aReply->set_value(myRet.get());
+    aReply->set_value(myRet.value());
   }
 
   return grpc::Status::OK;
@@ -104,7 +104,7 @@ grpc::Status CommandsDeque::dequeIndex(grpc::ServerContext*,
   auto myRet = theQueues.index(myName, myIndex);
 
   if (myRet) {
-    aReply->set_value(myRet.get());
+    aReply->set_value(myRet.value());
   }
 
   return grpc::Status::OK;
@@ -128,7 +128,7 @@ grpc::Status CommandsDeque::dequeInsert(grpc::ServerContext*,
   auto myRet = theQueues.insert(myName, myListPosition, myPivot, myValue);
 
   if (myRet) {
-    aReply->set_size(myRet.get());
+    aReply->set_size(myRet.value());
   }
 
   return grpc::Status::OK;
@@ -231,7 +231,7 @@ CommandsDeque::dequePopBackPushFront(grpc::ServerContext*,
   auto myRet = theQueues.popBackPushFront(mySourceName, myDestinationName);
 
   if (myRet) {
-    aReply->set_value(myRet.get());
+    aReply->set_value(myRet.value());
   }
 
   return grpc::Status::OK;

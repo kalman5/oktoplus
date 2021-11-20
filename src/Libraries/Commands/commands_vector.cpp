@@ -39,7 +39,7 @@ grpc::Status CommandsVector::vectorPopBack(grpc::ServerContext*,
   auto myRet = theVectors.popBack(myName);
 
   if (myRet) {
-    aReply->set_value(myRet.get());
+    aReply->set_value(myRet.value());
   }
 
   return grpc::Status::OK;
@@ -70,7 +70,7 @@ grpc::Status CommandsVector::vectorIndex(grpc::ServerContext*,
   auto myRet = theVectors.index(myName, myIndex);
 
   if (myRet) {
-    aReply->set_value(myRet.get());
+    aReply->set_value(myRet.value());
   }
 
   return grpc::Status::OK;
@@ -94,7 +94,7 @@ grpc::Status CommandsVector::vectorInsert(grpc::ServerContext*,
   auto myRet = theVectors.insert(myName, myListPosition, myPivot, myValue);
 
   if (myRet) {
-    aReply->set_size(myRet.get());
+    aReply->set_size(myRet.value());
   }
 
   return grpc::Status::OK;

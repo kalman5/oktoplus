@@ -1,6 +1,3 @@
-
-include_directories (${CMAKE_SRC_DIR}/Libraries)
-
 add_library (testunit_testcommands SHARED
   ${CMAKE_SRC_DIR}/TestUnits/TestCommands/testcommands_server.cpp
 )

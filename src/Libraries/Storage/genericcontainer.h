@@ -3,11 +3,11 @@
 #include "Support/containerfunctorapplier.h"
 #include "Support/noncopyable.h"
 
-#include <boost/optional.hpp>
 #include <boost/thread/mutex.hpp>
 
 #include <functional>
 #include <list>
+#include <optional>
 #include <string_view>
 
 namespace okts {
