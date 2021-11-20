@@ -9,7 +9,7 @@
 * cd oktoplus
 * mkdir build/debug
 * cd build/debug
-* ../buildme.sh
+* ../buildme.sh (specify -c to compile with clang)
 * make
 
 ##### Tested with:
