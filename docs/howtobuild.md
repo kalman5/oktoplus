@@ -14,11 +14,11 @@
 
 ##### Tested with:
 
-Component | Versions |  |  |  |
---- |:---:|:---:|:---: |:---:|
-GRPC   | 1.38.0 | | | |
-g++    | 10.3   | | | |
-clang  | 13.0   | | | |
+Component | Versions |
+--- |:---:|
+GRPC   | 1.38.0 |
+g++    | 10.3   |
+clang  | 13.0   |
 
 ##### Run unit tests
 You can find tests in build/debug/src/TestUnits
