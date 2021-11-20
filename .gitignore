@@ -1,4 +1,3 @@
-.kdev4
 build/debug
 build/optimized
-*.kdev4
+build/clang
