@@ -40,8 +40,8 @@ else()
   message("\nSPECIFIC WARNINGS FOR GCC")
 endif()
 
-# c++17
-set (CMAKE_CXX_STANDARD 17)
+# c++20
+set (CMAKE_CXX_STANDARD 20)
 
 set(PRJ_COMMONS "-Wall -Wextra -Wpedantic -Werror -pthread -fPIC -fno-strict-aliasing ${CLANG_SPECIFIC_WARNINGS} -Wcast-qual")
 
