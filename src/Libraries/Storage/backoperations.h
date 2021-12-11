@@ -27,33 +27,34 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
       : Base() {
   }
 
-  size_t pushBack(const std::string&                   aName,
+  size_t pushBack(const std::string_view&              aName,
                   const std::vector<std::string_view>& aValues);
 
-  std::optional<std::string> popBack(const std::string& aName);
+  std::optional<std::string> popBack(const std::string_view& aName);
 
-  size_t size(const std::string& aName) const;
+  size_t size(const std::string_view& aName) const;
 
-  std::optional<std::string> index(const std::string& aName,
-                                   int64_t            aIndex) const;
+  std::optional<std::string> index(const std::string_view& aName,
+                                   int64_t                 aIndex) const;
 
-  std::optional<int64_t> insert(const std::string& aName,
-                                Position           aPosition,
-                                const std::string& aPivot,
-                                const std::string& aValue);
+  std::optional<int64_t> insert(const std::string_view& aName,
+                                Position                aPosition,
+                                const std::string&      aPivot,
+                                const std::string&      aValue);
 
   std::vector<std::string>
-  range(const std::string& aName, int64_t aStart, int64_t aStop) const;
+  range(const std::string_view& aName, int64_t aStart, int64_t aStop) const;
 
-  size_t
-  remove(const std::string& aName, int64_t aCount, const std::string& aValue);
+  size_t remove(const std::string_view& aName,
+                int64_t                 aCount,
+                const std::string&      aValue);
 
   Status
-  set(const std::string& aName, int64_t aIndex, const std::string& aValue);
+  set(const std::string_view& aName, int64_t aIndex, const std::string& aValue);
 
-  void trim(const std::string& aName, int64_t aStart, int64_t aStop);
+  void trim(const std::string_view& aName, int64_t aStart, int64_t aStop);
 
-  size_t pushBackExist(const std::string&                   aName,
+  size_t pushBackExist(const std::string_view&              aName,
                        const std::vector<std::string_view>& aValues);
 };
 

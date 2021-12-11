@@ -1,7 +1,8 @@
 
 template <class CONTAINER>
 size_t BackOperations<CONTAINER>::pushBack(
-    const std::string& aName, const std::vector<std::string_view>& aValues) {
+    const std::string_view&              aName,
+    const std::vector<std::string_view>& aValues) {
 
   size_t myRet;
 
@@ -18,7 +19,7 @@ size_t BackOperations<CONTAINER>::pushBack(
 
 template <class CONTAINER>
 std::optional<std::string>
-BackOperations<CONTAINER>::popBack(const std::string& aName) {
+BackOperations<CONTAINER>::popBack(const std::string_view& aName) {
 
   std::optional<std::string> myRet;
 
@@ -34,7 +35,7 @@ BackOperations<CONTAINER>::popBack(const std::string& aName) {
 }
 
 template <class CONTAINER>
-size_t BackOperations<CONTAINER>::size(const std::string& aName) const {
+size_t BackOperations<CONTAINER>::size(const std::string_view& aName) const {
 
   size_t myRet = 0;
 
@@ -47,8 +48,8 @@ size_t BackOperations<CONTAINER>::size(const std::string& aName) const {
 
 template <class CONTAINER>
 std::optional<std::string>
-BackOperations<CONTAINER>::index(const std::string& aName,
-                                 int64_t            aIndex) const {
+BackOperations<CONTAINER>::index(const std::string_view& aName,
+                                 int64_t                 aIndex) const {
 
   std::optional<std::string> myRet;
 
@@ -75,10 +76,10 @@ BackOperations<CONTAINER>::index(const std::string& aName,
 
 template <class CONTAINER>
 std::optional<int64_t>
-BackOperations<CONTAINER>::insert(const std::string& aName,
-                                  Position           aPosition,
-                                  const std::string& aPivot,
-                                  const std::string& aValue) {
+BackOperations<CONTAINER>::insert(const std::string_view& aName,
+                                  Position                aPosition,
+                                  const std::string&      aPivot,
+                                  const std::string&      aValue) {
   std::optional<int64_t> myRet;
 
   Base::theApplyer.performOnExisting(
@@ -102,7 +103,7 @@ BackOperations<CONTAINER>::insert(const std::string& aName,
 
 template <class CONTAINER>
 std::vector<std::string> BackOperations<CONTAINER>::range(
-    const std::string& aName, int64_t aStart, int64_t aStop) const {
+    const std::string_view& aName, int64_t aStart, int64_t aStop) const {
 
   std::vector<std::string> myRet;
 
@@ -154,9 +155,9 @@ std::vector<std::string> BackOperations<CONTAINER>::range(
 }
 
 template <class CONTAINER>
-size_t BackOperations<CONTAINER>::remove(const std::string& aName,
-                                         int64_t            aCount,
-                                         const std::string& aValue) {
+size_t BackOperations<CONTAINER>::remove(const std::string_view& aName,
+                                         int64_t                 aCount,
+                                         const std::string&      aValue) {
   size_t myRet = 0;
 
   Base::theApplyer.performOnExisting(
@@ -209,7 +210,7 @@ size_t BackOperations<CONTAINER>::remove(const std::string& aName,
 
 template <class CONTAINER>
 typename BackOperations<CONTAINER>::Status BackOperations<CONTAINER>::set(
-    const std::string& aName, int64_t aIndex, const std::string& aValue) {
+    const std::string_view& aName, int64_t aIndex, const std::string& aValue) {
 
   Status myRet = Status::OK;
 
@@ -244,9 +245,9 @@ typename BackOperations<CONTAINER>::Status BackOperations<CONTAINER>::set(
 }
 
 template <class CONTAINER>
-void BackOperations<CONTAINER>::trim(const std::string& aName,
-                                     int64_t            aStart,
-                                     int64_t            aStop) {
+void BackOperations<CONTAINER>::trim(const std::string_view& aName,
+                                     int64_t                 aStart,
+                                     int64_t                 aStop) {
 
   Base::theApplyer.performOnExisting(
       aName, [aStart, aStop](Container& aContainer) {
@@ -299,7 +300,8 @@ void BackOperations<CONTAINER>::trim(const std::string& aName,
 
 template <class CONTAINER>
 size_t BackOperations<CONTAINER>::pushBackExist(
-    const std::string& aName, const std::vector<std::string_view>& aValues) {
+    const std::string_view&              aName,
+    const std::vector<std::string_view>& aValues) {
 
   size_t myRet = 0;
 

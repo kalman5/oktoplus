@@ -24,17 +24,17 @@ class FrontOnlyOperations : virtual public GenericContainer<CONTAINER>
       : Base() {
   }
 
-  size_t pushFront(const std::string&                   aName,
+  size_t pushFront(const std::string_view&              aName,
                    const std::vector<std::string_view>& aValues);
 
-  std::optional<std::string> popFront(const std::string& aName);
+  std::optional<std::string> popFront(const std::string_view& aName);
 
-  size_t pushFrontExist(const std::string&                   aName,
+  size_t pushFrontExist(const std::string_view&              aName,
                         const std::vector<std::string_view>& aValues);
 
   std::optional<std::string>
-  popBackPushFront(const std::string& aSourceName,
-                   const std::string& aDestinationName);
+  popBackPushFront(const std::string_view& aSourceName,
+                   const std::string_view& aDestinationName);
 
  private:
   using PopBackPushFrontMutex = boost::mutex;

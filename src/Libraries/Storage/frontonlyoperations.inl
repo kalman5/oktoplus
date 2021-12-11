@@ -1,7 +1,8 @@
 
 template <class CONTAINER>
 size_t FrontOnlyOperations<CONTAINER>::pushFront(
-    const std::string& aName, const std::vector<std::string_view>& aValues) {
+    const std::string_view&              aName,
+    const std::vector<std::string_view>& aValues) {
 
   size_t myRet;
 
@@ -18,7 +19,7 @@ size_t FrontOnlyOperations<CONTAINER>::pushFront(
 
 template <class CONTAINER>
 std::optional<std::string>
-FrontOnlyOperations<CONTAINER>::popFront(const std::string& aName) {
+FrontOnlyOperations<CONTAINER>::popFront(const std::string_view& aName) {
 
   std::optional<std::string> myRet;
 
@@ -35,7 +36,8 @@ FrontOnlyOperations<CONTAINER>::popFront(const std::string& aName) {
 
 template <class CONTAINER>
 size_t FrontOnlyOperations<CONTAINER>::pushFrontExist(
-    const std::string& aName, const std::vector<std::string_view>& aValues) {
+    const std::string_view&              aName,
+    const std::vector<std::string_view>& aValues) {
 
   size_t myRet = 0;
 
@@ -52,7 +54,8 @@ size_t FrontOnlyOperations<CONTAINER>::pushFrontExist(
 
 template <class CONTAINER>
 std::optional<std::string> FrontOnlyOperations<CONTAINER>::popBackPushFront(
-    const std::string& aSourceName, const std::string& aDestinationName) {
+    const std::string_view& aSourceName,
+    const std::string_view& aDestinationName) {
 
   std::optional<std::string> myRet;
 

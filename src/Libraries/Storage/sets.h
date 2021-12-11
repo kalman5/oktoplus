@@ -20,10 +20,10 @@ class Sets : public GenericContainer<std::unordered_set<std::string>>
 
   Sets();
 
-  size_t add(const std::string&                   aName,
+  size_t add(const std::string_view&              aName,
              const std::vector<std::string_view>& aValues);
 
-  size_t cardinality(const std::string& aName) const;
+  size_t cardinality(const std::string_view& aName) const;
 
   std::unordered_set<std::string>
   diff(const std::vector<std::string_view>& aNames);

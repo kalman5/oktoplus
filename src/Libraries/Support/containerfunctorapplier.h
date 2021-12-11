@@ -18,7 +18,6 @@ namespace sup {
 template <class CONTAINER>
 class ContainerFunctorApplier
 {
- private:
   using Container    = CONTAINER;
   using Functor      = std::function<void(Container& aList)>;
   using ConstFunctor = std::function<void(const Container& aList)>;
@@ -36,18 +35,19 @@ class ContainerFunctorApplier
   // Apply the aFunctor on a "possibly" new container (if the container at the
   // given key aName doesn't exist it's then created). Functor should not
   // consume the container.
-  void performOnNew(const std::string& aName, const Functor& aFunctor);
+  void performOnNew(const std::string_view& aName, const Functor& aFunctor);
 
   // Apply the aFunction to an already existing container (as a pop),
   // functor can make the container empty, in that case the container is
   // removed.
-  void performOnExisting(const std::string& aName, const Functor& aFunctor);
+  void performOnExisting(const std::string_view& aName,
+                         const Functor&          aFunctor);
 
   // Apply the aFunction to an already existing container (as a
   // legth), functor takes the container as const hence the list can not be
   // modified.
-  void performOnExisting(const std::string&  aName,
-                         const ConstFunctor& aFunctor) const;
+  void performOnExisting(const std::string_view& aName,
+                         const ConstFunctor&     aFunctor) const;
 
  private:
   // This needs to be recursive indeed some operations can work on multiple
@@ -65,8 +65,21 @@ class ContainerFunctorApplier
     Container                       storage;
   };
 
+  struct string_hash {
+    using is_transparent = void; // Pred to use
+    size_t operator()(std::string_view txt) const {
+      return std::hash<std::string_view>{}(txt);
+    }
+    size_t operator()(const std::string& txt) const {
+      return std::hash<std::string>{}(txt);
+    }
+  };
+
   // Maps a name to the actual container.
-  using Storage = std::unordered_map<std::string, ProtectedContainer>;
+  using Storage = std::unordered_map<std::string,
+                                     ProtectedContainer,
+                                     string_hash,
+                                     std::equal_to<>>;
 
   // The following mutex protects the Storage container (each container
   // has his own ProtectedContainer).
@@ -83,8 +96,8 @@ size_t ContainerFunctorApplier<CONTAINER>::hostedKeys() const {
 }
 
 template <class CONTAINER>
-void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
-                                                      const Functor& aFunctor) {
+void ContainerFunctorApplier<CONTAINER>::performOnNew(
+    const std::string_view& aName, const Functor& aFunctor) {
 
   ProtectedContainer* myContainer = nullptr;
 
@@ -93,7 +106,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
   while (true) {
     boost::lock_guard myLock(theMutex);
 
-    myContainer = &theStorage[aName];
+    myContainer = &theStorage[std::string(aName)];
     mySecondLevelLock.emplace(*myContainer->mutex, boost::try_to_lock_t());
     if (mySecondLevelLock->owns_lock()) {
       break;
@@ -106,7 +119,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
 
 template <class CONTAINER>
 void ContainerFunctorApplier<CONTAINER>::performOnExisting(
-    const std::string& aName, const Functor& aFunctor) {
+    const std::string_view& aName, const Functor& aFunctor) {
 
   // This looks a bit gymnic but we need to obey to the following:
   // after the operation if the list is empty has to be removed
@@ -189,7 +202,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
 
 template <class CONTAINER>
 void ContainerFunctorApplier<CONTAINER>::performOnExisting(
-    const std::string& aName, const ConstFunctor& aFunctor) const {
+    const std::string_view& aName, const ConstFunctor& aFunctor) const {
 
   const ProtectedContainer* myContainer = nullptr;
 
