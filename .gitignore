@@ -1,3 +1,5 @@
 build/debug
 build/optimized
 build/clang
+.cache/
+compile_commands.json

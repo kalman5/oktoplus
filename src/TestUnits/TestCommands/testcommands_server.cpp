@@ -67,6 +67,11 @@ TEST_F(TestCommands, DISABLED_perf2) {
   const std::size_t myListSize = 100000;
 
   for (size_t i = 0; i < myListSize; ++i) {
-    myClient.listPushFront("List-2", {"test"});
+    myClient.listPushFront("List-2", {std::to_string(i)});
+  }
+
+  for (size_t i = 0; i < myListSize; ++i) {
+    ASSERT_EQ(std::to_string(myListSize - i - 1),
+              myClient.listPopFront("List-2"));
   }
 }

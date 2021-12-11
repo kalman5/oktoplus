@@ -18,7 +18,7 @@ namespace sup {
 template <class CONTAINER>
 class ContainerFunctorApplier
 {
- public:
+ private:
   using Container    = CONTAINER;
   using Functor      = std::function<void(Container& aList)>;
   using ConstFunctor = std::function<void(const Container& aList)>;
@@ -33,25 +33,43 @@ class ContainerFunctorApplier
 
   size_t hostedKeys() const;
 
+  // Apply the aFunctor on a "possibly" new container (if the container at the
+  // given key aName doesn't exist it's then created). Functor should not
+  // consume the container.
   void performOnNew(const std::string& aName, const Functor& aFunctor);
+
+  // Apply the aFunction to an already existing container (as a pop),
+  // functor can make the container empty, in that case the container is
+  // removed.
   void performOnExisting(const std::string& aName, const Functor& aFunctor);
+
+  // Apply the aFunction to an already existing container (as a
+  // legth), functor takes the container as const hence the list can not be
+  // modified.
   void performOnExisting(const std::string&  aName,
                          const ConstFunctor& aFunctor) const;
 
  private:
+  // This needs to be recursive indeed some operations can work on multiple
+  // containers at the same time (see operations pop back push front), the
+  // two containers involved could be the same instance.
   using ContainerMutex = boost::recursive_mutex;
 
   struct ProtectedContainer {
     ProtectedContainer()
-        : mutex(new ContainerMutex())
+        : mutex(std::make_unique<ContainerMutex>())
         , storage() {
     }
+    // At a certain point it needs to be moved out.
     std::unique_ptr<ContainerMutex> mutex;
     Container                       storage;
   };
 
+  // Maps a name to the actual container.
   using Storage = std::unordered_map<std::string, ProtectedContainer>;
 
+  // The following mutex protects the Storage container (each container
+  // has his own ProtectedContainer).
   mutable boost::mutex theMutex;
 
   Storage theStorage ABSL_GUARDED_BY(theMutex);
@@ -68,11 +86,13 @@ template <class CONTAINER>
 void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
                                                       const Functor& aFunctor) {
 
-  ProtectedContainer*                               myContainer = nullptr;
+  ProtectedContainer* myContainer = nullptr;
+
   std::optional<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
 
   while (true) {
     boost::lock_guard myLock(theMutex);
+
     myContainer = &theStorage[aName];
     mySecondLevelLock.emplace(*myContainer->mutex, boost::try_to_lock_t());
     if (mySecondLevelLock->owns_lock()) {
@@ -88,9 +108,9 @@ template <class CONTAINER>
 void ContainerFunctorApplier<CONTAINER>::performOnExisting(
     const std::string& aName, const Functor& aFunctor) {
 
-  // This looks a bit gymnic but this is what needs to do
-  // After the operation if the list is empty has to be removed
-  // from the storage
+  // This looks a bit gymnic but we need to obey to the following:
+  // after the operation if the list is empty has to be removed
+  // from the storage.
   // The lock is done in multiple phases
   //  - External Lock
   //  - Try to acquire the internal Lock (each key has his own mutex), if the
@@ -141,17 +161,27 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
 
   if (myHasBecomeEmpty) {
     boost::lock_guard myLock(theMutex);
-    auto              myIt = theStorage.find(aName);
+
+    // check if the container has not been already removed.
+    auto myIt = theStorage.find(aName);
     if (myIt == theStorage.end()) {
       return;
     }
+
+    // The following mutex needs to be declared *before* the following lock,
+    // indeed in case we do destroy a container we need to have the mutex
+    // surviving his lock.
     std::unique_ptr<ContainerMutex>   myMutex;
     boost::lock_guard<ContainerMutex> mySecondLevelLock(*myIt->second.mutex);
 
+    // If in the mean time the container has got new entries we can not destroy
+    // it.
     if (not myIt->second.storage.empty()) {
       return;
     }
 
+    // We are destroying the container and the associated mutex, move the mutex
+    // and destroy the container.
     myMutex = std::move(myIt->second.mutex);
     theStorage.erase(myIt);
   }
@@ -161,25 +191,26 @@ template <class CONTAINER>
 void ContainerFunctorApplier<CONTAINER>::performOnExisting(
     const std::string& aName, const ConstFunctor& aFunctor) const {
 
-  const ProtectedContainer* myList = nullptr;
+  const ProtectedContainer* myContainer = nullptr;
 
   std::optional<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
 
   while (true) {
     boost::lock_guard myLock(theMutex);
-    auto              myIt = theStorage.find(aName);
+
+    auto myIt = theStorage.find(aName);
     if (myIt == theStorage.end()) {
       return;
     }
-    myList = &myIt->second;
-    mySecondLevelLock.emplace(*myList->mutex, boost::try_to_lock_t());
+    myContainer = &myIt->second;
+    mySecondLevelLock.emplace(*myContainer->mutex, boost::try_to_lock_t());
     if (mySecondLevelLock->owns_lock()) {
       break;
     }
   }
 
   assert(mySecondLevelLock->owns_lock());
-  aFunctor(myList->storage);
+  aFunctor(myContainer->storage);
 }
 
 } // namespace sup
