@@ -53,6 +53,11 @@ else
   echo "NINJABUILD OFF"
 fi
 
+if [ "$CURRENTDIR" = "clang" ] ;
+then
+    USE_CLANG=1
+fi
+
 if [[ ${USE_CLANG} -eq 1 &&  $CXXCOMPILER_SET -ne 1 ]];
 then
   CCOMPILER=clang
