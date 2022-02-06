@@ -12,16 +12,17 @@ CommandsServer::CommandsServer(const std::string& myEndpoint)
     : theCredentials(::grpc::InsecureServerCredentials())
     , theServer() {
   ::grpc::ServerBuilder myBuilder;
-  myBuilder.SetSyncServerOption(::grpc::ServerBuilder::NUM_CQS, 5)
-      .SetSyncServerOption(::grpc::ServerBuilder::MIN_POLLERS, 5);
-  myBuilder.AddListeningPort(myEndpoint, theCredentials);
-  myBuilder.RegisterService(this);
+  myBuilder.SetSyncServerOption(::grpc::ServerBuilder::NUM_CQS, 20)
+      .SetSyncServerOption(::grpc::ServerBuilder::MIN_POLLERS, 10)
+      .SetSyncServerOption(::grpc::ServerBuilder::MAX_POLLERS, 30)
+      .AddListeningPort(myEndpoint, theCredentials)
+      .RegisterService(this);
   theServer = myBuilder.BuildAndStart();
 
   const auto myLogService = "Oktoplus service on " + myEndpoint;
 
   if (theServer) {
-    LOG(INFO) << myLogService << " is ready to startup";
+    LOG(INFO) << myLogService << ". Started.";
   } else {
     std::stringstream myError;
     myError << "Could not start " << myLogService;
@@ -31,7 +32,6 @@ CommandsServer::CommandsServer(const std::string& myEndpoint)
 }
 
 void CommandsServer::wait() {
-  LOG(INFO) << "Server starting";
   theServer->Wait();
 }
 

@@ -6,6 +6,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/Libraries)
 # Libraries
 find_library(GLOG     glog)
 find_library(JSONCPP  jsoncpp)
+#find_library(TCMALLOC_LIB NAMES libtcmalloc_minimal tcmalloc_minimal)
 
 list(APPEND CMAKE_MODULE_PATH "${Oktoplus_SOURCE_DIR}/cmake")
 
@@ -78,5 +79,6 @@ include_directories (${CMAKE_SRC_DIR}/Libraries)
 
 add_subdirectory(Libraries)
 add_subdirectory(Executables)
+add_subdirectory(Benchmarks)
 add_subdirectory(TestUnits)
 

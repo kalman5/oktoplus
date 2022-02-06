@@ -8,5 +8,5 @@ add_library(oktoplus_configurations SHARED
 
 target_link_libraries(oktoplus_configurations
  ${Boost_LIBRARIES}
- jsoncpp
+ ${JSONCPP}
 )

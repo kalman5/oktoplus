@@ -7,33 +7,24 @@
 
 #include <memory>
 
-namespace okts {
-namespace cmds {
+namespace okts::cmds {
 
 class CommandsClient final
 {
  public:
-  CommandsClient(const std::string& myEndpoint);
+  CommandsClient(const std::string& aEndpoint);
 
-  size_t listPushFront(const std::string&             myListName,
-                       const std::vector<std::string> myValues);
+  size_t listPushFront(const std::string&         aListName,
+                       std::vector<std::string>&& aValues);
 
-  //   grpc::Status listPushBack(grpc::ServerContext*,
-  //                             const ListPushRequest*,
-  //                             ListPushReply*) override;
-  //
+  void listTrim(const std::string& aListName, int64_t aStart, int64_t aStop);
 
-  std::string listPopFront(const std::string& myListName);
-  //
-  //   grpc::Status listPopBack(grpc::ServerContext*,
-  //                            const ListPopRequest*,
-  //                            ListPopReply*) override;
-  //
+  std::string listPopFront(const std::string& aListName);
 
+ private:
   std::shared_ptr<::grpc::ChannelCredentials> theCredentials;
 
   std::unique_ptr<Interface::Stub> theStub;
 };
 
-} // namespace cmds
-} // namespace okts
+} // namespace okts::cmds

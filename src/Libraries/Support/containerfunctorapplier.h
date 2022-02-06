@@ -8,6 +8,8 @@
 
 #include <absl/base/thread_annotations.h>
 
+#include <glog/logging.h>
+
 #include <functional>
 #include <optional>
 #include <unordered_map>
@@ -106,7 +108,12 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(
   while (true) {
     boost::lock_guard myLock(theMutex);
 
-    myContainer = &theStorage[std::string(aName)];
+    auto [myIterator, myInserted] =
+        theStorage.emplace(std::pair(std::string(aName), ProtectedContainer()));
+    if (myInserted) {
+      LOG(INFO) << "Inserted new container at key \"" << aName << "\"";
+    }
+    myContainer = &myIterator->second;
     mySecondLevelLock.emplace(*myContainer->mutex, boost::try_to_lock_t());
     if (mySecondLevelLock->owns_lock()) {
       break;
@@ -197,6 +204,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
     // and destroy the container.
     myMutex = std::move(myIt->second.mutex);
     theStorage.erase(myIt);
+    LOG(INFO) << "Removed container at key \"" << aName << "\"";
   }
 }
 

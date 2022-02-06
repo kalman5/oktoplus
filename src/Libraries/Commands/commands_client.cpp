@@ -5,31 +5,29 @@
 #include <sstream>
 #include <string_view>
 
-namespace okts {
-namespace cmds {
+namespace okts::cmds {
 
-CommandsClient::CommandsClient(const std::string& myEndpoint)
+CommandsClient::CommandsClient(const std::string& aEndpoint)
     : theCredentials(::grpc::InsecureChannelCredentials())
     , theStub(Interface::NewStub(
-          ::grpc::CreateChannel(myEndpoint, theCredentials))) {
+          ::grpc::CreateChannel(aEndpoint, theCredentials))) {
 }
 
-size_t CommandsClient::listPushFront(const std::string&             aListName,
-                                     const std::vector<std::string> aValues) {
+size_t CommandsClient::listPushFront(const std::string&         aListName,
+                                     std::vector<std::string>&& aValues) {
 
-  PushRequest myRequest;
-
-  myRequest.set_name(aListName);
-
-  for (const auto& myValue : aValues) {
-    myRequest.add_values(std::move(myValue));
-  }
-
-  std::chrono::system_clock::time_point deadline =
+  const std::chrono::system_clock::time_point myDeadline =
       std::chrono::system_clock::now() + std::chrono::seconds(5);
 
   ::grpc::ClientContext myContext;
-  myContext.set_deadline(deadline);
+  myContext.set_deadline(myDeadline);
+
+  PushRequest myRequest;
+  myRequest.set_name(aListName);
+
+  for (auto&& myValue : aValues) {
+    myRequest.add_values(std::move(myValue));
+  }
 
   PushReply myReply;
 
@@ -43,24 +41,28 @@ size_t CommandsClient::listPushFront(const std::string&             aListName,
   return myReply.size();
 }
 
-// grpc::Status CommandsServer::listPushBack(grpc::ServerContext*,
-//                                           const ListPushRequest* aRequest,
-//                                           ListPushReply*         aReply) {
-//
-//   std::vector<std::string_view> myStrings;
-//   myStrings.reserve(aRequest->values_size());
-//   for (int i = 0; i < aRequest->values_size(); ++i) {
-//     myStrings.push_back(aRequest->values(i));
-//   }
-//
-//   const std::string& myName = aRequest->list_name();
-//
-//   auto myRet = theLists.pushBack(myName, myStrings);
-//
-//   aReply->set_size(myRet);
-//
-//   return grpc::Status::OK;
-// }
+void CommandsClient::listTrim(const std::string& aListName,
+                              int64_t            aStart,
+                              int64_t            aStop) {
+  const std::chrono::system_clock::time_point myDeadline =
+      std::chrono::system_clock::now() + std::chrono::seconds(5);
+
+  ::grpc::ClientContext myContext;
+  myContext.set_deadline(myDeadline);
+
+  TrimRequest myRequest;
+  myRequest.set_name(aListName);
+  myRequest.set_start(aStart);
+  myRequest.set_stop(aStop);
+
+  TrimReply myReply;
+
+  ::grpc::Status myStatus = theStub->listTrim(&myContext, myRequest, &myReply);
+
+  if (not myStatus.ok()) {
+    throw std::runtime_error(myStatus.error_message());
+  }
+}
 
 std::string CommandsClient::listPopFront(const std::string& aListName) {
 
@@ -86,19 +88,4 @@ std::string CommandsClient::listPopFront(const std::string& aListName) {
   return myReply.value();
 }
 
-// grpc::Status CommandsServer::listPopBack(grpc::ServerContext*,
-//                                          const ListPopRequest* aRequest,
-//                                          ListPopReply*         aReply) {
-//   const std::string& myName = aRequest->list_name();
-//
-//   auto myRet = theLists.popBack(myName);
-//
-//   if (myRet) {
-//     aReply->set_value(myRet.get());
-//   }
-//
-//   return grpc::Status::OK;
-// }
-
-} // namespace cmds
-} // namespace okts
+} // namespace okts::cmds

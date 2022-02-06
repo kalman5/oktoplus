@@ -210,7 +210,6 @@ grpc::Status CommandsList::listSet(grpc::ServerContext*,
 grpc::Status CommandsList::listTrim(grpc::ServerContext*,
                                     const TrimRequest* aRequest,
                                     TrimReply*) {
-
   const auto& myName  = aRequest->name();
   const auto  myStart = aRequest->start();
   const auto  myStop  = aRequest->stop();

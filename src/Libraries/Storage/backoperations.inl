@@ -1,4 +1,3 @@
-
 template <class CONTAINER>
 size_t BackOperations<CONTAINER>::pushBack(
     const std::string_view&              aName,
@@ -248,7 +247,6 @@ template <class CONTAINER>
 void BackOperations<CONTAINER>::trim(const std::string_view& aName,
                                      int64_t                 aStart,
                                      int64_t                 aStop) {
-
   Base::theApplyer.performOnExisting(
       aName, [aStart, aStop](Container& aContainer) {
         if (aContainer.empty()) {
@@ -257,7 +255,12 @@ void BackOperations<CONTAINER>::trim(const std::string_view& aName,
 
         auto myStart = aStart;
         auto myStop  = aStop;
-
+        /*
+                if (myStart > myStop) {
+                  aContainer.clear();
+                  return;
+                }
+        */
         if (aStart > 0 and size_t(aStart) >= aContainer.size()) {
           aContainer.clear();
           return;
