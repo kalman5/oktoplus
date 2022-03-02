@@ -12,14 +12,14 @@ namespace oksu   = okts::sup;
 
 int main(int /*argc*/, char** argv) {
 
-  std::random_device              myRd;
-  std::mt19937                    myGen(myRd());
-  std::uniform_int_distribution<> myDistrib(1, 1000);
+  std::random_device              rd;
+  std::mt19937                    gen(rd());
+  std::uniform_int_distribution<> distrib(1, 1000);
 
   oksu::GoogleRaii myShutdowner(argv[0], true, true);
 
   const std::string        myEndpoint("127.0.0.1:6666");
-  const size_t             myValuesPerBatch(10);
+  const size_t             myValuesPerBatch(1);
   std::vector<std::string> myValues;
   myValues.reserve(myValuesPerBatch);
 
@@ -32,16 +32,20 @@ int main(int /*argc*/, char** argv) {
 
     const std::size_t myListSize = 100000;
 
-    const std::string myList("List-" + std::to_string(myDistrib(myGen)));
+    const std::string myList("List-" + std::to_string(distrib(gen)));
+
+    for (size_t i = 0; i < myListSize; ++i) {
+      myClient.listPushFront(myList, myValues);
+    }
 
     oksu::Chrono myChrono;
-    for (size_t i = 0; i < myListSize; ++i) {
-      myClient.dequePushFront(myList, myValues);
+    for (size_t i = 0; i < myListSize * myValuesPerBatch; ++i) {
+      myClient.listPopFront(myList);
     }
-    std::cout << "Inserts per seconds: "
+    std::cout << "Reads per seconds: "
               << myListSize * myValuesPerBatch / myChrono.stop() << "\n";
 
-    myClient.dequeTrim(myList, 1, 0);
+    std::cout << "Entries left: " << myClient.listLength(myList) << "\n";
 
   } catch (const std::exception& e) {
     LOG(ERROR) << "Error: " << e.what();
