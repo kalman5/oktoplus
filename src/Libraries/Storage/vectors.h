@@ -1,14 +1,12 @@
 #pragma once
 
-#include "Storage/backoperations.h"
-
-#include "Support/noncopyable.h"
-
 #include <string>
 #include <vector>
 
-namespace okts {
-namespace stor {
+#include "Storage/backoperations.h"
+#include "Support/noncopyable.h"
+
+namespace okts::stor {
 
 class Vectors : public BackOperations<std::vector<std::string>>
 {
@@ -20,5 +18,4 @@ class Vectors : public BackOperations<std::vector<std::string>>
   Vectors();
 };
 
-} // namespace stor
-} // namespace okts
+} // namespace okts::stor

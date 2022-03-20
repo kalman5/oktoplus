@@ -1,11 +1,9 @@
 #include "Storage/vectors.h"
 
-namespace okts {
-namespace stor {
+namespace okts::stor {
 
 Vectors::Vectors()
     : Base() {
 }
 
-} // namespace stor
-} // namespace okts
+} // namespace okts::stor

@@ -1,12 +1,11 @@
 #pragma once
 
-#include "Storage/backoperations.h"
-#include "Storage/frontonlyoperations.h"
-
-#include "Support/noncopyable.h"
-
 #include <deque>
 #include <string>
+
+#include "Storage/backoperations.h"
+#include "Storage/frontonlyoperations.h"
+#include "Support/noncopyable.h"
 
 namespace okts {
 namespace stor {

@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Support/noncopyable.h"
+#include <functional>
+#include <optional>
+#include <unordered_map>
 
 #include <boost/thread/lock_guard.hpp>
 #include <boost/thread/mutex.hpp>
@@ -10,9 +12,7 @@
 
 #include <glog/logging.h>
 
-#include <functional>
-#include <optional>
-#include <unordered_map>
+#include "Support/noncopyable.h"
 
 namespace okts {
 namespace sup {
@@ -37,19 +37,18 @@ class ContainerFunctorApplier
   // Apply the aFunctor on a "possibly" new container (if the container at the
   // given key aName doesn't exist it's then created). Functor should not
   // consume the container.
-  void performOnNew(const std::string_view& aName, const Functor& aFunctor);
+  void performOnNew(const std::string& aName, const Functor& aFunctor);
 
   // Apply the aFunction to an already existing container (as a pop),
   // functor can make the container empty, in that case the container is
   // removed.
-  void performOnExisting(const std::string_view& aName,
-                         const Functor&          aFunctor);
+  void performOnExisting(const std::string& aName, const Functor& aFunctor);
 
   // Apply the aFunction to an already existing container (as a
-  // legth), functor takes the container as const hence the list can not be
+  // legth), functor takes the container as const hence the container can not be
   // modified.
-  void performOnExisting(const std::string_view& aName,
-                         const ConstFunctor&     aFunctor) const;
+  void performOnExisting(const std::string&  aName,
+                         const ConstFunctor& aFunctor) const;
 
  private:
   // This needs to be recursive indeed some operations can work on multiple
@@ -92,14 +91,13 @@ class ContainerFunctorApplier
 
 template <class CONTAINER>
 size_t ContainerFunctorApplier<CONTAINER>::hostedKeys() const {
-
   const boost::lock_guard myLock(theMutex);
   return theStorage.size();
 }
 
 template <class CONTAINER>
-void ContainerFunctorApplier<CONTAINER>::performOnNew(
-    const std::string_view& aName, const Functor& aFunctor) {
+void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
+                                                      const Functor& aFunctor) {
 
   ProtectedContainer* myContainer = nullptr;
 
@@ -109,10 +107,9 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(
     boost::lock_guard myLock(theMutex);
 
     auto [myIterator, myInserted] =
-        theStorage.emplace(std::pair(std::string(aName), ProtectedContainer()));
-    if (myInserted) {
-      LOG(INFO) << "Inserted new container at key \"" << aName << "\"";
-    }
+        theStorage.emplace(std::pair(aName, ProtectedContainer()));
+    LOG_IF(INFO, myInserted)
+        << "Inserted new container at key \"" << aName << "\"";
     myContainer = &myIterator->second;
     mySecondLevelLock.emplace(*myContainer->mutex, boost::try_to_lock_t());
     if (mySecondLevelLock->owns_lock()) {
@@ -126,19 +123,18 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(
 
 template <class CONTAINER>
 void ContainerFunctorApplier<CONTAINER>::performOnExisting(
-    const std::string_view& aName, const Functor& aFunctor) {
+    const std::string& aName, const Functor& aFunctor) {
 
   // This looks a bit gymnic but we need to obey to the following:
-  // after the operation if the list is empty has to be removed
-  // from the storage.
+  // after the operation if the list is empty has to be removed from storage.
   // The lock is done in multiple phases
-  //  - External Lock
+  //  - External Lock.
   //  - Try to acquire the internal Lock (each key has his own mutex), if the
-  //  lock
-  //    is not acquired it unlock the external lock and restart the acquisition,
-  //    this will permit other threads to work on different keys
+  //    lock is not acquired (another operation is being performed on same
+  //    container) it unlock the external lock and restart the acquisition
+  //    phase, this will permit other threads to work on different keys.
   //  - Unlock External Lock this gives the ability to another thread to operate
-  //    on another key while current threads works on aName key
+  //    on another key while current thread works on aName key.
   //  - After the operation if the list has become empty has to be removed, but
   //    in order to do so the external lock has to be acquired, so release all
   //    the lock and start to:
@@ -146,11 +142,10 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
   //      - Retrieve the key (if not exists we are done)
   //      - Lock the mutex (the mutex associated with the key)
   //      - If the key is still empty (in mean while while all locks were
-  //      released some
-  //        clients can have added a value) continue otherwise we are done
+  //        released some clients can have added a value) continue otherwise we
+  //        are done
   //      - Move the mutex out on a local mutex (the key "carrying" the mutex is
-  //      going
-  //        to be destroyed hence we need to move it out)
+  //        going to be destroyed hence we need to move it out)
   //      - Remove the keys
   //      - Release all the locks
 
@@ -210,7 +205,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
 
 template <class CONTAINER>
 void ContainerFunctorApplier<CONTAINER>::performOnExisting(
-    const std::string_view& aName, const ConstFunctor& aFunctor) const {
+    const std::string& aName, const ConstFunctor& aFunctor) const {
 
   const ProtectedContainer* myContainer = nullptr;
 

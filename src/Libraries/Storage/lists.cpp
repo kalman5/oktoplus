@@ -1,12 +1,10 @@
 #include "Storage/lists.h"
 
-namespace okts {
-namespace stor {
+namespace okts::stor {
 
 Lists::Lists()
     : Base()
     , Base2() {
 }
 
-} // namespace stor
-} // namespace okts
+} // namespace okts::stor

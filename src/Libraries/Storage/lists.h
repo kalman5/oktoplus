@@ -1,15 +1,13 @@
 #pragma once
 
-#include "Storage/backoperations.h"
-#include "Storage/frontonlyoperations.h"
-
-#include "Support/noncopyable.h"
-
 #include <list>
 #include <string>
 
-namespace okts {
-namespace stor {
+#include "Storage/backoperations.h"
+#include "Storage/frontonlyoperations.h"
+#include "Support/noncopyable.h"
+
+namespace okts::stor {
 
 class Lists : public BackOperations<std::list<std::string>>,
               public FrontOnlyOperations<std::list<std::string>>
@@ -23,5 +21,4 @@ class Lists : public BackOperations<std::list<std::string>>,
   Lists();
 };
 
-} // namespace stor
-} // namespace okts
+} // namespace okts::stor

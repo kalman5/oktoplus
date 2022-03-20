@@ -1,14 +1,13 @@
 #pragma once
 
-#include "Storage/genericcontainer.h"
-
-#include "Support/noncopyable.h"
-
 #include <string>
 #include <unordered_set>
+#include <vector>
 
-namespace okts {
-namespace stor {
+#include "Storage/genericcontainer.h"
+#include "Support/noncopyable.h"
+
+namespace okts::stor {
 
 class Sets : public GenericContainer<std::unordered_set<std::string>>
 {
@@ -20,14 +19,12 @@ class Sets : public GenericContainer<std::unordered_set<std::string>>
 
   Sets();
 
-  size_t add(const std::string_view&              aName,
+  size_t add(const std::string&                   aName,
              const std::vector<std::string_view>& aValues);
 
-  size_t cardinality(const std::string_view& aName) const;
+  size_t cardinality(const std::string& aName) const;
 
-  std::unordered_set<std::string>
-  diff(const std::vector<std::string_view>& aNames);
+  Container diff(const std::vector<std::string_view>& aNames);
 };
 
-} // namespace stor
-} // namespace okts
+} // namespace okts::stor

@@ -1,13 +1,12 @@
 #include "Storage/sets.h"
 
-namespace okts {
-namespace stor {
+namespace okts::stor {
 
 Sets::Sets()
     : Base() {
 }
 
-size_t Sets::add(const std::string_view&              aName,
+size_t Sets::add(const std::string&                   aName,
                  const std::vector<std::string_view>& aValues) {
 
   size_t myRet;
@@ -22,7 +21,7 @@ size_t Sets::add(const std::string_view&              aName,
   return myRet;
 }
 
-size_t Sets::cardinality(const std::string_view& aName) const {
+size_t Sets::cardinality(const std::string& aName) const {
 
   size_t myRet = 0;
 
@@ -43,12 +42,13 @@ Sets::diff(const std::vector<std::string_view>& aNames) {
   }
 
   theApplyer.performOnExisting(
-      aNames[0], [&myRet](const Container& aContainer) { myRet = aContainer; });
+      std::string(aNames[0]),
+      [&myRet](const Container& aContainer) { myRet = aContainer; });
 
   for (size_t i = 1; i < aNames.size(); ++i) {
 
     theApplyer.performOnExisting(
-        aNames[i], [&myRet](const Container& aContainer) {
+        std::string(aNames[i]), [&myRet](const Container& aContainer) {
           for (auto it = myRet.begin(); it != myRet.end(); /*void*/) {
             if (aContainer.count(*it)) {
               it = myRet.erase(it);
@@ -62,5 +62,4 @@ Sets::diff(const std::vector<std::string_view>& aNames) {
   return myRet;
 }
 
-} // namespace stor
-} // namespace okts
+} // namespace okts::stor

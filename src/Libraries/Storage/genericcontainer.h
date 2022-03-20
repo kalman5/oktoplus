@@ -3,15 +3,7 @@
 #include "Support/containerfunctorapplier.h"
 #include "Support/noncopyable.h"
 
-#include <boost/thread/mutex.hpp>
-
-#include <functional>
-#include <list>
-#include <optional>
-#include <string_view>
-
-namespace okts {
-namespace stor {
+namespace okts::stor {
 
 template <class CONTAINER>
 class GenericContainer
@@ -33,5 +25,4 @@ class GenericContainer
   sup::ContainerFunctorApplier<CONTAINER> theApplyer;
 };
 
-} // namespace stor
-} // namespace okts
+} // namespace okts::stor
