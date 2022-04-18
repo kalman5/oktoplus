@@ -12,85 +12,8 @@ CommandsList::CommandsList()
     : theLists() {
 }
 
-grpc::Status CommandsList::listPushFront(grpc::ServerContext*,
-                                         const PushRequest* aRequest,
-                                         PushReply*         aReply) {
-
-  std::vector<std::string_view> myStrings;
-  myStrings.reserve(aRequest->values_size());
-  for (int i = 0; i < aRequest->values_size(); ++i) {
-    myStrings.push_back(aRequest->values(i));
-  }
-
-  const auto& myName = aRequest->name();
-
-  auto myRet = theLists.pushFront(myName, myStrings);
-
-  aReply->set_size(myRet);
-
-  return grpc::Status::OK;
-}
-
-grpc::Status CommandsList::listPushBack(grpc::ServerContext*,
-                                        const PushRequest* aRequest,
-                                        PushReply*         aReply) {
-
-  std::vector<std::string_view> myStrings;
-  myStrings.reserve(aRequest->values_size());
-  for (int i = 0; i < aRequest->values_size(); ++i) {
-    myStrings.push_back(aRequest->values(i));
-  }
-
-  const auto& myName = aRequest->name();
-
-  auto myRet = theLists.pushBack(myName, myStrings);
-
-  aReply->set_size(myRet);
-
-  return grpc::Status::OK;
-}
-
-grpc::Status CommandsList::listPopFront(grpc::ServerContext*,
-                                        const GetValueRequest* aRequest,
-                                        GetValueReply*         aReply) {
-
-  const auto& myName = aRequest->name();
-
-  auto myRet = theLists.popFront(myName);
-
-  if (myRet) {
-    aReply->set_value(myRet.value());
-  }
-
-  return grpc::Status::OK;
-}
-
-grpc::Status CommandsList::listPopBack(grpc::ServerContext*,
-                                       const GetValueRequest* aRequest,
-                                       GetValueReply*         aReply) {
-  const std::string& myName = aRequest->name();
-
-  auto myRet = theLists.popBack(myName);
-
-  if (myRet) {
-    aReply->set_value(myRet.value());
-  }
-
-  return grpc::Status::OK;
-}
-
-grpc::Status CommandsList::listLength(grpc::ServerContext*,
-                                      const LengthRequest* aRequest,
-                                      LengthReply*         aReply) {
-  const auto& myName = aRequest->name();
-
-  auto myRet = theLists.size(myName);
-
-  aReply->set_value(myRet);
-
-  return grpc::Status::OK;
-}
-
+// BLMOVE
+// BLMPOP
 // BLPOP
 // BRPOP
 // BRPOPLPUSH
@@ -134,9 +57,67 @@ grpc::Status CommandsList::listInsert(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-grpc::Status CommandsList::listExistPushFront(grpc::ServerContext*,
-                                              const PushRequest* aRequest,
-                                              PushReply*         aReply) {
+grpc::Status CommandsList::listLength(grpc::ServerContext*,
+                                      const LengthRequest* aRequest,
+                                      LengthReply*         aReply) {
+  const auto& myName = aRequest->name();
+
+  auto myRet = theLists.size(myName);
+
+  aReply->set_value(myRet);
+
+  return grpc::Status::OK;
+}
+
+grpc::Status CommandsList::listMove(grpc::ServerContext*,
+                                    const MoveRequest* aRequest,
+                                    GetValueReply*     aReply) {
+
+  const auto& mySourceName           = aRequest->source_name();
+  const auto& myDestinationName      = aRequest->destination_name();
+  const auto  mySourceDirection      = aRequest->source_direction();
+  const auto  myDestinationDirection = aRequest->destination_direction();
+
+  auto myRet = theLists.move(
+      mySourceName,
+      myDestinationName,
+      mySourceDirection == MoveRequest::Direction::MoveRequest_Direction_LEFT ?
+          stor::Lists::Direction::LEFT :
+          stor::Lists::Direction::RIGHT,
+      myDestinationDirection ==
+              MoveRequest::Direction::MoveRequest_Direction_LEFT ?
+          stor::Lists::Direction::LEFT :
+          stor::Lists::Direction::RIGHT);
+
+  if (myRet) {
+    aReply->set_value(myRet.value());
+  }
+
+  return grpc::Status::OK;
+}
+
+// LMPOP
+
+grpc::Status CommandsList::listPopFront(grpc::ServerContext*,
+                                        const GetValueRequest* aRequest,
+                                        GetValueReply*         aReply) {
+
+  const auto& myName = aRequest->name();
+
+  auto myRet = theLists.popFront(myName);
+
+  if (myRet) {
+    aReply->set_value(myRet.value());
+  }
+
+  return grpc::Status::OK;
+}
+
+// LPOS
+
+grpc::Status CommandsList::listPushFront(grpc::ServerContext*,
+                                         const PushRequest* aRequest,
+                                         PushReply*         aReply) {
 
   std::vector<std::string_view> myStrings;
   myStrings.reserve(aRequest->values_size());
@@ -146,7 +127,26 @@ grpc::Status CommandsList::listExistPushFront(grpc::ServerContext*,
 
   const auto& myName = aRequest->name();
 
-  auto myRet = theLists.pushFrontExist(myName, myStrings);
+  auto myRet = theLists.pushFront(myName, myStrings);
+
+  aReply->set_size(myRet);
+
+  return grpc::Status::OK;
+}
+
+grpc::Status CommandsList::listExistPushBack(grpc::ServerContext*,
+                                             const PushRequest* aRequest,
+                                             PushReply*         aReply) {
+
+  std::vector<std::string_view> myStrings;
+  myStrings.reserve(aRequest->values_size());
+  for (int i = 0; i < aRequest->values_size(); ++i) {
+    myStrings.push_back(aRequest->values(i));
+  }
+
+  const auto& myName = aRequest->name();
+
+  auto myRet = theLists.pushBackExist(myName, myStrings);
 
   aReply->set_size(myRet);
 
@@ -219,14 +219,12 @@ grpc::Status CommandsList::listTrim(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-grpc::Status CommandsList::listPopBackPushFront(grpc::ServerContext*,
-                                                const PopPushRequest* aRequest,
-                                                PopPushReply*         aReply) {
+grpc::Status CommandsList::listPopBack(grpc::ServerContext*,
+                                       const GetValueRequest* aRequest,
+                                       GetValueReply*         aReply) {
+  const std::string& myName = aRequest->name();
 
-  const auto& mySourceName      = aRequest->source_name();
-  const auto& myDestinationName = aRequest->destination_name();
-
-  auto myRet = theLists.popBackPushFront(mySourceName, myDestinationName);
+  auto myRet = theLists.popBack(myName);
 
   if (myRet) {
     aReply->set_value(myRet.value());
@@ -235,9 +233,9 @@ grpc::Status CommandsList::listPopBackPushFront(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-grpc::Status CommandsList::listExistPushBack(grpc::ServerContext*,
-                                             const PushRequest* aRequest,
-                                             PushReply*         aReply) {
+grpc::Status CommandsList::listPushBack(grpc::ServerContext*,
+                                        const PushRequest* aRequest,
+                                        PushReply*         aReply) {
 
   std::vector<std::string_view> myStrings;
   myStrings.reserve(aRequest->values_size());
@@ -247,7 +245,26 @@ grpc::Status CommandsList::listExistPushBack(grpc::ServerContext*,
 
   const auto& myName = aRequest->name();
 
-  auto myRet = theLists.pushBackExist(myName, myStrings);
+  auto myRet = theLists.pushBack(myName, myStrings);
+
+  aReply->set_size(myRet);
+
+  return grpc::Status::OK;
+}
+
+grpc::Status CommandsList::listExistPushFront(grpc::ServerContext*,
+                                              const PushRequest* aRequest,
+                                              PushReply*         aReply) {
+
+  std::vector<std::string_view> myStrings;
+  myStrings.reserve(aRequest->values_size());
+  for (int i = 0; i < aRequest->values_size(); ++i) {
+    myStrings.push_back(aRequest->values(i));
+  }
+
+  const auto& myName = aRequest->name();
+
+  auto myRet = theLists.pushFrontExist(myName, myStrings);
 
   aReply->set_size(myRet);
 

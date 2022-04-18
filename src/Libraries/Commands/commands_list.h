@@ -7,8 +7,7 @@
 
 #include <memory>
 
-namespace okts {
-namespace cmds {
+namespace okts::cmds {
 
 class CommandsList : virtual public Interface::Service
 {
@@ -16,66 +15,62 @@ class CommandsList : virtual public Interface::Service
   CommandsList();
 
  private:
-  grpc::Status listPushFront(grpc::ServerContext*,
-                             const PushRequest*,
-                             PushReply*) final override;
-
-  grpc::Status listPushBack(grpc::ServerContext*,
-                            const PushRequest*,
-                            PushReply*) final override;
-
-  grpc::Status listPopFront(grpc::ServerContext*,
-                            const GetValueRequest*,
-                            GetValueReply*) final override;
-
-  grpc::Status listPopBack(grpc::ServerContext*,
-                           const GetValueRequest*,
-                           GetValueReply*) final override;
-
-  grpc::Status listLength(grpc::ServerContext*,
-                          const LengthRequest*,
-                          LengthReply*) final override;
-
+  // BLMOVE
+  // BLMPOP
   // BLPOP
   // BRPOP
   // BRPOPLPUSH
 
-  grpc::Status listIndex(grpc::ServerContext*,
-                         const IndexRequest*,
-                         GetValueReply*) final override;
+  grpc::Status
+  listIndex(grpc::ServerContext*, const IndexRequest*, GetValueReply*) final;
 
-  grpc::Status listInsert(grpc::ServerContext*,
-                          const InsertRequest*,
-                          InsertReply*) final override;
+  grpc::Status
+  listInsert(grpc::ServerContext*, const InsertRequest*, InsertReply*) final;
+
+  grpc::Status
+  listLength(grpc::ServerContext*, const LengthRequest*, LengthReply*) final;
+
+  grpc::Status
+  listMove(grpc::ServerContext*, const MoveRequest*, GetValueReply*) final;
+
+  // LMPOP
+
+  grpc::Status listPopFront(grpc::ServerContext*,
+                            const GetValueRequest*,
+                            GetValueReply*) final;
+
+  // LPOS
+
+  grpc::Status
+  listPushFront(grpc::ServerContext*, const PushRequest*, PushReply*) final;
+
+  grpc::Status
+  listExistPushBack(grpc::ServerContext*, const PushRequest*, PushReply*) final;
+
+  grpc::Status
+  listRange(grpc::ServerContext*, const RangeRequest*, RangeReply*) final;
+
+  grpc::Status
+  listRemove(grpc::ServerContext*, const RemoveRequest*, RemoveReply*) final;
+
+  grpc::Status
+  listSet(grpc::ServerContext*, const SetRequest*, SetReply*) final;
+
+  grpc::Status
+  listTrim(grpc::ServerContext*, const TrimRequest*, TrimReply*) final;
+
+  grpc::Status listPopBack(grpc::ServerContext*,
+                           const GetValueRequest*,
+                           GetValueReply*) final;
+
+  grpc::Status
+  listPushBack(grpc::ServerContext*, const PushRequest*, PushReply*) final;
 
   grpc::Status listExistPushFront(grpc::ServerContext*,
                                   const PushRequest*,
-                                  PushReply*) final override;
-
-  grpc::Status listRange(grpc::ServerContext*,
-                         const RangeRequest*,
-                         RangeReply*) final override;
-
-  grpc::Status listRemove(grpc::ServerContext*,
-                          const RemoveRequest*,
-                          RemoveReply*) final override;
-
-  grpc::Status
-  listSet(grpc::ServerContext*, const SetRequest*, SetReply*) final override;
-
-  grpc::Status
-  listTrim(grpc::ServerContext*, const TrimRequest*, TrimReply*) final override;
-
-  grpc::Status listPopBackPushFront(grpc::ServerContext*,
-                                    const PopPushRequest*,
-                                    PopPushReply*) final override;
-
-  grpc::Status listExistPushBack(grpc::ServerContext*,
-                                 const PushRequest*,
-                                 PushReply*) final override;
+                                  PushReply*) final;
 
   stor::Lists theLists;
 };
 
-} // namespace cmds
-} // namespace okts
+} // namespace okts::cmds

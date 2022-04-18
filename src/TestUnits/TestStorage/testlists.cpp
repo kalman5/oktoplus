@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 
 #include <glog/logging.h>
+#include <optional>
 
 namespace oktss = okts::stor;
 
@@ -336,12 +337,30 @@ TEST_F(TestLists, set) {
   }
 }
 
-TEST_F(TestLists, pop_back_push_front) {
+TEST_F(TestLists, move) {
+  {
+    oktss::Lists myLists;
+
+    ASSERT_EQ(std::nullopt,
+              myLists.move("l1",
+                           "l2",
+                           oktss::Lists::Direction::RIGHT,
+                           oktss::Lists::Direction::LEFT));
+
+    ASSERT_EQ(0u, myLists.hostedKeys());
+  }
+
   {
     oktss::Lists myLists;
 
     ASSERT_EQ(1u, myLists.pushBack("l1", {"0"}));
-    ASSERT_EQ("0", myLists.popBackPushFront("l1", "l2").value());
+    ASSERT_EQ("0",
+              myLists
+                  .move("l1",
+                        "l2",
+                        oktss::Lists::Direction::RIGHT,
+                        oktss::Lists::Direction::LEFT)
+                  .value());
     ASSERT_EQ(1u, myLists.hostedKeys());
   }
 
@@ -349,10 +368,49 @@ TEST_F(TestLists, pop_back_push_front) {
     oktss::Lists myLists;
 
     ASSERT_EQ(2u, myLists.pushBack("l1", {"0", "1"}));
-    ASSERT_EQ("1", myLists.popBackPushFront("l1", "l2").value());
+    ASSERT_EQ("1",
+              myLists
+                  .move("l1",
+                        "l2",
+                        oktss::Lists::Direction::RIGHT,
+                        oktss::Lists::Direction::LEFT)
+                  .value());
     ASSERT_EQ(2u, myLists.hostedKeys());
 
-    ASSERT_EQ("0", myLists.popBackPushFront("l1", "l2").value());
+    ASSERT_EQ("0",
+              myLists
+                  .move("l1",
+                        "l2",
+                        oktss::Lists::Direction::RIGHT,
+                        oktss::Lists::Direction::LEFT)
+                  .value());
+    ASSERT_EQ(1u, myLists.hostedKeys());
+
+    ASSERT_EQ("0", myLists.popFront("l2").value());
+    ASSERT_EQ("1", myLists.popFront("l2").value());
+    ASSERT_EQ(0u, myLists.hostedKeys());
+  }
+
+  {
+    oktss::Lists myLists;
+
+    ASSERT_EQ(2u, myLists.pushBack("l1", {"0", "1"}));
+    ASSERT_EQ("0",
+              myLists
+                  .move("l1",
+                        "l2",
+                        oktss::Lists::Direction::LEFT,
+                        oktss::Lists::Direction::RIGHT)
+                  .value());
+    ASSERT_EQ(2u, myLists.hostedKeys());
+
+    ASSERT_EQ("1",
+              myLists
+                  .move("l1",
+                        "l2",
+                        oktss::Lists::Direction::LEFT,
+                        oktss::Lists::Direction::RIGHT)
+                  .value());
     ASSERT_EQ(1u, myLists.hostedKeys());
 
     ASSERT_EQ("0", myLists.popFront("l2").value());
@@ -364,8 +422,20 @@ TEST_F(TestLists, pop_back_push_front) {
     oktss::Lists myLists;
 
     ASSERT_EQ(3u, myLists.pushBack("l1", {"0", "1", "2"}));
-    ASSERT_EQ("2", myLists.popBackPushFront("l1", "l1").value());
-    ASSERT_EQ("1", myLists.popBackPushFront("l1", "l1").value());
+    ASSERT_EQ("2",
+              myLists
+                  .move("l1",
+                        "l1",
+                        oktss::Lists::Direction::RIGHT,
+                        oktss::Lists::Direction::LEFT)
+                  .value());
+    ASSERT_EQ("1",
+              myLists
+                  .move("l1",
+                        "l1",
+                        oktss::Lists::Direction::RIGHT,
+                        oktss::Lists::Direction::LEFT)
+                  .value());
 
     ASSERT_EQ("1", myLists.popFront("l1").value());
     ASSERT_EQ("2", myLists.popFront("l1").value());

@@ -7,8 +7,7 @@
 
 #include <memory>
 
-namespace okts {
-namespace cmds {
+namespace okts::cmds {
 
 class CommandsDeque : virtual public Interface::Service
 {
@@ -16,67 +15,63 @@ class CommandsDeque : virtual public Interface::Service
   CommandsDeque();
 
  private:
-  grpc::Status dequePushFront(grpc::ServerContext*,
-                              const PushRequest*,
-                              PushReply*) final override;
-
-  grpc::Status dequePushBack(grpc::ServerContext*,
-                             const PushRequest*,
-                             PushReply*) final override;
-
-  grpc::Status dequePopFront(grpc::ServerContext*,
-                             const GetValueRequest*,
-                             GetValueReply*) final override;
-
-  grpc::Status dequePopBack(grpc::ServerContext*,
-                            const GetValueRequest*,
-                            GetValueReply*) final override;
-
-  grpc::Status dequeLength(grpc::ServerContext*,
-                           const LengthRequest*,
-                           LengthReply*) final override;
-
+  // BLMOVE
+  // BLMPOP
   // BLPOP
   // BRPOP
   // BRPOPLPUSH
 
-  grpc::Status dequeIndex(grpc::ServerContext*,
-                          const IndexRequest*,
-                          GetValueReply*) final override;
-
-  grpc::Status dequeInsert(grpc::ServerContext*,
-                           const InsertRequest*,
-                           InsertReply*) final override;
-
-  grpc::Status dequeExistPushFront(grpc::ServerContext*,
-                                   const PushRequest*,
-                                   PushReply*) final override;
-
-  grpc::Status dequeRange(grpc::ServerContext*,
-                          const RangeRequest*,
-                          RangeReply*) final override;
-
-  grpc::Status dequeRemove(grpc::ServerContext*,
-                           const RemoveRequest*,
-                           RemoveReply*) final override;
+  grpc::Status
+  dequeIndex(grpc::ServerContext*, const IndexRequest*, GetValueReply*) final;
 
   grpc::Status
-  dequeSet(grpc::ServerContext*, const SetRequest*, SetReply*) final override;
+  dequeInsert(grpc::ServerContext*, const InsertRequest*, InsertReply*) final;
 
-  grpc::Status dequeTrim(grpc::ServerContext*,
-                         const TrimRequest*,
-                         TrimReply*) final override;
+  grpc::Status
+  dequeLength(grpc::ServerContext*, const LengthRequest*, LengthReply*) final;
 
-  grpc::Status dequePopBackPushFront(grpc::ServerContext*,
-                                     const PopPushRequest*,
-                                     PopPushReply*) final override;
+  grpc::Status
+  dequeMove(grpc::ServerContext*, const MoveRequest*, GetValueReply*);
+
+  // LMPOP
+
+  grpc::Status dequePopFront(grpc::ServerContext*,
+                             const GetValueRequest*,
+                             GetValueReply*) final;
+
+  // LPOS
+
+  grpc::Status
+  dequePushFront(grpc::ServerContext*, const PushRequest*, PushReply*) final;
 
   grpc::Status dequeExistPushBack(grpc::ServerContext*,
                                   const PushRequest*,
-                                  PushReply*) final override;
+                                  PushReply*) final;
+
+  grpc::Status
+  dequeRange(grpc::ServerContext*, const RangeRequest*, RangeReply*) final;
+
+  grpc::Status
+  dequeRemove(grpc::ServerContext*, const RemoveRequest*, RemoveReply*) final;
+
+  grpc::Status
+  dequeSet(grpc::ServerContext*, const SetRequest*, SetReply*) final;
+
+  grpc::Status
+  dequeTrim(grpc::ServerContext*, const TrimRequest*, TrimReply*) final;
+
+  grpc::Status dequePopBack(grpc::ServerContext*,
+                            const GetValueRequest*,
+                            GetValueReply*) final;
+
+  grpc::Status
+  dequePushBack(grpc::ServerContext*, const PushRequest*, PushReply*) final;
+
+  grpc::Status dequeExistPushFront(grpc::ServerContext*,
+                                   const PushRequest*,
+                                   PushReply*) final;
 
   stor::Deques theQueues;
 };
 
-} // namespace cmds
-} // namespace okts
+} // namespace okts::cmds

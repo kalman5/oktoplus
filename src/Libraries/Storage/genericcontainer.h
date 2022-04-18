@@ -12,6 +12,7 @@ class GenericContainer
   DISABLE_EVIL_CONSTRUCTOR(GenericContainer);
 
   enum class Position { BEFORE = 0, AFTER = 1 };
+  enum class Direction { LEFT = 0, RIGHT = 1 };
   enum class Status { OK = 0, NOT_FOUND = 1, OUT_OF_RANGE = 2 };
 
   GenericContainer()          = default;

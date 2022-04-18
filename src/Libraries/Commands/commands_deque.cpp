@@ -5,92 +5,14 @@
 #include <sstream>
 #include <string_view>
 
-namespace okts {
-namespace cmds {
+namespace okts::cmds {
 
 CommandsDeque::CommandsDeque()
     : theQueues() {
 }
 
-grpc::Status CommandsDeque::dequePushFront(grpc::ServerContext*,
-                                           const PushRequest* aRequest,
-                                           PushReply*         aReply) {
-
-  std::vector<std::string_view> myStrings;
-  myStrings.reserve(aRequest->values_size());
-  for (int i = 0; i < aRequest->values_size(); ++i) {
-    myStrings.push_back(aRequest->values(i));
-  }
-
-  const auto& myName = aRequest->name();
-
-  auto myRet = theQueues.pushFront(myName, myStrings);
-
-  aReply->set_size(myRet);
-
-  return grpc::Status::OK;
-}
-
-grpc::Status CommandsDeque::dequePushBack(grpc::ServerContext*,
-                                          const PushRequest* aRequest,
-                                          PushReply*         aReply) {
-
-  std::vector<std::string_view> myStrings;
-  myStrings.reserve(aRequest->values_size());
-  for (int i = 0; i < aRequest->values_size(); ++i) {
-    myStrings.push_back(aRequest->values(i));
-  }
-
-  const auto& myName = aRequest->name();
-
-  auto myRet = theQueues.pushBack(myName, myStrings);
-
-  aReply->set_size(myRet);
-
-  return grpc::Status::OK;
-}
-
-grpc::Status CommandsDeque::dequePopFront(grpc::ServerContext*,
-                                          const GetValueRequest* aRequest,
-                                          GetValueReply*         aReply) {
-
-  const auto& myName = aRequest->name();
-
-  auto myRet = theQueues.popFront(myName);
-
-  if (myRet) {
-    aReply->set_value(myRet.value());
-  }
-
-  return grpc::Status::OK;
-}
-
-grpc::Status CommandsDeque::dequePopBack(grpc::ServerContext*,
-                                         const GetValueRequest* aRequest,
-                                         GetValueReply*         aReply) {
-  const std::string& myName = aRequest->name();
-
-  auto myRet = theQueues.popBack(myName);
-
-  if (myRet) {
-    aReply->set_value(myRet.value());
-  }
-
-  return grpc::Status::OK;
-}
-
-grpc::Status CommandsDeque::dequeLength(grpc::ServerContext*,
-                                        const LengthRequest* aRequest,
-                                        LengthReply*         aReply) {
-  const auto& myName = aRequest->name();
-
-  auto myRet = theQueues.size(myName);
-
-  aReply->set_value(myRet);
-
-  return grpc::Status::OK;
-}
-
+// BLMOVE
+// BLMPOP
 // BLPOP
 // BRPOP
 // BRPOPLPUSH
@@ -134,9 +56,67 @@ grpc::Status CommandsDeque::dequeInsert(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-grpc::Status CommandsDeque::dequeExistPushFront(grpc::ServerContext*,
-                                                const PushRequest* aRequest,
-                                                PushReply*         aReply) {
+grpc::Status CommandsDeque::dequeLength(grpc::ServerContext*,
+                                        const LengthRequest* aRequest,
+                                        LengthReply*         aReply) {
+  const auto& myName = aRequest->name();
+
+  auto myRet = theQueues.size(myName);
+
+  aReply->set_value(myRet);
+
+  return grpc::Status::OK;
+}
+
+grpc::Status CommandsDeque::dequeMove(grpc::ServerContext*,
+                                      const MoveRequest* aRequest,
+                                      GetValueReply*     aReply) {
+
+  const auto& mySourceName           = aRequest->source_name();
+  const auto& myDestinationName      = aRequest->destination_name();
+  const auto  mySourceDirection      = aRequest->source_direction();
+  const auto  myDestinationDirection = aRequest->destination_direction();
+
+  auto myRet = theQueues.move(
+      mySourceName,
+      myDestinationName,
+      mySourceDirection == MoveRequest::Direction::MoveRequest_Direction_LEFT ?
+          stor::Deques::Direction::LEFT :
+          stor::Deques::Direction::RIGHT,
+      myDestinationDirection ==
+              MoveRequest::Direction::MoveRequest_Direction_LEFT ?
+          stor::Deques::Direction::LEFT :
+          stor::Deques::Direction::RIGHT);
+
+  if (myRet) {
+    aReply->set_value(myRet.value());
+  }
+
+  return grpc::Status::OK;
+}
+
+// LMPOP
+
+grpc::Status CommandsDeque::dequePopFront(grpc::ServerContext*,
+                                          const GetValueRequest* aRequest,
+                                          GetValueReply*         aReply) {
+
+  const auto& myName = aRequest->name();
+
+  auto myRet = theQueues.popFront(myName);
+
+  if (myRet) {
+    aReply->set_value(myRet.value());
+  }
+
+  return grpc::Status::OK;
+}
+
+// LPOS
+
+grpc::Status CommandsDeque::dequePushFront(grpc::ServerContext*,
+                                           const PushRequest* aRequest,
+                                           PushReply*         aReply) {
 
   std::vector<std::string_view> myStrings;
   myStrings.reserve(aRequest->values_size());
@@ -146,7 +126,26 @@ grpc::Status CommandsDeque::dequeExistPushFront(grpc::ServerContext*,
 
   const auto& myName = aRequest->name();
 
-  auto myRet = theQueues.pushFrontExist(myName, myStrings);
+  auto myRet = theQueues.pushFront(myName, myStrings);
+
+  aReply->set_size(myRet);
+
+  return grpc::Status::OK;
+}
+
+grpc::Status CommandsDeque::dequeExistPushBack(grpc::ServerContext*,
+                                               const PushRequest* aRequest,
+                                               PushReply*         aReply) {
+
+  std::vector<std::string_view> myStrings;
+  myStrings.reserve(aRequest->values_size());
+  for (int i = 0; i < aRequest->values_size(); ++i) {
+    myStrings.push_back(aRequest->values(i));
+  }
+
+  const auto& myName = aRequest->name();
+
+  auto myRet = theQueues.pushBackExist(myName, myStrings);
 
   aReply->set_size(myRet);
 
@@ -220,15 +219,12 @@ grpc::Status CommandsDeque::dequeTrim(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-grpc::Status
-CommandsDeque::dequePopBackPushFront(grpc::ServerContext*,
-                                     const PopPushRequest* aRequest,
-                                     PopPushReply*         aReply) {
+grpc::Status CommandsDeque::dequePopBack(grpc::ServerContext*,
+                                         const GetValueRequest* aRequest,
+                                         GetValueReply*         aReply) {
+  const std::string& myName = aRequest->name();
 
-  const auto& mySourceName      = aRequest->source_name();
-  const auto& myDestinationName = aRequest->destination_name();
-
-  auto myRet = theQueues.popBackPushFront(mySourceName, myDestinationName);
+  auto myRet = theQueues.popBack(myName);
 
   if (myRet) {
     aReply->set_value(myRet.value());
@@ -237,9 +233,9 @@ CommandsDeque::dequePopBackPushFront(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-grpc::Status CommandsDeque::dequeExistPushBack(grpc::ServerContext*,
-                                               const PushRequest* aRequest,
-                                               PushReply*         aReply) {
+grpc::Status CommandsDeque::dequePushBack(grpc::ServerContext*,
+                                          const PushRequest* aRequest,
+                                          PushReply*         aReply) {
 
   std::vector<std::string_view> myStrings;
   myStrings.reserve(aRequest->values_size());
@@ -249,12 +245,30 @@ grpc::Status CommandsDeque::dequeExistPushBack(grpc::ServerContext*,
 
   const auto& myName = aRequest->name();
 
-  auto myRet = theQueues.pushBackExist(myName, myStrings);
+  auto myRet = theQueues.pushBack(myName, myStrings);
 
   aReply->set_size(myRet);
 
   return grpc::Status::OK;
 }
 
-} // namespace cmds
-} // namespace okts
+grpc::Status CommandsDeque::dequeExistPushFront(grpc::ServerContext*,
+                                                const PushRequest* aRequest,
+                                                PushReply*         aReply) {
+
+  std::vector<std::string_view> myStrings;
+  myStrings.reserve(aRequest->values_size());
+  for (int i = 0; i < aRequest->values_size(); ++i) {
+    myStrings.push_back(aRequest->values(i));
+  }
+
+  const auto& myName = aRequest->name();
+
+  auto myRet = theQueues.pushFrontExist(myName, myStrings);
+
+  aReply->set_size(myRet);
+
+  return grpc::Status::OK;
+}
+
+} // namespace okts::cmds

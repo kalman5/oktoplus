@@ -7,8 +7,7 @@
 
 #include <memory>
 
-namespace okts {
-namespace cmds {
+namespace okts::cmds {
 
 class CommandsSet : virtual public Interface::Service
 {
@@ -44,5 +43,4 @@ class CommandsSet : virtual public Interface::Service
   stor::Sets theSets;
 };
 
-} // namespace cmds
-} // namespace okts
+} // namespace okts::cmds

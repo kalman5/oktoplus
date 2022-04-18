@@ -18,6 +18,8 @@ class FrontOnlyOperations : virtual public GenericContainer<CONTAINER>
   using Base      = GenericContainer<Container>;
 
  public:
+  using Direction = typename Base::Direction;
+
   DISABLE_EVIL_CONSTRUCTOR(FrontOnlyOperations);
 
   FrontOnlyOperations()
@@ -32,9 +34,10 @@ class FrontOnlyOperations : virtual public GenericContainer<CONTAINER>
   size_t pushFrontExist(const std::string&                   aName,
                         const std::vector<std::string_view>& aValues);
 
-  std::optional<std::string>
-  popBackPushFront(const std::string& aSourceName,
-                   const std::string& aDestinationName);
+  std::optional<std::string> move(const std::string& aSourceName,
+                                  const std::string& aDestinationName,
+                                  Direction          aSourceDirection,
+                                  Direction          aDestinationDirection);
 
  private:
   using PopBackPushFrontMutex = boost::mutex;
@@ -95,18 +98,21 @@ size_t FrontOnlyOperations<CONTAINER>::pushFrontExist(
 }
 
 template <class CONTAINER>
-std::optional<std::string> FrontOnlyOperations<CONTAINER>::popBackPushFront(
-    const std::string& aSourceName, const std::string& aDestinationName) {
+std::optional<std::string>
+FrontOnlyOperations<CONTAINER>::move(const std::string& aSourceName,
+                                     const std::string& aDestinationName,
+                                     Direction          aSourceDirection,
+                                     Direction          aDestinationDirection) {
 
   std::optional<std::string> myRet;
 
   // clang-format off
   // The following mutex is required to avoid a dead lock in case two different
   // operations are running concurrently:
-  //     popBackPushFront(L1 -> L2)
-  //     popBackPushFront(L2 -> L1)
+  //     move(L1 -> L2)
+  //     move(L2 -> L1)
   // TODO: this has to be improved indeed it avoid the concurrency
-  //       of every other popBackPushFront operations on different
+  //       of every other move operations on different
   //       containers
   // clang-format on
 
@@ -114,16 +120,33 @@ std::optional<std::string> FrontOnlyOperations<CONTAINER>::popBackPushFront(
 
   Base::theApplyer.performOnExisting(
       aSourceName,
-      [this, &aDestinationName, &myRet](Container& aSourceContainer) {
+      [this,
+       &aDestinationName,
+       &aSourceDirection,
+       &aDestinationDirection,
+       &myRet](Container& aSourceContainer) {
         if (aSourceContainer.empty()) {
           return;
         }
-        std::string myValue = aSourceContainer.back();
-        aSourceContainer.pop_back();
+        std::string myValue;
+
+        if (aSourceDirection == Direction::LEFT) {
+          myValue = aSourceContainer.front();
+          aSourceContainer.pop_front();
+        } else {
+          myValue = aSourceContainer.back();
+          aSourceContainer.pop_back();
+        }
 
         Base::theApplyer.performOnNew(
-            aDestinationName, [&myValue](Container& aDestinationContainer) {
-              aDestinationContainer.push_front(myValue);
+            aDestinationName,
+            [&myValue,
+             &aDestinationDirection](Container& aDestinationContainer) {
+              if (aDestinationDirection == Direction::LEFT) {
+                aDestinationContainer.push_front(myValue);
+              } else {
+                aDestinationContainer.push_back(myValue);
+              }
             });
 
         myRet = std::move(myValue);

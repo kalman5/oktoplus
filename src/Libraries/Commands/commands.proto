@@ -7,22 +7,26 @@ package okts.cmds;
 
 service Interface {
   // LIST
-  rpc listPushFront(PushRequest)               returns (PushReply)     { }  // LPUSH
-  rpc listPushBack(PushRequest)                returns (PushReply)     { }  // RPUSH
-  rpc listPopFront(GetValueRequest)            returns (GetValueReply) { }  // LPOP
-  rpc listPopBack(GetValueRequest)             returns (GetValueReply) { }  // RPOP
-  rpc listLength(LengthRequest)                returns (LengthReply)   { }  // LLEN
+                                                                            // BLMOVE
+                                                                            // BLMPOP
                                                                             // BLPOP
                                                                             // BRPOP
                                                                             // BRPOPLPUSH
   rpc listIndex(IndexRequest)                  returns (GetValueReply) { }  // LINDEX
   rpc listInsert(InsertRequest)                returns (InsertReply)   { }  // LINSERT
+  rpc listLength(LengthRequest)                returns (LengthReply)   { }  // LLEN
+  rpc listMove(MoveRequest)                    returns (GetValueReply) { }  // LMOVE
+                                                                            // LMPOP
+  rpc listPopFront(GetValueRequest)            returns (GetValueReply) { }  // LPOP
+                                                                            // LPOS
+  rpc listPushFront(PushRequest)               returns (PushReply)     { }  // LPUSH
   rpc listExistPushFront(PushRequest)          returns (PushReply)     { }  // LPUSHX
   rpc listRange(RangeRequest)                  returns (RangeReply)    { }  // LRANGE
   rpc listRemove(RemoveRequest)                returns (RemoveReply)   { }  // LREM
   rpc listSet(SetRequest)                      returns (SetReply)      { }  // LSET
   rpc listTrim(TrimRequest)                    returns (TrimReply)     { }  // LTRIM
-  rpc listPopBackPushFront(PopPushRequest)     returns (PopPushReply)  { }  // RPOPLPUSH
+  rpc listPopBack(GetValueRequest)             returns (GetValueReply) { }  // RPOP
+  rpc listPushBack(PushRequest)                returns (PushReply)     { }  // RPUSH
   rpc listExistPushBack(PushRequest)           returns (PushReply)     { }  // RPUSHX
 
   //////////////////////////////////////////////////////////////
@@ -50,6 +54,7 @@ service Interface {
   rpc dequePopFront(GetValueRequest)            returns (GetValueReply) { }  // LPOP
   rpc dequePopBack(GetValueRequest)             returns (GetValueReply) { }  // RPOP
   rpc dequeLength(LengthRequest)                returns (LengthReply)   { }  // LLEN
+  rpc dequeMove(MoveRequest)                    returns (GetValueReply) { }  // LMOVE
                                                                              // BLPOP
                                                                              // BRPOP
                                                                              // BRPOPLPUSH
@@ -60,7 +65,6 @@ service Interface {
   rpc dequeRemove(RemoveRequest)                returns (RemoveReply)   { }  // LREM
   rpc dequeSet(SetRequest)                      returns (SetReply)      { }  // LSET
   rpc dequeTrim(TrimRequest)                    returns (TrimReply)     { }  // LTRIM
-  rpc dequePopBackPushFront(PopPushRequest)     returns (PopPushReply)  { }  // RPOPLPUSH
   rpc dequeExistPushBack(PushRequest)           returns (PushReply)     { }  // RPUSHX
 
   //////////////////////////////////////////////////////////////
