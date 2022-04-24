@@ -21,8 +21,8 @@ class CommandsVector : virtual public Interface::Service
                               PushReply*) final override;
 
   grpc::Status vectorPopBack(grpc::ServerContext*,
-                             const GetValueRequest*,
-                             GetValueReply*) final override;
+                             const PopBackRequest*,
+                             PopBackReply*) final override;
 
   grpc::Status vectorLength(grpc::ServerContext*,
                             const LengthRequest*,

@@ -32,14 +32,13 @@ grpc::Status CommandsVector::vectorPushBack(grpc::ServerContext*,
 }
 
 grpc::Status CommandsVector::vectorPopBack(grpc::ServerContext*,
-                                           const GetValueRequest* aRequest,
-                                           GetValueReply*         aReply) {
-  const std::string& myName = aRequest->name();
+                                           const PopBackRequest* aRequest,
+                                           PopBackReply*         aReply) {
+  auto myRet = theVectors.popBack(
+      aRequest->name(), aRequest->has_count() ? aRequest->count().value() : 1);
 
-  auto myRet = theVectors.popBack(myName);
-
-  if (myRet) {
-    aReply->set_value(myRet.value());
+  for (auto&& myValue : myRet) {
+    aReply->add_value(std::move(myValue));
   }
 
   return grpc::Status::OK;

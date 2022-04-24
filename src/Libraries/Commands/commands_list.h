@@ -36,8 +36,8 @@ class CommandsList : virtual public Interface::Service
   // LMPOP
 
   grpc::Status listPopFront(grpc::ServerContext*,
-                            const GetValueRequest*,
-                            GetValueReply*) final;
+                            const PopFrontRequest*,
+                            PopFrontReply*) final;
 
   // LPOS
 
@@ -59,9 +59,8 @@ class CommandsList : virtual public Interface::Service
   grpc::Status
   listTrim(grpc::ServerContext*, const TrimRequest*, TrimReply*) final;
 
-  grpc::Status listPopBack(grpc::ServerContext*,
-                           const GetValueRequest*,
-                           GetValueReply*) final;
+  grpc::Status
+  listPopBack(grpc::ServerContext*, const PopBackRequest*, PopBackReply*) final;
 
   grpc::Status
   listPushBack(grpc::ServerContext*, const PushRequest*, PushReply*) final;

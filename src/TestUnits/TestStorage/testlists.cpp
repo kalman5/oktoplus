@@ -89,33 +89,33 @@ TEST_F(TestLists, push_front_on_existing) {
   }
 }
 
-TEST_F(TestLists, pop_back) {
+TEST_F(TestLists, pop_front_back) {
   oktss::Lists myLists;
 
-  ASSERT_EQ(5u, myLists.pushFront("l1", {"5", "4", "3", "2", "1"}));
+  ASSERT_EQ(7u, myLists.pushFront("l1", {"7", "6", "5", "4", "3", "2", "1"}));
 
-  ASSERT_EQ("1", myLists.popFront("l1").value());
-  ASSERT_EQ(4u, myLists.size("l1"));
+  ASSERT_EQ(std::list<std::string>{"1"}, myLists.popFront("l1", 1));
+  ASSERT_EQ(6u, myLists.size("l1"));
 
-  ASSERT_EQ("2", myLists.popFront("l1").value());
+  ASSERT_EQ(std::list<std::string>{"2"}, myLists.popFront("l1", 1));
+  ASSERT_EQ(5u, myLists.size("l1"));
+
+  ASSERT_EQ((std::list<std::string>{"3", "4"}), myLists.popFront("l1", 2));
   ASSERT_EQ(3u, myLists.size("l1"));
 
-  ASSERT_EQ("5", myLists.popBack("l1").value());
+  ASSERT_EQ(std::list<std::string>{"7"}, myLists.popBack("l1", 1));
   ASSERT_EQ(2u, myLists.size("l1"));
 
-  ASSERT_EQ("4", myLists.popBack("l1").value());
-  ASSERT_EQ(1u, myLists.size("l1"));
-
-  ASSERT_EQ("3", myLists.popBack("l1").value());
+  ASSERT_EQ((std::list<std::string>{"6", "5"}), myLists.popBack("l1", 2));
 
   // at this point the list is empty
   ASSERT_EQ(0u, myLists.size("l1"));
   ASSERT_EQ(0u, myLists.hostedKeys());
 
-  ASSERT_FALSE(myLists.popBack("l1"));
-  ASSERT_FALSE(myLists.popFront("l1"));
-  ASSERT_FALSE(myLists.popBack("xxxx"));
-  ASSERT_FALSE(myLists.popFront("xxxx"));
+  ASSERT_TRUE(myLists.popBack("l1", 1).empty());
+  ASSERT_TRUE(myLists.popFront("l1", 1).empty());
+  ASSERT_TRUE(myLists.popBack("xxxx", 1).empty());
+  ASSERT_TRUE(myLists.popFront("xxxx", 1).empty());
 }
 
 TEST_F(TestLists, index) {
@@ -186,31 +186,30 @@ TEST_F(TestLists, range) {
 
   ASSERT_EQ(3u, myLists.size("l1"));
 
-  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
-            myLists.range("l1", 0, 2));
+  ASSERT_EQ(std::list<std::string>({"1", "2", "3"}), myLists.range("l1", 0, 2));
 
-  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
+  ASSERT_EQ(std::list<std::string>({"1", "2", "3"}),
             myLists.range("l1", 0, 20));
 
-  ASSERT_EQ(std::vector<std::string>({"2", "3"}), myLists.range("l1", 1, 2));
+  ASSERT_EQ(std::list<std::string>({"2", "3"}), myLists.range("l1", 1, 2));
 
-  ASSERT_EQ(std::vector<std::string>({"2", "3"}), myLists.range("l1", 1, 20));
+  ASSERT_EQ(std::list<std::string>({"2", "3"}), myLists.range("l1", 1, 20));
 
-  ASSERT_EQ(std::vector<std::string>(), myLists.range("l1", 10, 20));
+  ASSERT_EQ(std::list<std::string>(), myLists.range("l1", 10, 20));
 
-  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
+  ASSERT_EQ(std::list<std::string>({"1", "2", "3"}),
             myLists.range("l1", -3, -1));
 
-  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
+  ASSERT_EQ(std::list<std::string>({"1", "2", "3"}),
             myLists.range("l1", -30, -1));
 
-  ASSERT_EQ(std::vector<std::string>({"1", "2"}), myLists.range("l1", -30, -2));
+  ASSERT_EQ(std::list<std::string>({"1", "2"}), myLists.range("l1", -30, -2));
 
-  ASSERT_EQ(std::vector<std::string>(), myLists.range("l1", -30, -10));
+  ASSERT_EQ(std::list<std::string>(), myLists.range("l1", -30, -10));
 
-  ASSERT_EQ(std::vector<std::string>({"1", "2"}), myLists.range("l1", -30, 1));
+  ASSERT_EQ(std::list<std::string>({"1", "2"}), myLists.range("l1", -30, 1));
 
-  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
+  ASSERT_EQ(std::list<std::string>({"1", "2", "3"}),
             myLists.range("l1", -30, 30));
 }
 
@@ -224,9 +223,8 @@ TEST_F(TestLists, remove) {
     ASSERT_EQ(0u, myLists.remove("l1", -1, "7"));
     ASSERT_EQ(0u, myLists.remove("l1", 1, "7"));
 
-    ASSERT_EQ(
-        std::vector<std::string>({"1", "3", "3", "3", "4", "3", "6", "6"}),
-        myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::list<std::string>({"1", "3", "3", "3", "4", "3", "6", "6"}),
+              myLists.range("l1", -30, 30));
   }
 
   { // all occurencies
@@ -235,7 +233,7 @@ TEST_F(TestLists, remove) {
               myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myLists.remove("l1", 0, "3"));
 
-    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
+    ASSERT_EQ(std::list<std::string>({"1", "4", "6", "6"}),
               myLists.range("l1", -30, 30));
   }
 
@@ -245,7 +243,7 @@ TEST_F(TestLists, remove) {
               myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myLists.remove("l1", 20, "3"));
 
-    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
+    ASSERT_EQ(std::list<std::string>({"1", "4", "6", "6"}),
               myLists.range("l1", -30, 30));
   }
 
@@ -255,7 +253,7 @@ TEST_F(TestLists, remove) {
               myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myLists.remove("l1", 4, "3"));
 
-    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
+    ASSERT_EQ(std::list<std::string>({"1", "4", "6", "6"}),
               myLists.range("l1", -30, 30));
   }
 
@@ -265,7 +263,7 @@ TEST_F(TestLists, remove) {
               myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(2u, myLists.remove("l1", 2, "3"));
 
-    ASSERT_EQ(std::vector<std::string>({"1", "3", "4", "3", "6", "6"}),
+    ASSERT_EQ(std::list<std::string>({"1", "3", "4", "3", "6", "6"}),
               myLists.range("l1", -30, 30));
   }
 
@@ -275,7 +273,7 @@ TEST_F(TestLists, remove) {
               myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myLists.remove("l1", -20, "3"));
 
-    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
+    ASSERT_EQ(std::list<std::string>({"1", "4", "6", "6"}),
               myLists.range("l1", -30, 30));
   }
 
@@ -285,7 +283,7 @@ TEST_F(TestLists, remove) {
               myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myLists.remove("l1", -4, "3"));
 
-    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
+    ASSERT_EQ(std::list<std::string>({"1", "4", "6", "6"}),
               myLists.range("l1", -30, 30));
   }
 
@@ -295,7 +293,7 @@ TEST_F(TestLists, remove) {
               myLists.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(3u, myLists.remove("l1", -3, "3"));
 
-    ASSERT_EQ(std::vector<std::string>({"1", "3", "4", "6", "6"}),
+    ASSERT_EQ(std::list<std::string>({"1", "3", "4", "6", "6"}),
               myLists.range("l1", -30, 30));
   }
 }
@@ -325,14 +323,13 @@ TEST_F(TestLists, set) {
 
     ASSERT_EQ(oktss::Lists::Status::OK, myLists.set("l1", 3, "40"));
 
-    ASSERT_EQ(
-        std::vector<std::string>({"1", "2", "3", "40", "5", "6", "7", "8"}),
-        myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::list<std::string>({"1", "2", "3", "40", "5", "6", "7", "8"}),
+              myLists.range("l1", -30, 30));
 
     ASSERT_EQ(oktss::Lists::Status::OK, myLists.set("l1", -3, "60"));
 
     ASSERT_EQ(
-        std::vector<std::string>({"1", "2", "3", "40", "5", "60", "7", "8"}),
+        std::list<std::string>({"1", "2", "3", "40", "5", "60", "7", "8"}),
         myLists.range("l1", -30, 30));
   }
 }
@@ -386,8 +383,8 @@ TEST_F(TestLists, move) {
                   .value());
     ASSERT_EQ(1u, myLists.hostedKeys());
 
-    ASSERT_EQ("0", myLists.popFront("l2").value());
-    ASSERT_EQ("1", myLists.popFront("l2").value());
+    ASSERT_EQ("0", myLists.popFront("l2", 1).front());
+    ASSERT_EQ("1", myLists.popFront("l2", 1).front());
     ASSERT_EQ(0u, myLists.hostedKeys());
   }
 
@@ -413,8 +410,8 @@ TEST_F(TestLists, move) {
                   .value());
     ASSERT_EQ(1u, myLists.hostedKeys());
 
-    ASSERT_EQ("0", myLists.popFront("l2").value());
-    ASSERT_EQ("1", myLists.popFront("l2").value());
+    ASSERT_EQ("0", myLists.popFront("l2", 1).front());
+    ASSERT_EQ("1", myLists.popFront("l2", 1).front());
     ASSERT_EQ(0u, myLists.hostedKeys());
   }
 
@@ -437,9 +434,9 @@ TEST_F(TestLists, move) {
                         oktss::Lists::Direction::LEFT)
                   .value());
 
-    ASSERT_EQ("1", myLists.popFront("l1").value());
-    ASSERT_EQ("2", myLists.popFront("l1").value());
-    ASSERT_EQ("0", myLists.popFront("l1").value());
+    ASSERT_EQ("1", myLists.popFront("l1", 1).front());
+    ASSERT_EQ("2", myLists.popFront("l1", 1).front());
+    ASSERT_EQ("0", myLists.popFront("l1", 1).front());
     ASSERT_EQ(0u, myLists.hostedKeys());
   }
 }
@@ -453,9 +450,8 @@ TEST_F(TestLists, trim) {
 
     myLists.trim("l1", 0, 7);
 
-    ASSERT_EQ(
-        std::vector<std::string>({"0", "1", "2", "3", "4", "5", "6", "7"}),
-        myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::list<std::string>({"0", "1", "2", "3", "4", "5", "6", "7"}),
+              myLists.range("l1", -30, 30));
   }
 
   {
@@ -465,9 +461,8 @@ TEST_F(TestLists, trim) {
 
     myLists.trim("l1", -8, -1);
 
-    ASSERT_EQ(
-        std::vector<std::string>({"0", "1", "2", "3", "4", "5", "6", "7"}),
-        myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::list<std::string>({"0", "1", "2", "3", "4", "5", "6", "7"}),
+              myLists.range("l1", -30, 30));
   }
 
   {
@@ -477,7 +472,7 @@ TEST_F(TestLists, trim) {
 
     myLists.trim("l1", 5, 4);
 
-    ASSERT_EQ(std::vector<std::string>({}), myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::list<std::string>({}), myLists.range("l1", -30, 30));
     ASSERT_EQ(0u, myLists.hostedKeys());
   }
 
@@ -488,7 +483,7 @@ TEST_F(TestLists, trim) {
 
     myLists.trim("l1", 15, 30);
 
-    ASSERT_EQ(std::vector<std::string>({}), myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::list<std::string>({}), myLists.range("l1", -30, 30));
     ASSERT_EQ(0u, myLists.hostedKeys());
   }
 
@@ -499,7 +494,7 @@ TEST_F(TestLists, trim) {
 
     myLists.trim("l1", 1, 6);
 
-    ASSERT_EQ(std::vector<std::string>({"1", "2", "3", "4", "5", "6"}),
+    ASSERT_EQ(std::list<std::string>({"1", "2", "3", "4", "5", "6"}),
               myLists.range("l1", -30, 30));
   }
 
@@ -510,7 +505,7 @@ TEST_F(TestLists, trim) {
 
     myLists.trim("l1", 5, 5);
 
-    ASSERT_EQ(std::vector<std::string>({"5"}), myLists.range("l1", -30, 30));
+    ASSERT_EQ(std::list<std::string>({"5"}), myLists.range("l1", -30, 30));
   }
 
   {
@@ -520,7 +515,7 @@ TEST_F(TestLists, trim) {
 
     myLists.trim("l1", 5, 50);
 
-    ASSERT_EQ(std::vector<std::string>({"5", "6", "7"}),
+    ASSERT_EQ(std::list<std::string>({"5", "6", "7"}),
               myLists.range("l1", -30, 30));
   }
 }

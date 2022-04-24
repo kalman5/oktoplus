@@ -98,15 +98,14 @@ grpc::Status CommandsDeque::dequeMove(grpc::ServerContext*,
 // LMPOP
 
 grpc::Status CommandsDeque::dequePopFront(grpc::ServerContext*,
-                                          const GetValueRequest* aRequest,
-                                          GetValueReply*         aReply) {
+                                          const PopFrontRequest* aRequest,
+                                          PopFrontReply*         aReply) {
 
-  const auto& myName = aRequest->name();
+  auto myRet = theQueues.popFront(
+      aRequest->name(), aRequest->has_count() ? aRequest->count().value() : 1);
 
-  auto myRet = theQueues.popFront(myName);
-
-  if (myRet) {
-    aReply->set_value(myRet.value());
+  for (auto&& myValue : myRet) {
+    aReply->add_value(std::move(myValue));
   }
 
   return grpc::Status::OK;
@@ -220,14 +219,13 @@ grpc::Status CommandsDeque::dequeTrim(grpc::ServerContext*,
 }
 
 grpc::Status CommandsDeque::dequePopBack(grpc::ServerContext*,
-                                         const GetValueRequest* aRequest,
-                                         GetValueReply*         aReply) {
-  const std::string& myName = aRequest->name();
+                                         const PopBackRequest* aRequest,
+                                         PopBackReply*         aReply) {
+  auto myRet = theQueues.popBack(
+      aRequest->name(), aRequest->has_count() ? aRequest->count().value() : 1);
 
-  auto myRet = theQueues.popBack(myName);
-
-  if (myRet) {
-    aReply->set_value(myRet.value());
+  for (auto&& myValue : myRet) {
+    aReply->add_value(std::move(myValue));
   }
 
   return grpc::Status::OK;

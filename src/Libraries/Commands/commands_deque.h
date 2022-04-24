@@ -36,8 +36,8 @@ class CommandsDeque : virtual public Interface::Service
   // LMPOP
 
   grpc::Status dequePopFront(grpc::ServerContext*,
-                             const GetValueRequest*,
-                             GetValueReply*) final;
+                             const PopFrontRequest*,
+                             PopFrontReply*) final;
 
   // LPOS
 
@@ -61,8 +61,8 @@ class CommandsDeque : virtual public Interface::Service
   dequeTrim(grpc::ServerContext*, const TrimRequest*, TrimReply*) final;
 
   grpc::Status dequePopBack(grpc::ServerContext*,
-                            const GetValueRequest*,
-                            GetValueReply*) final;
+                            const PopBackRequest*,
+                            PopBackReply*) final;
 
   grpc::Status
   dequePushBack(grpc::ServerContext*, const PushRequest*, PushReply*) final;

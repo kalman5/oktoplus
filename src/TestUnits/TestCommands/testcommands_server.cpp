@@ -37,7 +37,7 @@ TEST_F(TestCommands, set_get) {
 
   for (size_t i = 0; i < myListSize; ++i) {
     ASSERT_EQ(std::to_string(myListSize - 1 - i),
-              myClient.listPopFront("List-1"));
+              myClient.listPopFront("List-1", 1).front());
   }
 }
 
@@ -72,6 +72,6 @@ TEST_F(TestCommands, DISABLED_perf2) {
 
   for (size_t i = 0; i < myListSize; ++i) {
     ASSERT_EQ(std::to_string(myListSize - i - 1),
-              myClient.listPopFront("List-2"));
+              myClient.listPopFront("List-2", 1).front());
   }
 }

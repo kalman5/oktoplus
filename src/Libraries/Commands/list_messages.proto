@@ -2,6 +2,8 @@ syntax = "proto3";
 
 import "types.proto";
 
+import "google/protobuf/wrappers.proto";
+
 package okts.cmds;
 
 //////////////////////////////////////////////////////
@@ -53,6 +55,18 @@ message MoveRequest {
   string destination_name         = 2;
   Direction source_direction      = 3;
   Direction destination_direction = 4;
+}
+
+//////////////////////////////////////////////////////
+
+message PopFrontRequest {
+  string                      name  = 1;
+  google.protobuf.UInt32Value count = 2;
+}
+
+message PopFrontReply {
+  ResultInfo      info  = 1;
+  repeated string value = 2;
 }
 
 //////////////////////////////////////////////////////
@@ -126,4 +140,16 @@ message TrimRequest {
 
 message TrimReply {
   ResultInfo info = 1;
+}
+
+//////////////////////////////////////////////////////
+
+message PopBackRequest {
+  string                      name  = 1;
+  google.protobuf.UInt32Value count = 2;
+}
+
+message PopBackReply {
+  ResultInfo      info  = 1;
+  repeated string value = 2;
 }

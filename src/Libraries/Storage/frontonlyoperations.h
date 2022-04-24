@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+#include <list>
 #include <optional>
 #include <string_view>
 #include <vector>
@@ -29,7 +31,7 @@ class FrontOnlyOperations : virtual public GenericContainer<CONTAINER>
   size_t pushFront(const std::string&                   aName,
                    const std::vector<std::string_view>& aValues);
 
-  std::optional<std::string> popFront(const std::string& aName);
+  std::list<std::string> popFront(const std::string& aName, uint32_t aCount);
 
   size_t pushFrontExist(const std::string&                   aName,
                         const std::vector<std::string_view>& aValues);
@@ -64,18 +66,21 @@ size_t FrontOnlyOperations<CONTAINER>::pushFront(
 }
 
 template <class CONTAINER>
-std::optional<std::string>
-FrontOnlyOperations<CONTAINER>::popFront(const std::string& aName) {
+std::list<std::string>
+FrontOnlyOperations<CONTAINER>::popFront(const std::string& aName,
+                                         const uint32_t     aCount) {
 
-  std::optional<std::string> myRet;
+  std::list<std::string> myRet;
 
-  Base::theApplyer.performOnExisting(aName, [&myRet](Container& aContainer) {
-    if (aContainer.empty()) {
-      return;
-    }
-    myRet = aContainer.front();
-    aContainer.pop_front();
-  });
+  Base::theApplyer.performOnExisting(
+      aName, [&myRet, &aCount](Container& aContainer) {
+        uint32_t myCollected = 0;
+        while (!aContainer.empty() && myCollected < aCount) {
+          myRet.emplace_back(std::move(aContainer.front()));
+          aContainer.pop_front();
+          ++myCollected;
+        }
+      });
 
   return myRet;
 }

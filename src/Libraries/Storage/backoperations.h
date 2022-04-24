@@ -4,6 +4,7 @@
 
 #include "Support/noncopyable.h"
 
+#include <list>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -30,7 +31,7 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
   size_t pushBack(const std::string&                   aName,
                   const std::vector<std::string_view>& aValues);
 
-  std::optional<std::string> popBack(const std::string& aName);
+  std::list<std::string> popBack(const std::string& aName, uint32_t aCount);
 
   size_t size(const std::string& aName) const;
 
@@ -42,7 +43,7 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
                                 const std::string& aPivot,
                                 const std::string& aValue);
 
-  std::vector<std::string>
+  std::list<std::string>
   range(const std::string& aName, int64_t aStart, int64_t aStop) const;
 
   size_t
@@ -77,18 +78,21 @@ size_t BackOperations<CONTAINER>::pushBack(
 }
 
 template <class CONTAINER>
-std::optional<std::string>
-BackOperations<CONTAINER>::popBack(const std::string& aName) {
+std::list<std::string>
+BackOperations<CONTAINER>::popBack(const std::string& aName,
+                                   const uint32_t     aCount) {
 
-  std::optional<std::string> myRet;
+  std::list<std::string> myRet;
 
-  Base::theApplyer.performOnExisting(aName, [&myRet](Container& aContainer) {
-    if (aContainer.empty()) {
-      return;
-    }
-    myRet = aContainer.back();
-    aContainer.pop_back();
-  });
+  Base::theApplyer.performOnExisting(
+      aName, [&myRet, &aCount](Container& aContainer) {
+        uint32_t myCollected = 0;
+        while (!aContainer.empty() && myCollected < aCount) {
+          myRet.emplace_back(std::move(aContainer.back()));
+          aContainer.pop_back();
+          ++myCollected;
+        }
+      });
 
   return myRet;
 }
@@ -161,10 +165,10 @@ BackOperations<CONTAINER>::insert(const std::string& aName,
 }
 
 template <class CONTAINER>
-std::vector<std::string> BackOperations<CONTAINER>::range(
+std::list<std::string> BackOperations<CONTAINER>::range(
     const std::string& aName, int64_t aStart, int64_t aStop) const {
 
-  std::vector<std::string> myRet;
+  std::list<std::string> myRet;
 
   Base::theApplyer.performOnExisting(
       aName, [&myRet, aStart, aStop](const Container& aContainer) {
@@ -205,7 +209,7 @@ std::vector<std::string> BackOperations<CONTAINER>::range(
         std::advance(myItStop, myStop + 1);
 
         while (myItStart != myItStop) {
-          myRet.push_back(*myItStart);
+          myRet.emplace_back(*myItStart);
           ++myItStart;
         }
       });

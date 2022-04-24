@@ -99,15 +99,13 @@ grpc::Status CommandsList::listMove(grpc::ServerContext*,
 // LMPOP
 
 grpc::Status CommandsList::listPopFront(grpc::ServerContext*,
-                                        const GetValueRequest* aRequest,
-                                        GetValueReply*         aReply) {
+                                        const PopFrontRequest* aRequest,
+                                        PopFrontReply*         aReply) {
+  auto myRet = theLists.popFront(
+      aRequest->name(), aRequest->has_count() ? aRequest->count().value() : 1);
 
-  const auto& myName = aRequest->name();
-
-  auto myRet = theLists.popFront(myName);
-
-  if (myRet) {
-    aReply->set_value(myRet.value());
+  for (auto&& myValue : myRet) {
+    aReply->add_value(std::move(myValue));
   }
 
   return grpc::Status::OK;
@@ -220,14 +218,13 @@ grpc::Status CommandsList::listTrim(grpc::ServerContext*,
 }
 
 grpc::Status CommandsList::listPopBack(grpc::ServerContext*,
-                                       const GetValueRequest* aRequest,
-                                       GetValueReply*         aReply) {
-  const std::string& myName = aRequest->name();
+                                       const PopBackRequest* aRequest,
+                                       PopBackReply*         aReply) {
+  auto myRet = theLists.popBack(
+      aRequest->name(), aRequest->has_count() ? aRequest->count().value() : 1);
 
-  auto myRet = theLists.popBack(myName);
-
-  if (myRet) {
-    aReply->set_value(myRet.value());
+  for (auto&& myValue : myRet) {
+    aReply->add_value(std::move(myValue));
   }
 
   return grpc::Status::OK;

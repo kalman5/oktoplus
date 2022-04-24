@@ -64,20 +64,26 @@ void CommandsClient::dequeTrim(const std::string& aListName,
        });
 }
 
-std::string CommandsClient::listPopFront(const std::string& aContainerName) {
+std::list<std::string>
+CommandsClient::listPopFront(const std::string& aContainerName,
+                             const uint32_t     aCount) {
   return popFront(aContainerName,
+                  aCount,
                   [this](::grpc::ClientContext* aContext,
-                         const GetValueRequest& aRequest,
-                         GetValueReply*         aReply) {
+                         const PopFrontRequest& aRequest,
+                         PopFrontReply*         aReply) {
                     return theStub->listPopFront(aContext, aRequest, aReply);
                   });
 }
 
-std::string CommandsClient::dequePopFront(const std::string& aContainerName) {
+std::list<std::string>
+CommandsClient::dequePopFront(const std::string& aContainerName,
+                              const uint32_t     aCount) {
   return popFront(aContainerName,
+                  aCount,
                   [this](::grpc::ClientContext* aContext,
-                         const GetValueRequest& aRequest,
-                         GetValueReply*         aReply) {
+                         const PopFrontRequest& aRequest,
+                         PopFrontReply*         aReply) {
                     return theStub->dequePopFront(aContext, aRequest, aReply);
                   });
 }
@@ -157,15 +163,16 @@ void CommandsClient::trim(
   }
 }
 
-std::string CommandsClient::popFront(
+std::list<std::string> CommandsClient::popFront(
     const std::string&                                   aContainerName,
+    const uint32_t                                       aCount,
     const std::function<::grpc::Status(::grpc::ClientContext*,
-                                       const GetValueRequest&,
-                                       GetValueReply*)>& aFunction) {
+                                       const PopFrontRequest&,
+                                       PopFrontReply*)>& aFunction) {
 
-  GetValueRequest myRequest;
-
+  PopFrontRequest myRequest;
   myRequest.set_name(aContainerName);
+  myRequest.mutable_count()->set_value(aCount);
 
   std::chrono::system_clock::time_point deadline =
       std::chrono::system_clock::now() + std::chrono::seconds(5);
@@ -173,15 +180,20 @@ std::string CommandsClient::popFront(
   ::grpc::ClientContext myContext;
   myContext.set_deadline(deadline);
 
-  GetValueReply myReply;
+  PopFrontReply myReply;
 
-  ::grpc::Status myStatus = aFunction(&myContext, myRequest, &myReply);
+  const ::grpc::Status myStatus = aFunction(&myContext, myRequest, &myReply);
 
   if (not myStatus.ok()) {
     throw std::runtime_error(myStatus.error_message());
   }
 
-  return myReply.value();
+  std::list<std::string> myRet;
+  for (auto myValue : myReply.value()) {
+    myRet.emplace_back(std::move(myValue));
+  }
+
+  return myRet;
 }
 
 size_t CommandsClient::length(

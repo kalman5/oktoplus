@@ -17,7 +17,7 @@ service Interface {
   rpc listLength(LengthRequest)                returns (LengthReply)   { }  // LLEN
   rpc listMove(MoveRequest)                    returns (GetValueReply) { }  // LMOVE
                                                                             // LMPOP
-  rpc listPopFront(GetValueRequest)            returns (GetValueReply) { }  // LPOP
+  rpc listPopFront(PopFrontRequest)            returns (PopFrontReply) { }  // LPOP
                                                                             // LPOS
   rpc listPushFront(PushRequest)               returns (PushReply)     { }  // LPUSH
   rpc listExistPushFront(PushRequest)          returns (PushReply)     { }  // LPUSHX
@@ -25,7 +25,7 @@ service Interface {
   rpc listRemove(RemoveRequest)                returns (RemoveReply)   { }  // LREM
   rpc listSet(SetRequest)                      returns (SetReply)      { }  // LSET
   rpc listTrim(TrimRequest)                    returns (TrimReply)     { }  // LTRIM
-  rpc listPopBack(GetValueRequest)             returns (GetValueReply) { }  // RPOP
+  rpc listPopBack(PopBackRequest)              returns (PopBackReply)  { }  // RPOP
   rpc listPushBack(PushRequest)                returns (PushReply)     { }  // RPUSH
   rpc listExistPushBack(PushRequest)           returns (PushReply)     { }  // RPUSHX
 
@@ -33,7 +33,7 @@ service Interface {
 
   // VECTOR
   rpc vectorPushBack(PushRequest)              returns (PushReply)     { }  // RPUSH
-  rpc vectorPopBack(GetValueRequest)           returns (GetValueReply) { }  // RPOP
+  rpc vectorPopBack(PopBackRequest)            returns (PopBackReply)  { }  // RPOP
   rpc vectorLength(LengthRequest)              returns (LengthReply)   { }  // LLEN
                                                                             // BLPOP
                                                                             // BRPOP
@@ -51,8 +51,8 @@ service Interface {
   // DEQUE
   rpc dequePushFront(PushRequest)               returns (PushReply)     { }  // LPUSH
   rpc dequePushBack(PushRequest)                returns (PushReply)     { }  // RPUSH
-  rpc dequePopFront(GetValueRequest)            returns (GetValueReply) { }  // LPOP
-  rpc dequePopBack(GetValueRequest)             returns (GetValueReply) { }  // RPOP
+  rpc dequePopFront(PopFrontRequest)            returns (PopFrontReply) { }  // LPOP
+  rpc dequePopBack(PopBackRequest)              returns (PopBackReply) { }  // RPOP
   rpc dequeLength(LengthRequest)                returns (LengthReply)   { }  // LLEN
   rpc dequeMove(MoveRequest)                    returns (GetValueReply) { }  // LMOVE
                                                                              // BLPOP

@@ -19,7 +19,7 @@ int main(int /*argc*/, char** argv) {
   oksu::GoogleRaii myShutdowner(argv[0], true, true);
 
   const std::string        myEndpoint("127.0.0.1:6666");
-  const size_t             myValuesPerBatch(1);
+  const size_t             myValuesPerBatch(10);
   std::vector<std::string> myValues;
   myValues.reserve(myValuesPerBatch);
 
@@ -39,8 +39,8 @@ int main(int /*argc*/, char** argv) {
     }
 
     oksu::Chrono myChrono;
-    for (size_t i = 0; i < myListSize * myValuesPerBatch; ++i) {
-      myClient.listPopFront(myList);
+    for (size_t i = 0; i < myListSize; ++i) {
+      myClient.listPopFront(myList, myValuesPerBatch);
     }
     std::cout << "Reads per seconds: "
               << myListSize * myValuesPerBatch / myChrono.stop() << "\n";

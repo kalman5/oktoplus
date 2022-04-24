@@ -3,6 +3,7 @@
 #include "Commands/commands_server_service.h"
 #include "Storage/lists.h"
 
+#include <cstdint>
 #include <grpc++/grpc++.h>
 
 #include <memory>
@@ -24,8 +25,10 @@ class CommandsClient final
   void
   dequeTrim(const std::string& aContainerName, int64_t aStart, int64_t aStop);
 
-  std::string listPopFront(const std::string& aContainerName);
-  std::string dequePopFront(const std::string& aContainerName);
+  std::list<std::string> listPopFront(const std::string& aContainerName,
+                                      uint32_t           aCount);
+  std::list<std::string> dequePopFront(const std::string& aContainerName,
+                                       uint32_t           aCount);
 
   size_t listLength(const std::string& aContainerName);
   size_t dequeLength(const std::string& aContainerName);
@@ -44,11 +47,12 @@ class CommandsClient final
        const std::function<::grpc::Status(
            ::grpc::ClientContext*, const TrimRequest&, TrimReply*)>& aFunction);
 
-  std::string
+  std::list<std::string>
   popFront(const std::string&                                   aContainerName,
+           uint32_t                                             aCount,
            const std::function<::grpc::Status(::grpc::ClientContext*,
-                                              const GetValueRequest&,
-                                              GetValueReply*)>& aFunction);
+                                              const PopFrontRequest&,
+                                              PopFrontReply*)>& aFunction);
 
   size_t length(const std::string& aContainerName,
                 const std::function<::grpc::Status(::grpc::ClientContext*,
