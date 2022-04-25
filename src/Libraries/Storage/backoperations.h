@@ -9,8 +9,7 @@
 #include <string>
 #include <string_view>
 
-namespace okts {
-namespace stor {
+namespace okts::stor {
 
 template <class CONTAINER>
 class BackOperations : virtual public GenericContainer<CONTAINER>
@@ -251,63 +250,52 @@ BackOperations<CONTAINER>::position(const std::string& aName,
       aName,
       [&myRet, &aValue, &aRank, &aCount, &aMaxLength](
           const Container& aContainer) {
-        uint64_t   myIndex = 0;
-        uint64_t   myFound = 0;
-        auto const myMaxLength =
-            aMaxLength == 0 ? std::numeric_limits<uint64_t>::max() : aMaxLength;
+        uint64_t myIndex = 0;
+        uint64_t myFound = 0;
+
         const uint64_t myURank = aRank > 0 ? aRank : std::abs(aRank);
 
+        auto mySearchFunction = [&](const auto aBegin,
+                                    const auto aEnd,
+                                    const auto aIndexConverter) {
+          for (auto myIt = aBegin; myIt != aEnd; ++myIt) {
+            if (*myIt == aValue) {
+              ++myFound;
+
+              /// Until we have not found the amount of ranked values
+              /// we need to skip the found ones.
+              if (myFound < myURank) {
+                ++myIndex;
+                continue;
+              }
+
+              myRet.push_back(aIndexConverter(myIndex));
+              if (myRet.size() == aCount) {
+                break;
+              }
+            }
+
+            ++myIndex;
+
+            /// Interrupt the traverse if I have visited already the max
+            /// allowed values.
+            /// If specified lenght is 0 then we do not have limits.
+            if (aMaxLength > 0 && myIndex >= aMaxLength) {
+              break;
+            }
+          }
+        };
+
         if (aRank > 0) {
-          for (auto myIt = aContainer.begin(); myIt != aContainer.end();
-               ++myIt) {
-            if (*myIt == aValue) {
-              ++myFound;
-              if (myFound < myURank) {
-                ++myIndex;
-                continue;
-              }
-              myRet.push_back(myIndex);
-            }
-
-            ++myIndex;
-
-            // At max we can return the amount of aCount indexes.
-            if (myRet.size() == aCount) {
-              break;
-            }
-
-            /// Interrupt the traverse if I have visited already the max
-            /// allowed values.
-            if (myIndex >= myMaxLength) {
-              break;
-            }
-          }
+          mySearchFunction(aContainer.begin(),
+                           aContainer.end(),
+                           [](uint64_t aIndex) { return aIndex; });
         } else {
-          for (auto myIt = aContainer.rbegin(); myIt != aContainer.rend();
-               ++myIt) {
-            if (*myIt == aValue) {
-              ++myFound;
-              if (myFound < myURank) {
-                ++myIndex;
-                continue;
-              }
-              // Returned index is always 0 based traversing from left.
-              myRet.push_back(aContainer.size() - 1 - myIndex);
-            }
-
-            ++myIndex;
-
-            // At max we can return the amount of aCount indexes.
-            if (myRet.size() == aCount) {
-              break;
-            }
-
-            /// Interrupt the traverse if I have visited already the max
-            /// allowed values.
-            if (myIndex >= myMaxLength) {
-              break;
-            }
-          }
+          mySearchFunction(aContainer.rbegin(),
+                           aContainer.rend(),
+                           [myLen = aContainer.size()](uint64_t aIndex) {
+                             return myLen - 1 - aIndex;
+                           });
         }
       });
 
@@ -532,5 +520,4 @@ size_t BackOperations<CONTAINER>::pushBackExist(
   return myRet;
 }
 
-} // namespace stor
-} // namespace okts
+} // namespace okts::stor

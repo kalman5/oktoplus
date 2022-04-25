@@ -556,4 +556,11 @@ TEST_F(TestLists, position) {
 
   // Rank = -2, Count = 1, MaxLenght = 0
   ASSERT_EQ(std::list<uint64_t>({0}), myLists.position("l1", "a", -2, 1, 0));
+
+  oktss::Lists myListsOneEntry;
+  ASSERT_EQ(1u, myLists.pushBack("l2", {"a"}));
+
+  // Rank = -1/1, Count = 1, MaxLenght = 0
+  ASSERT_EQ(std::list<uint64_t>({0}), myLists.position("l2", "a", -1, 1, 0));
+  ASSERT_EQ(std::list<uint64_t>({0}), myLists.position("l2", "a", 1, 1, 0));
 }
