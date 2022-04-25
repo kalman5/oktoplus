@@ -72,16 +72,16 @@ message PopFrontReply {
 //////////////////////////////////////////////////////
 
 message PositionRequest {
-  string name    = 1;
-  string value   = 2;
-  int64  rank    = 3;
-  uint64 count   = 4;
-  uint64 max_len = 5;
+  string                      name    = 1;
+  string                      value   = 2;
+  google.protobuf.Int64Value  rank    = 3;
+  google.protobuf.UInt64Value count   = 4;
+  google.protobuf.UInt64Value max_len = 5;
 }
 
 message PositionReply {
   ResultInfo      info  = 1;
-  repeated string value = 2;
+  repeated uint64 index = 2;
 }
 
 //////////////////////////////////////////////////////

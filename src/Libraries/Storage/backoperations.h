@@ -49,6 +49,12 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
                                   Direction          aSourceDirection,
                                   Direction          aDestinationDirection);
 
+  std::list<uint64_t> position(const std::string& aName,
+                               const std::string& aValue,
+                               int64_t            aRank,
+                               uint64_t           aCount,
+                               uint64_t           aMaxLength);
+
   std::list<std::string>
   range(const std::string& aName, int64_t aStart, int64_t aStop) const;
 
@@ -227,6 +233,109 @@ BackOperations<CONTAINER>::move(const std::string& aSourceName,
             });
 
         myRet = std::move(myValue);
+      });
+
+  return myRet;
+}
+
+template <class CONTAINER>
+std::list<uint64_t>
+BackOperations<CONTAINER>::position(const std::string& aName,
+                                    const std::string& aValue,
+                                    const int64_t      aRank,
+                                    const uint64_t     aCount,
+                                    const uint64_t     aMaxLength) {
+  std::list<uint64_t> myRet;
+
+  Base::theApplyer.performOnExisting(
+      aName,
+      [&myRet, &aValue, &aRank, &aCount, &aMaxLength](
+          const Container& aContainer) {
+        uint64_t   myIndex = 0;
+        uint64_t   myFound = 0;
+        auto const myMaxLength =
+            aMaxLength == 0 ? std::numeric_limits<uint64_t>::max() : aMaxLength;
+        const uint64_t myURank = aRank > 0 ? aRank : std::abs(aRank);
+
+        enum class Operation { Nop = 0, Continue = 1, Break = 2 };
+
+        [[maybe_unused]] const auto myFunction =
+            [&](const auto& aLambdaValue) -> Operation {
+          if (aLambdaValue == aValue) {
+            ++myFound;
+            if (myFound < myURank) {
+              ++myIndex;
+              return Operation::Continue;
+            }
+            myRet.push_back(myIndex);
+          }
+
+          ++myIndex;
+
+          // At max we can return the amount of aCount indexes.
+          if (myRet.size() == aCount) {
+            return Operation::Break;
+          }
+
+          /// Interrupt the traverse if I have visited already the max
+          /// allowed values.
+          if (myIndex >= myMaxLength) {
+            return Operation::Break;
+          }
+        };
+
+        if (aRank > 0) {
+          for (auto myIt = aContainer.begin(); myIt != aContainer.end();
+               ++myIt) {
+            if (*myIt == aValue) {
+              ++myFound;
+              if (myFound < myURank) {
+                ++myIndex;
+                continue;
+              }
+              myRet.push_back(myIndex);
+            }
+
+            ++myIndex;
+
+            // At max we can return the amount of aCount indexes.
+            if (myRet.size() == aCount) {
+              break;
+            }
+
+            /// Interrupt the traverse if I have visited already the max
+            /// allowed values.
+            if (myIndex >= myMaxLength) {
+              break;
+            }
+          }
+        } else {
+          for (auto myIt = aContainer.rbegin(); myIt != aContainer.rend();
+               ++myIt) {
+            if (*myIt == aValue) {
+              ++myFound;
+              if (myFound < myURank) {
+                ++myIndex;
+                continue;
+              }
+              // Returned index is always 0 based traversing from left.
+              myRet.push_back(aContainer.size() - 1 - myIndex);
+            }
+
+            ++myIndex;
+
+            // At max we can return the amount of aCount indexes.
+            if (myRet.size() == aCount) {
+              break;
+            }
+
+            /// Interrupt the traverse if I have visited already the max
+            /// allowed values.
+            if (myIndex >= myMaxLength) {
+              break;
+            }
+          }
+        }
       });
 
   return myRet;

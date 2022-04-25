@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 
 #include <glog/logging.h>
+#include <limits>
 #include <optional>
 
 namespace oktss = okts::stor;
@@ -518,4 +519,41 @@ TEST_F(TestLists, trim) {
     ASSERT_EQ(std::list<std::string>({"5", "6", "7"}),
               myLists.range("l1", -30, 30));
   }
+}
+
+TEST_F(TestLists, position) {
+  oktss::Lists myLists;
+  ASSERT_EQ(8u,
+            myLists.pushBack("l1", {"a", "b", "c", "d", "c", "e", "a", "b"}));
+
+  // Rank = 1, Count = 1, MaxLenght = max
+  ASSERT_EQ(
+      std::list<uint64_t>({0}),
+      myLists.position("l1", "a", 1, 1, std::numeric_limits<uint64_t>::max()));
+  // MaxLength == 0 => max uint64
+  ASSERT_EQ(std::list<uint64_t>({0}), myLists.position("l1", "a", 1, 1, 0));
+
+  // Rank = 1, Count = 2, MaxLenght = max
+  ASSERT_EQ(
+      std::list<uint64_t>({0, 6}),
+      myLists.position("l1", "a", 1, 2, std::numeric_limits<uint64_t>::max()));
+
+  // Rank = 2, Count = 1, MaxLenght = max
+  ASSERT_EQ(
+      std::list<uint64_t>({6}),
+      myLists.position("l1", "a", 2, 1, std::numeric_limits<uint64_t>::max()));
+
+  // Rank = 1, Count = 1, MaxLenght = 3
+  ASSERT_EQ(std::list<uint64_t>({}), myLists.position("l1", "d", 1, 1, 3));
+
+  // Rank = 1, Count = 1, MaxLenght = 4
+  ASSERT_EQ(std::list<uint64_t>({3}), myLists.position("l1", "d", 1, 1, 4));
+
+  // Rank = -1, Count = 1, MaxLenght = max
+  ASSERT_EQ(
+      std::list<uint64_t>({6}),
+      myLists.position("l1", "a", -1, 1, std::numeric_limits<uint64_t>::max()));
+
+  // Rank = -2, Count = 1, MaxLenght = 0
+  ASSERT_EQ(std::list<uint64_t>({0}), myLists.position("l1", "a", -2, 1, 0));
 }

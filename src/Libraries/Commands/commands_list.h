@@ -39,7 +39,9 @@ class CommandsList : virtual public Interface::Service
                             const PopFrontRequest*,
                             PopFrontReply*) final;
 
-  // LPOS
+  grpc::Status listPosition(grpc::ServerContext*,
+                            const PositionRequest*,
+                            PositionReply*) final;
 
   grpc::Status
   listPushFront(grpc::ServerContext*, const PushRequest*, PushReply*) final;
