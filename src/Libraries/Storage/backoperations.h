@@ -19,8 +19,9 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
   using Base      = GenericContainer<Container>;
 
  public:
-  using Status   = typename Base::Status;
-  using Position = typename Base::Position;
+  using Status    = typename Base::Status;
+  using Position  = typename Base::Position;
+  using Direction = typename Base::Direction;
 
   DISABLE_EVIL_CONSTRUCTOR(BackOperations);
 
@@ -43,6 +44,11 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
                                 const std::string& aPivot,
                                 const std::string& aValue);
 
+  std::optional<std::string> move(const std::string& aSourceName,
+                                  const std::string& aDestinationName,
+                                  Direction          aSourceDirection,
+                                  Direction          aDestinationDirection);
+
   std::list<std::string>
   range(const std::string& aName, int64_t aStart, int64_t aStop) const;
 
@@ -56,6 +62,10 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
 
   size_t pushBackExist(const std::string&                   aName,
                        const std::vector<std::string_view>& aValues);
+
+ private:
+  using MoveMutex = boost::mutex;
+  MoveMutex theMoveMutex;
 };
 
 //// INLINE DEFINITIONS
@@ -159,6 +169,64 @@ BackOperations<CONTAINER>::insert(const std::string& aName,
 
         aContainer.insert(myIt, aValue);
         myRet = aContainer.size();
+      });
+
+  return myRet;
+}
+
+template <class CONTAINER>
+std::optional<std::string>
+BackOperations<CONTAINER>::move(const std::string& aSourceName,
+                                const std::string& aDestinationName,
+                                Direction          aSourceDirection,
+                                Direction          aDestinationDirection) {
+
+  std::optional<std::string> myRet;
+
+  // clang-format off
+  // The following mutex is required to avoid a dead lock in case two different
+  // operations are running concurrently:
+  //     move(L1 -> L2)
+  //     move(L2 -> L1)
+  // TODO: this has to be improved indeed it avoid the concurrency
+  //       of every other move operations on different
+  //       containers
+  // clang-format on
+
+  const boost::lock_guard myLock(theMoveMutex);
+
+  Base::theApplyer.performOnExisting(
+      aSourceName,
+      [this,
+       &aDestinationName,
+       &aSourceDirection,
+       &aDestinationDirection,
+       &myRet](Container& aSourceContainer) {
+        if (aSourceContainer.empty()) {
+          return;
+        }
+        std::string myValue;
+
+        if (aSourceDirection == Direction::LEFT) {
+          myValue = aSourceContainer.front();
+          aSourceContainer.pop_front();
+        } else {
+          myValue = aSourceContainer.back();
+          aSourceContainer.pop_back();
+        }
+
+        Base::theApplyer.performOnNew(
+            aDestinationName,
+            [&myValue,
+             &aDestinationDirection](Container& aDestinationContainer) {
+              if (aDestinationDirection == Direction::LEFT) {
+                aDestinationContainer.push_front(myValue);
+              } else {
+                aDestinationContainer.push_back(myValue);
+              }
+            });
+
+        myRet = std::move(myValue);
       });
 
   return myRet;
