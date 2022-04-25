@@ -120,8 +120,7 @@ grpc::Status CommandsDeque::dequePosition(grpc::ServerContext*,
       aRequest->value(),
       aRequest->has_rank() ? aRequest->rank().value() : 1,
       aRequest->has_count() ? aRequest->count().value() : 1,
-      aRequest->has_max_len() ? aRequest->max_len().value() :
-                                std::numeric_limits<uint64_t>::max());
+      aRequest->has_max_len() ? aRequest->max_len().value() : 0);
 
   for (const auto& myValue : myRet) {
     aReply->add_index(myValue);
