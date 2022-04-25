@@ -130,8 +130,6 @@ grpc::Status CommandsList::listPosition(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-// LPOS
-
 grpc::Status CommandsList::listPushFront(grpc::ServerContext*,
                                          const PushRequest* aRequest,
                                          PushReply*         aReply) {

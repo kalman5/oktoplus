@@ -111,7 +111,24 @@ grpc::Status CommandsDeque::dequePopFront(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-// LPOS
+grpc::Status CommandsDeque::dequePosition(grpc::ServerContext*,
+                                          const PositionRequest* aRequest,
+                                          PositionReply*         aReply) {
+
+  auto myRet = theQueues.position(
+      aRequest->name(),
+      aRequest->value(),
+      aRequest->has_rank() ? aRequest->rank().value() : 1,
+      aRequest->has_count() ? aRequest->count().value() : 1,
+      aRequest->has_max_len() ? aRequest->max_len().value() :
+                                std::numeric_limits<uint64_t>::max());
+
+  for (const auto& myValue : myRet) {
+    aReply->add_index(myValue);
+  }
+
+  return grpc::Status::OK;
+}
 
 grpc::Status CommandsDeque::dequePushFront(grpc::ServerContext*,
                                            const PushRequest* aRequest,

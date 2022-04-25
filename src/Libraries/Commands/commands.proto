@@ -60,7 +60,7 @@ service Interface {
   rpc dequeMove(MoveRequest)                    returns (GetValueReply) { }  // LMOVE
                                                                              // LMPOP
   rpc dequePopFront(PopFrontRequest)            returns (PopFrontReply) { }  // LPOP
-                                                                             // LPOS
+  rpc dequePosition(PositionRequest)            returns (PositionReply) { }  // LPOS
   rpc dequePushFront(PushRequest)               returns (PushReply)     { }  // LPUSH
   rpc dequeExistPushFront(PushRequest)          returns (PushReply)     { }  // LPUSHX
   rpc dequeRange(RangeRequest)                  returns (RangeReply)    { }  // LRANGE

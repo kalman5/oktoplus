@@ -39,7 +39,9 @@ class CommandsDeque : virtual public Interface::Service
                              const PopFrontRequest*,
                              PopFrontReply*) final;
 
-  // LPOS
+  grpc::Status dequePosition(grpc::ServerContext*,
+                             const PositionRequest*,
+                             PositionReply*) final;
 
   grpc::Status
   dequePushFront(grpc::ServerContext*, const PushRequest*, PushReply*) final;
