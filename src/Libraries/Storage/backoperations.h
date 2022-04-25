@@ -257,33 +257,6 @@ BackOperations<CONTAINER>::position(const std::string& aName,
             aMaxLength == 0 ? std::numeric_limits<uint64_t>::max() : aMaxLength;
         const uint64_t myURank = aRank > 0 ? aRank : std::abs(aRank);
 
-        enum class Operation { Nop = 0, Continue = 1, Break = 2 };
-
-        [[maybe_unused]] const auto myFunction =
-            [&](const auto& aLambdaValue) -> Operation {
-          if (aLambdaValue == aValue) {
-            ++myFound;
-            if (myFound < myURank) {
-              ++myIndex;
-              return Operation::Continue;
-            }
-            myRet.push_back(myIndex);
-          }
-
-          ++myIndex;
-
-          // At max we can return the amount of aCount indexes.
-          if (myRet.size() == aCount) {
-            return Operation::Break;
-          }
-
-          /// Interrupt the traverse if I have visited already the max
-          /// allowed values.
-          if (myIndex >= myMaxLength) {
-            return Operation::Break;
-          }
-        };
-
         if (aRank > 0) {
           for (auto myIt = aContainer.begin(); myIt != aContainer.end();
                ++myIt) {
