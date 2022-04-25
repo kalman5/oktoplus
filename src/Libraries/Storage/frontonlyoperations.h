@@ -31,7 +31,7 @@ class FrontOnlyOperations : virtual public GenericContainer<CONTAINER>
   size_t pushFront(const std::string&                   aName,
                    const std::vector<std::string_view>& aValues);
 
-  std::list<std::string> popFront(const std::string& aName, uint32_t aCount);
+  std::list<std::string> popFront(const std::string& aName, uint64_t aCount);
 
   size_t pushFrontExist(const std::string&                   aName,
                         const std::vector<std::string_view>& aValues);
@@ -68,13 +68,13 @@ size_t FrontOnlyOperations<CONTAINER>::pushFront(
 template <class CONTAINER>
 std::list<std::string>
 FrontOnlyOperations<CONTAINER>::popFront(const std::string& aName,
-                                         const uint32_t     aCount) {
+                                         const uint64_t     aCount) {
 
   std::list<std::string> myRet;
 
   Base::theApplyer.performOnExisting(
       aName, [&myRet, &aCount](Container& aContainer) {
-        uint32_t myCollected = 0;
+        uint64_t myCollected = 0;
         while (!aContainer.empty() && myCollected < aCount) {
           myRet.emplace_back(std::move(aContainer.front()));
           aContainer.pop_front();

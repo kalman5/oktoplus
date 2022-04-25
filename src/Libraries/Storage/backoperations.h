@@ -31,7 +31,7 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
   size_t pushBack(const std::string&                   aName,
                   const std::vector<std::string_view>& aValues);
 
-  std::list<std::string> popBack(const std::string& aName, uint32_t aCount);
+  std::list<std::string> popBack(const std::string& aName, uint64_t aCount);
 
   size_t size(const std::string& aName) const;
 
@@ -80,13 +80,13 @@ size_t BackOperations<CONTAINER>::pushBack(
 template <class CONTAINER>
 std::list<std::string>
 BackOperations<CONTAINER>::popBack(const std::string& aName,
-                                   const uint32_t     aCount) {
+                                   const uint64_t     aCount) {
 
   std::list<std::string> myRet;
 
   Base::theApplyer.performOnExisting(
       aName, [&myRet, &aCount](Container& aContainer) {
-        uint32_t myCollected = 0;
+        uint64_t myCollected = 0;
         while (!aContainer.empty() && myCollected < aCount) {
           myRet.emplace_back(std::move(aContainer.back()));
           aContainer.pop_back();

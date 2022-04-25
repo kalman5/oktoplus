@@ -66,7 +66,7 @@ void CommandsClient::dequeTrim(const std::string& aListName,
 
 std::list<std::string>
 CommandsClient::listPopFront(const std::string& aContainerName,
-                             const uint32_t     aCount) {
+                             const uint64_t     aCount) {
   return popFront(aContainerName,
                   aCount,
                   [this](::grpc::ClientContext* aContext,
@@ -78,7 +78,7 @@ CommandsClient::listPopFront(const std::string& aContainerName,
 
 std::list<std::string>
 CommandsClient::dequePopFront(const std::string& aContainerName,
-                              const uint32_t     aCount) {
+                              const uint64_t     aCount) {
   return popFront(aContainerName,
                   aCount,
                   [this](::grpc::ClientContext* aContext,
@@ -165,7 +165,7 @@ void CommandsClient::trim(
 
 std::list<std::string> CommandsClient::popFront(
     const std::string&                                   aContainerName,
-    const uint32_t                                       aCount,
+    const uint64_t                                       aCount,
     const std::function<::grpc::Status(::grpc::ClientContext*,
                                        const PopFrontRequest&,
                                        PopFrontReply*)>& aFunction) {
