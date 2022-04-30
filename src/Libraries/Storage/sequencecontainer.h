@@ -4,15 +4,17 @@
 
 #include "Support/noncopyable.h"
 
+#include <deque>
 #include <list>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace okts::stor {
 
 template <class CONTAINER>
-class BackOperations : public GenericContainer<CONTAINER>
+class SequenceContainer : public GenericContainer<CONTAINER>
 {
   using Container = CONTAINER;
   using Base      = GenericContainer<Container>;
@@ -22,9 +24,9 @@ class BackOperations : public GenericContainer<CONTAINER>
   using Position  = typename Base::Position;
   using Direction = typename Base::Direction;
 
-  DISABLE_EVIL_CONSTRUCTOR(BackOperations);
+  DISABLE_EVIL_CONSTRUCTOR(SequenceContainer);
 
-  BackOperations()
+  SequenceContainer()
       : Base() {
   }
 
@@ -87,10 +89,14 @@ class BackOperations : public GenericContainer<CONTAINER>
   MoveMutex theMoveMutex;
 };
 
+using Lists   = SequenceContainer<std::list<std::string>>;
+using Deques  = SequenceContainer<std::deque<std::string>>;
+using Vectors = SequenceContainer<std::deque<std::string>>;
+
 //// INLINE DEFINITIONS
 
 template <class CONTAINER>
-size_t BackOperations<CONTAINER>::pushFront(
+size_t SequenceContainer<CONTAINER>::pushFront(
     const std::string& aName, const std::vector<std::string_view>& aValues) {
 
   size_t myRet;
@@ -108,8 +114,8 @@ size_t BackOperations<CONTAINER>::pushFront(
 
 template <class CONTAINER>
 std::list<std::string>
-BackOperations<CONTAINER>::popFront(const std::string& aName,
-                                    const uint64_t     aCount) {
+SequenceContainer<CONTAINER>::popFront(const std::string& aName,
+                                       const uint64_t     aCount) {
 
   std::list<std::string> myRet;
 
@@ -127,7 +133,7 @@ BackOperations<CONTAINER>::popFront(const std::string& aName,
 }
 
 template <class CONTAINER>
-size_t BackOperations<CONTAINER>::pushFrontExist(
+size_t SequenceContainer<CONTAINER>::pushFrontExist(
     const std::string& aName, const std::vector<std::string_view>& aValues) {
 
   size_t myRet = 0;
@@ -144,7 +150,7 @@ size_t BackOperations<CONTAINER>::pushFrontExist(
 }
 
 template <class CONTAINER>
-size_t BackOperations<CONTAINER>::pushBack(
+size_t SequenceContainer<CONTAINER>::pushBack(
     const std::string& aName, const std::vector<std::string_view>& aValues) {
 
   size_t myRet;
@@ -162,8 +168,8 @@ size_t BackOperations<CONTAINER>::pushBack(
 
 template <class CONTAINER>
 std::list<std::string>
-BackOperations<CONTAINER>::popBack(const std::string& aName,
-                                   const uint64_t     aCount) {
+SequenceContainer<CONTAINER>::popBack(const std::string& aName,
+                                      const uint64_t     aCount) {
 
   std::list<std::string> myRet;
 
@@ -181,7 +187,7 @@ BackOperations<CONTAINER>::popBack(const std::string& aName,
 }
 
 template <class CONTAINER>
-size_t BackOperations<CONTAINER>::size(const std::string& aName) const {
+size_t SequenceContainer<CONTAINER>::size(const std::string& aName) const {
 
   size_t myRet = 0;
 
@@ -194,8 +200,8 @@ size_t BackOperations<CONTAINER>::size(const std::string& aName) const {
 
 template <class CONTAINER>
 std::optional<std::string>
-BackOperations<CONTAINER>::index(const std::string& aName,
-                                 int64_t            aIndex) const {
+SequenceContainer<CONTAINER>::index(const std::string& aName,
+                                    int64_t            aIndex) const {
 
   std::optional<std::string> myRet;
 
@@ -222,10 +228,10 @@ BackOperations<CONTAINER>::index(const std::string& aName,
 
 template <class CONTAINER>
 std::optional<int64_t>
-BackOperations<CONTAINER>::insert(const std::string& aName,
-                                  Position           aPosition,
-                                  const std::string& aPivot,
-                                  const std::string& aValue) {
+SequenceContainer<CONTAINER>::insert(const std::string& aName,
+                                     Position           aPosition,
+                                     const std::string& aPivot,
+                                     const std::string& aValue) {
   std::optional<int64_t> myRet;
 
   Base::theApplyer.performOnExisting(
@@ -249,10 +255,10 @@ BackOperations<CONTAINER>::insert(const std::string& aName,
 
 template <class CONTAINER>
 std::optional<std::string>
-BackOperations<CONTAINER>::move(const std::string& aSourceName,
-                                const std::string& aDestinationName,
-                                Direction          aSourceDirection,
-                                Direction          aDestinationDirection) {
+SequenceContainer<CONTAINER>::move(const std::string& aSourceName,
+                                   const std::string& aDestinationName,
+                                   Direction          aSourceDirection,
+                                   Direction          aDestinationDirection) {
 
   std::optional<std::string> myRet;
 
@@ -307,11 +313,11 @@ BackOperations<CONTAINER>::move(const std::string& aSourceName,
 
 template <class CONTAINER>
 std::list<uint64_t>
-BackOperations<CONTAINER>::position(const std::string& aName,
-                                    const std::string& aValue,
-                                    const int64_t      aRank,
-                                    const uint64_t     aCount,
-                                    const uint64_t     aMaxLength) {
+SequenceContainer<CONTAINER>::position(const std::string& aName,
+                                       const std::string& aValue,
+                                       const int64_t      aRank,
+                                       const uint64_t     aCount,
+                                       const uint64_t     aMaxLength) {
   std::list<uint64_t> myRet;
 
   Base::theApplyer.performOnExisting(
@@ -371,7 +377,7 @@ BackOperations<CONTAINER>::position(const std::string& aName,
 }
 
 template <class CONTAINER>
-std::list<std::string> BackOperations<CONTAINER>::range(
+std::list<std::string> SequenceContainer<CONTAINER>::range(
     const std::string& aName, int64_t aStart, int64_t aStop) const {
 
   std::list<std::string> myRet;
@@ -424,9 +430,9 @@ std::list<std::string> BackOperations<CONTAINER>::range(
 }
 
 template <class CONTAINER>
-size_t BackOperations<CONTAINER>::remove(const std::string& aName,
-                                         int64_t            aCount,
-                                         const std::string& aValue) {
+size_t SequenceContainer<CONTAINER>::remove(const std::string& aName,
+                                            int64_t            aCount,
+                                            const std::string& aValue) {
   size_t myRet = 0;
 
   Base::theApplyer.performOnExisting(
@@ -478,7 +484,7 @@ size_t BackOperations<CONTAINER>::remove(const std::string& aName,
 }
 
 template <class CONTAINER>
-typename BackOperations<CONTAINER>::Status BackOperations<CONTAINER>::set(
+typename SequenceContainer<CONTAINER>::Status SequenceContainer<CONTAINER>::set(
     const std::string& aName, int64_t aIndex, const std::string& aValue) {
 
   Status myRet = Status::OK;
@@ -514,9 +520,9 @@ typename BackOperations<CONTAINER>::Status BackOperations<CONTAINER>::set(
 }
 
 template <class CONTAINER>
-void BackOperations<CONTAINER>::trim(const std::string& aName,
-                                     int64_t            aStart,
-                                     int64_t            aStop) {
+void SequenceContainer<CONTAINER>::trim(const std::string& aName,
+                                        int64_t            aStart,
+                                        int64_t            aStop) {
   Base::theApplyer.performOnExisting(
       aName, [aStart, aStop](Container& aContainer) {
         if (aContainer.empty()) {
@@ -572,7 +578,7 @@ void BackOperations<CONTAINER>::trim(const std::string& aName,
 }
 
 template <class CONTAINER>
-size_t BackOperations<CONTAINER>::pushBackExist(
+size_t SequenceContainer<CONTAINER>::pushBackExist(
     const std::string& aName, const std::vector<std::string_view>& aValues) {
 
   size_t myRet = 0;
@@ -589,10 +595,10 @@ size_t BackOperations<CONTAINER>::pushBackExist(
 }
 
 template <class CONTAINER>
-std::list<std::string>
-BackOperations<CONTAINER>::multiplePop(const std::vector<std::string>& aNames,
-                                       Direction aDirection,
-                                       uint64_t  aCount) {
+std::list<std::string> SequenceContainer<CONTAINER>::multiplePop(
+    const std::vector<std::string>& aNames,
+    Direction                       aDirection,
+    uint64_t                        aCount) {
   std::list<std::string> myRet;
 
   for (const auto& myName : aNames) {

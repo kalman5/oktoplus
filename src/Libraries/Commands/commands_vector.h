@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Commands/commands_server_service.h"
-#include "Storage/vectors.h"
+#include "Storage/sequencecontainer.h"
 
 #include <grpc++/grpc++.h>
 

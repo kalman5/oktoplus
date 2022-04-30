@@ -1,4 +1,4 @@
-#include "Storage/lists.h"
+#include "Storage/sequencecontainer.h"
 
 #include "gtest/gtest.h"
 
@@ -8,16 +8,16 @@
 
 namespace oktss = okts::stor;
 
-class TestLists : public ::testing::Test
+class TestSequenceContainer : public ::testing::Test
 {
  public:
 };
 
-TEST_F(TestLists, ctor) {
+TEST_F(TestSequenceContainer, ctor) {
   oktss::Lists myLists;
 }
 
-TEST_F(TestLists, push_back_front_size) {
+TEST_F(TestSequenceContainer, push_back_front_size) {
   oktss::Lists myLists;
 
   // Single value
@@ -44,7 +44,7 @@ TEST_F(TestLists, push_back_front_size) {
   ASSERT_EQ("2", myLists.index("l2", 1).value());
 }
 
-TEST_F(TestLists, push_back_on_existing) {
+TEST_F(TestSequenceContainer, push_back_on_existing) {
   oktss::Lists myLists;
 
   ASSERT_EQ(0u, myLists.pushBackExist("l1", {"1"}));
@@ -67,7 +67,7 @@ TEST_F(TestLists, push_back_on_existing) {
   }
 }
 
-TEST_F(TestLists, push_front_on_existing) {
+TEST_F(TestSequenceContainer, push_front_on_existing) {
   oktss::Lists myLists;
 
   ASSERT_EQ(0u, myLists.pushFrontExist("l1", {"5"}));
@@ -90,7 +90,7 @@ TEST_F(TestLists, push_front_on_existing) {
   }
 }
 
-TEST_F(TestLists, pop_front_back) {
+TEST_F(TestSequenceContainer, pop_front_back) {
   oktss::Lists myLists;
 
   ASSERT_EQ(7u, myLists.pushFront("l1", {"7", "6", "5", "4", "3", "2", "1"}));
@@ -119,7 +119,7 @@ TEST_F(TestLists, pop_front_back) {
   ASSERT_TRUE(myLists.popFront("xxxx", 1).empty());
 }
 
-TEST_F(TestLists, index) {
+TEST_F(TestSequenceContainer, index) {
   oktss::Lists myLists;
 
   ASSERT_EQ(1u, myLists.pushBack("l1", {"one"}));
@@ -141,7 +141,7 @@ TEST_F(TestLists, index) {
   ASSERT_EQ("one", myLists.index("l1", -3).value());
 }
 
-TEST_F(TestLists, insert) {
+TEST_F(TestSequenceContainer, insert) {
   oktss::Lists myLists;
 
   ASSERT_EQ(1u, myLists.pushBack("l1", {"one"}));
@@ -178,7 +178,7 @@ TEST_F(TestLists, insert) {
   ASSERT_EQ("three.5", myLists.index("l1", 6).value());
 }
 
-TEST_F(TestLists, range) {
+TEST_F(TestSequenceContainer, range) {
   oktss::Lists myLists;
 
   ASSERT_EQ(1u, myLists.pushBack("l1", {"1"}));
@@ -214,7 +214,7 @@ TEST_F(TestLists, range) {
             myLists.range("l1", -30, 30));
 }
 
-TEST_F(TestLists, remove) {
+TEST_F(TestSequenceContainer, remove) {
 
   { // Not existing element
     oktss::Lists myLists;
@@ -299,7 +299,7 @@ TEST_F(TestLists, remove) {
   }
 }
 
-TEST_F(TestLists, set) {
+TEST_F(TestSequenceContainer, set) {
 
   { // Not existing list
     oktss::Lists myLists;
@@ -335,7 +335,7 @@ TEST_F(TestLists, set) {
   }
 }
 
-TEST_F(TestLists, move) {
+TEST_F(TestSequenceContainer, move) {
   {
     oktss::Lists myLists;
 
@@ -442,7 +442,7 @@ TEST_F(TestLists, move) {
   }
 }
 
-TEST_F(TestLists, trim) {
+TEST_F(TestSequenceContainer, trim) {
 
   {
     oktss::Lists myLists;
@@ -521,7 +521,7 @@ TEST_F(TestLists, trim) {
   }
 }
 
-TEST_F(TestLists, position) {
+TEST_F(TestSequenceContainer, position) {
   oktss::Lists myLists;
   ASSERT_EQ(8u,
             myLists.pushBack("l1", {"a", "b", "c", "d", "c", "e", "a", "b"}));

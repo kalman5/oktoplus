@@ -1,5 +1,5 @@
 add_library (testunit_teststorage SHARED
-  testlists.cpp
+  testsequencecontainer.cpp
   testsets.cpp
 )
 
