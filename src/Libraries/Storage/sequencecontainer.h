@@ -569,10 +569,10 @@ void SequenceContainer<CONTAINER>::trim(const std::string& aName,
 
         auto myItStart = aContainer.begin();
         std::advance(myItStart, myStart);
-        auto myItStop = aContainer.begin();
-        std::advance(myItStop, myStop + 1);
-
         aContainer.erase(aContainer.begin(), myItStart);
+
+        auto myItStop = aContainer.begin();
+        std::advance(myItStop, myStop + 1 - myStart);
         aContainer.erase(myItStop, aContainer.end());
       });
 }

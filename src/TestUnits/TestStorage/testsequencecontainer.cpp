@@ -8,51 +8,55 @@
 
 namespace oktss = okts::stor;
 
-template <class T>
+template <class>
 struct TestSequenceContainer : ::testing::Test {
-  using Container = oktss::SequenceContainer<T>;
 };
 
-using VectorTypeList =
-    ::testing::Types<std::list<std::string>, std::deque<std::string>>;
+using VectorTypeList = ::testing::Types<std::list<std::string>,
+                                        std::deque<std::string>,
+                                        std::vector<std::string>>;
 
 TYPED_TEST_SUITE(TestSequenceContainer, VectorTypeList);
 
 TYPED_TEST(TestSequenceContainer, ctor) {
-  using Container = typename TestFixture::Container;
+  using Container = oktss::SequenceContainer<TypeParam>;
   Container myContainer;
 }
 
 TYPED_TEST(TestSequenceContainer, push_back_front_size) {
-  using Container = typename TestFixture::Container;
-  Container myContainer;
+  if constexpr (std::is_same_v<TypeParam, std::vector<std::string>>) {
+    GTEST_SKIP();
+  } else {
+    using Container = oktss::SequenceContainer<TypeParam>;
+    Container myContainer;
 
-  // Single value
-  ASSERT_EQ(1u, myContainer.pushBack("l1", {"5"}));
-  ASSERT_EQ(1u, myContainer.pushBack("l2", {"2"}));
-  ASSERT_EQ(2u, myContainer.pushFront("l1", {"4"}));
-  ASSERT_EQ(2u, myContainer.pushFront("l2", {"1"}));
+    // Single value
+    ASSERT_EQ(1u, myContainer.pushBack("l1", {"5"}));
+    ASSERT_EQ(1u, myContainer.pushBack("l2", {"2"}));
+    ASSERT_EQ(2u, myContainer.pushFront("l1", {"4"}));
+    ASSERT_EQ(2u, myContainer.pushFront("l2", {"1"}));
 
-  // Multiple Value
-  ASSERT_EQ(5u, myContainer.pushFront("l1", {"3", "2", "1"}));
-  ASSERT_EQ(7u, myContainer.pushBack("l1", {"6", "7"}));
+    // Multiple Value
+    ASSERT_EQ(5u, myContainer.pushFront("l1", {"3", "2", "1"}));
+    ASSERT_EQ(7u, myContainer.pushBack("l1", {"6", "7"}));
 
-  ASSERT_EQ(7u, myContainer.size("l1"));
-  ASSERT_EQ(2u, myContainer.size("l2"));
+    ASSERT_EQ(7u, myContainer.size("l1"));
+    ASSERT_EQ(2u, myContainer.size("l2"));
 
-  // Not existing list
-  ASSERT_EQ(0u, myContainer.size("l3"));
+    // Not existing list
+    ASSERT_EQ(0u, myContainer.size("l3"));
 
-  for (size_t i = 0; i < 7; ++i) {
-    ASSERT_EQ(std::to_string(i + 1), myContainer.index("l1", i).value());
+    for (size_t i = 0; i < 7; ++i) {
+      ASSERT_EQ(std::to_string(i + 1), myContainer.index("l1", i).value());
+    }
+
+    ASSERT_EQ("1", myContainer.index("l2", 0).value());
+    ASSERT_EQ("2", myContainer.index("l2", 1).value());
   }
-
-  ASSERT_EQ("1", myContainer.index("l2", 0).value());
-  ASSERT_EQ("2", myContainer.index("l2", 1).value());
 }
 
 TYPED_TEST(TestSequenceContainer, push_back_on_existing) {
-  using Container = typename TestFixture::Container;
+  using Container = oktss::SequenceContainer<TypeParam>;
   Container myContainer;
 
   ASSERT_EQ(0u, myContainer.pushBackExist("l1", {"1"}));
@@ -76,62 +80,72 @@ TYPED_TEST(TestSequenceContainer, push_back_on_existing) {
 }
 
 TYPED_TEST(TestSequenceContainer, push_front_on_existing) {
-  using Container = typename TestFixture::Container;
-  Container myContainer;
+  if constexpr (std::is_same_v<TypeParam, std::vector<std::string>>) {
+    GTEST_SKIP();
+  } else {
+    using Container = oktss::SequenceContainer<TypeParam>;
+    Container myContainer;
 
-  ASSERT_EQ(0u, myContainer.pushFrontExist("l1", {"5"}));
-  ASSERT_EQ(0u, myContainer.size("l1"));
-  ASSERT_EQ(0u, myContainer.hostedKeys());
+    ASSERT_EQ(0u, myContainer.pushFrontExist("l1", {"5"}));
+    ASSERT_EQ(0u, myContainer.size("l1"));
+    ASSERT_EQ(0u, myContainer.hostedKeys());
 
-  // Single value
-  ASSERT_EQ(1u, myContainer.pushFront("l1", {"5"}));
-  ASSERT_EQ(2u, myContainer.pushFrontExist("l1", {"4"}));
-  ASSERT_EQ(2u, myContainer.size("l1"));
-  ASSERT_EQ(1u, myContainer.hostedKeys());
+    // Single value
+    ASSERT_EQ(1u, myContainer.pushFront("l1", {"5"}));
+    ASSERT_EQ(2u, myContainer.pushFrontExist("l1", {"4"}));
+    ASSERT_EQ(2u, myContainer.size("l1"));
+    ASSERT_EQ(1u, myContainer.hostedKeys());
 
-  // Multiple Value
-  ASSERT_EQ(5u, myContainer.pushFrontExist("l1", {"3", "2", "1"}));
-  ASSERT_EQ(5u, myContainer.size("l1"));
-  ASSERT_EQ(1u, myContainer.hostedKeys());
+    // Multiple Value
+    ASSERT_EQ(5u, myContainer.pushFrontExist("l1", {"3", "2", "1"}));
+    ASSERT_EQ(5u, myContainer.size("l1"));
+    ASSERT_EQ(1u, myContainer.hostedKeys());
 
-  for (size_t i = 0; i < 5; ++i) {
-    ASSERT_EQ(std::to_string(i + 1), myContainer.index("l1", i).value());
+    for (size_t i = 0; i < 5; ++i) {
+      ASSERT_EQ(std::to_string(i + 1), myContainer.index("l1", i).value());
+    }
   }
 }
 
 TYPED_TEST(TestSequenceContainer, pop_front_back) {
-  using Container = typename TestFixture::Container;
-  Container myContainer;
+  if constexpr (std::is_same_v<TypeParam, std::vector<std::string>>) {
+    GTEST_SKIP();
+  } else {
 
-  ASSERT_EQ(7u,
-            myContainer.pushFront("l1", {"7", "6", "5", "4", "3", "2", "1"}));
+    using Container = oktss::SequenceContainer<TypeParam>;
+    Container myContainer;
 
-  ASSERT_EQ(std::list<std::string>{"1"}, myContainer.popFront("l1", 1));
-  ASSERT_EQ(6u, myContainer.size("l1"));
+    ASSERT_EQ(7u,
+              myContainer.pushFront("l1", {"7", "6", "5", "4", "3", "2", "1"}));
 
-  ASSERT_EQ(std::list<std::string>{"2"}, myContainer.popFront("l1", 1));
-  ASSERT_EQ(5u, myContainer.size("l1"));
+    ASSERT_EQ(std::list<std::string>{"1"}, myContainer.popFront("l1", 1));
+    ASSERT_EQ(6u, myContainer.size("l1"));
 
-  ASSERT_EQ((std::list<std::string>{"3", "4"}), myContainer.popFront("l1", 2));
-  ASSERT_EQ(3u, myContainer.size("l1"));
+    ASSERT_EQ(std::list<std::string>{"2"}, myContainer.popFront("l1", 1));
+    ASSERT_EQ(5u, myContainer.size("l1"));
 
-  ASSERT_EQ(std::list<std::string>{"7"}, myContainer.popBack("l1", 1));
-  ASSERT_EQ(2u, myContainer.size("l1"));
+    ASSERT_EQ((std::list<std::string>{"3", "4"}),
+              myContainer.popFront("l1", 2));
+    ASSERT_EQ(3u, myContainer.size("l1"));
 
-  ASSERT_EQ((std::list<std::string>{"6", "5"}), myContainer.popBack("l1", 2));
+    ASSERT_EQ(std::list<std::string>{"7"}, myContainer.popBack("l1", 1));
+    ASSERT_EQ(2u, myContainer.size("l1"));
 
-  // at this point the list is empty
-  ASSERT_EQ(0u, myContainer.size("l1"));
-  ASSERT_EQ(0u, myContainer.hostedKeys());
+    ASSERT_EQ((std::list<std::string>{"6", "5"}), myContainer.popBack("l1", 2));
 
-  ASSERT_TRUE(myContainer.popBack("l1", 1).empty());
-  ASSERT_TRUE(myContainer.popFront("l1", 1).empty());
-  ASSERT_TRUE(myContainer.popBack("xxxx", 1).empty());
-  ASSERT_TRUE(myContainer.popFront("xxxx", 1).empty());
+    // at this point the list is empty
+    ASSERT_EQ(0u, myContainer.size("l1"));
+    ASSERT_EQ(0u, myContainer.hostedKeys());
+
+    ASSERT_TRUE(myContainer.popBack("l1", 1).empty());
+    ASSERT_TRUE(myContainer.popFront("l1", 1).empty());
+    ASSERT_TRUE(myContainer.popBack("xxxx", 1).empty());
+    ASSERT_TRUE(myContainer.popFront("xxxx", 1).empty());
+  }
 }
 
 TYPED_TEST(TestSequenceContainer, index) {
-  using Container = typename TestFixture::Container;
+  using Container = oktss::SequenceContainer<TypeParam>;
   Container myContainer;
 
   ASSERT_EQ(1u, myContainer.pushBack("l1", {"one"}));
@@ -154,7 +168,7 @@ TYPED_TEST(TestSequenceContainer, index) {
 }
 
 TYPED_TEST(TestSequenceContainer, insert) {
-  using Container = typename TestFixture::Container;
+  using Container = oktss::SequenceContainer<TypeParam>;
   Container myContainer;
 
   ASSERT_EQ(1u, myContainer.pushBack("l1", {"one"}));
@@ -194,7 +208,7 @@ TYPED_TEST(TestSequenceContainer, insert) {
 }
 
 TYPED_TEST(TestSequenceContainer, range) {
-  using Container = typename TestFixture::Container;
+  using Container = oktss::SequenceContainer<TypeParam>;
   Container myContainer;
 
   ASSERT_EQ(1u, myContainer.pushBack("l1", {"1"}));
@@ -234,7 +248,7 @@ TYPED_TEST(TestSequenceContainer, range) {
 }
 
 TYPED_TEST(TestSequenceContainer, remove) {
-  using Container = typename TestFixture::Container;
+  using Container = oktss::SequenceContainer<TypeParam>;
 
   { // Not existing element
     Container myContainer;
@@ -329,7 +343,7 @@ TYPED_TEST(TestSequenceContainer, remove) {
 
 TYPED_TEST(TestSequenceContainer, set) {
 
-  using Container = typename TestFixture::Container;
+  using Container = oktss::SequenceContainer<TypeParam>;
 
   { // Not existing list
     Container myContainer;
@@ -368,116 +382,121 @@ TYPED_TEST(TestSequenceContainer, set) {
 }
 
 TYPED_TEST(TestSequenceContainer, move) {
-  using Container = typename TestFixture::Container;
+  if constexpr (std::is_same_v<TypeParam, std::vector<std::string>>) {
+    GTEST_SKIP();
+  } else {
 
-  {
-    Container myContainer;
+    using Container = oktss::SequenceContainer<TypeParam>;
 
-    ASSERT_EQ(std::nullopt,
-              myContainer.move("l1",
-                               "l2",
-                               Container::Direction::RIGHT,
-                               Container::Direction::LEFT));
+    {
+      Container myContainer;
 
-    ASSERT_EQ(0u, myContainer.hostedKeys());
-  }
+      ASSERT_EQ(std::nullopt,
+                myContainer.move("l1",
+                                 "l2",
+                                 Container::Direction::RIGHT,
+                                 Container::Direction::LEFT));
 
-  {
-    Container myContainer;
+      ASSERT_EQ(0u, myContainer.hostedKeys());
+    }
 
-    ASSERT_EQ(1u, myContainer.pushBack("l1", {"0"}));
-    ASSERT_EQ("0",
-              myContainer
-                  .move("l1",
-                        "l2",
-                        Container::Direction::RIGHT,
-                        Container::Direction::LEFT)
-                  .value());
-    ASSERT_EQ(1u, myContainer.hostedKeys());
-  }
+    {
+      Container myContainer;
 
-  {
-    Container myContainer;
+      ASSERT_EQ(1u, myContainer.pushBack("l1", {"0"}));
+      ASSERT_EQ("0",
+                myContainer
+                    .move("l1",
+                          "l2",
+                          Container::Direction::RIGHT,
+                          Container::Direction::LEFT)
+                    .value());
+      ASSERT_EQ(1u, myContainer.hostedKeys());
+    }
 
-    ASSERT_EQ(2u, myContainer.pushBack("l1", {"0", "1"}));
-    ASSERT_EQ("1",
-              myContainer
-                  .move("l1",
-                        "l2",
-                        Container::Direction::RIGHT,
-                        Container::Direction::LEFT)
-                  .value());
-    ASSERT_EQ(2u, myContainer.hostedKeys());
+    {
+      Container myContainer;
 
-    ASSERT_EQ("0",
-              myContainer
-                  .move("l1",
-                        "l2",
-                        Container::Direction::RIGHT,
-                        Container::Direction::LEFT)
-                  .value());
-    ASSERT_EQ(1u, myContainer.hostedKeys());
+      ASSERT_EQ(2u, myContainer.pushBack("l1", {"0", "1"}));
+      ASSERT_EQ("1",
+                myContainer
+                    .move("l1",
+                          "l2",
+                          Container::Direction::RIGHT,
+                          Container::Direction::LEFT)
+                    .value());
+      ASSERT_EQ(2u, myContainer.hostedKeys());
 
-    ASSERT_EQ("0", myContainer.popFront("l2", 1).front());
-    ASSERT_EQ("1", myContainer.popFront("l2", 1).front());
-    ASSERT_EQ(0u, myContainer.hostedKeys());
-  }
+      ASSERT_EQ("0",
+                myContainer
+                    .move("l1",
+                          "l2",
+                          Container::Direction::RIGHT,
+                          Container::Direction::LEFT)
+                    .value());
+      ASSERT_EQ(1u, myContainer.hostedKeys());
 
-  {
-    Container myContainer;
+      ASSERT_EQ("0", myContainer.popFront("l2", 1).front());
+      ASSERT_EQ("1", myContainer.popFront("l2", 1).front());
+      ASSERT_EQ(0u, myContainer.hostedKeys());
+    }
 
-    ASSERT_EQ(2u, myContainer.pushBack("l1", {"0", "1"}));
-    ASSERT_EQ("0",
-              myContainer
-                  .move("l1",
-                        "l2",
-                        Container::Direction::LEFT,
-                        Container::Direction::RIGHT)
-                  .value());
-    ASSERT_EQ(2u, myContainer.hostedKeys());
+    {
+      Container myContainer;
 
-    ASSERT_EQ("1",
-              myContainer
-                  .move("l1",
-                        "l2",
-                        Container::Direction::LEFT,
-                        Container::Direction::RIGHT)
-                  .value());
-    ASSERT_EQ(1u, myContainer.hostedKeys());
+      ASSERT_EQ(2u, myContainer.pushBack("l1", {"0", "1"}));
+      ASSERT_EQ("0",
+                myContainer
+                    .move("l1",
+                          "l2",
+                          Container::Direction::LEFT,
+                          Container::Direction::RIGHT)
+                    .value());
+      ASSERT_EQ(2u, myContainer.hostedKeys());
 
-    ASSERT_EQ("0", myContainer.popFront("l2", 1).front());
-    ASSERT_EQ("1", myContainer.popFront("l2", 1).front());
-    ASSERT_EQ(0u, myContainer.hostedKeys());
-  }
+      ASSERT_EQ("1",
+                myContainer
+                    .move("l1",
+                          "l2",
+                          Container::Direction::LEFT,
+                          Container::Direction::RIGHT)
+                    .value());
+      ASSERT_EQ(1u, myContainer.hostedKeys());
 
-  {
-    Container myContainer;
+      ASSERT_EQ("0", myContainer.popFront("l2", 1).front());
+      ASSERT_EQ("1", myContainer.popFront("l2", 1).front());
+      ASSERT_EQ(0u, myContainer.hostedKeys());
+    }
 
-    ASSERT_EQ(3u, myContainer.pushBack("l1", {"0", "1", "2"}));
-    ASSERT_EQ("2",
-              myContainer
-                  .move("l1",
-                        "l1",
-                        Container::Direction::RIGHT,
-                        Container::Direction::LEFT)
-                  .value());
-    ASSERT_EQ("1",
-              myContainer
-                  .move("l1",
-                        "l1",
-                        Container::Direction::RIGHT,
-                        Container::Direction::LEFT)
-                  .value());
+    {
+      Container myContainer;
 
-    ASSERT_EQ("1", myContainer.popFront("l1", 1).front());
-    ASSERT_EQ("2", myContainer.popFront("l1", 1).front());
-    ASSERT_EQ("0", myContainer.popFront("l1", 1).front());
-    ASSERT_EQ(0u, myContainer.hostedKeys());
+      ASSERT_EQ(3u, myContainer.pushBack("l1", {"0", "1", "2"}));
+      ASSERT_EQ("2",
+                myContainer
+                    .move("l1",
+                          "l1",
+                          Container::Direction::RIGHT,
+                          Container::Direction::LEFT)
+                    .value());
+      ASSERT_EQ("1",
+                myContainer
+                    .move("l1",
+                          "l1",
+                          Container::Direction::RIGHT,
+                          Container::Direction::LEFT)
+                    .value());
+
+      ASSERT_EQ("1", myContainer.popFront("l1", 1).front());
+      ASSERT_EQ("2", myContainer.popFront("l1", 1).front());
+      ASSERT_EQ("0", myContainer.popFront("l1", 1).front());
+      ASSERT_EQ(0u, myContainer.hostedKeys());
+    }
   }
 }
 
 TYPED_TEST(TestSequenceContainer, trim) {
-  using Container = typename TestFixture::Container;
+  using Container = oktss::SequenceContainer<TypeParam>;
 
   {
     Container myContainer;
@@ -486,6 +505,8 @@ TYPED_TEST(TestSequenceContainer, trim) {
         myContainer.pushBack("l1", {"0", "1", "2", "3", "4", "5", "6", "7"}));
 
     myContainer.trim("l1", 0, 7);
+
+    ASSERT_EQ(8u, myContainer.size("l1"));
 
     ASSERT_EQ(std::list<std::string>({"0", "1", "2", "3", "4", "5", "6", "7"}),
               myContainer.range("l1", -30, 30));
@@ -499,6 +520,8 @@ TYPED_TEST(TestSequenceContainer, trim) {
 
     myContainer.trim("l1", -8, -1);
 
+    ASSERT_EQ(8u, myContainer.size("l1"));
+
     ASSERT_EQ(std::list<std::string>({"0", "1", "2", "3", "4", "5", "6", "7"}),
               myContainer.range("l1", -30, 30));
   }
@@ -510,6 +533,8 @@ TYPED_TEST(TestSequenceContainer, trim) {
         myContainer.pushBack("l1", {"0", "1", "2", "3", "4", "5", "6", "7"}));
 
     myContainer.trim("l1", 5, 4);
+
+    ASSERT_EQ(0u, myContainer.size("l1"));
 
     ASSERT_EQ(std::list<std::string>({}), myContainer.range("l1", -30, 30));
     ASSERT_EQ(0u, myContainer.hostedKeys());
@@ -523,6 +548,8 @@ TYPED_TEST(TestSequenceContainer, trim) {
 
     myContainer.trim("l1", 15, 30);
 
+    ASSERT_EQ(0u, myContainer.size("l1"));
+
     ASSERT_EQ(std::list<std::string>({}), myContainer.range("l1", -30, 30));
     ASSERT_EQ(0u, myContainer.hostedKeys());
   }
@@ -535,6 +562,8 @@ TYPED_TEST(TestSequenceContainer, trim) {
 
     myContainer.trim("l1", 1, 6);
 
+    ASSERT_EQ(6u, myContainer.size("l1"));
+
     ASSERT_EQ(std::list<std::string>({"1", "2", "3", "4", "5", "6"}),
               myContainer.range("l1", -30, 30));
   }
@@ -546,6 +575,8 @@ TYPED_TEST(TestSequenceContainer, trim) {
         myContainer.pushBack("l1", {"0", "1", "2", "3", "4", "5", "6", "7"}));
 
     myContainer.trim("l1", 5, 5);
+
+    ASSERT_EQ(1u, myContainer.size("l1"));
 
     ASSERT_EQ(std::list<std::string>({"5"}), myContainer.range("l1", -30, 30));
   }
@@ -564,7 +595,7 @@ TYPED_TEST(TestSequenceContainer, trim) {
 }
 
 TYPED_TEST(TestSequenceContainer, position) {
-  using Container = typename TestFixture::Container;
+  using Container = oktss::SequenceContainer<TypeParam>;
 
   Container myContainer;
 
