@@ -11,7 +11,7 @@ GRP Interface | Equivalent REDIS Command (for Lists)|
  dequeInsert | LINSERT
  dequeLength | LLEN
  dequeMove | LMOVE
- _ | LMPOP
+ dequeMultiplePop | LMPOP
  dequePopFront | LPOP
  dequePosition | LPOS
  dequePushFront | LPUSH

@@ -11,7 +11,7 @@ GRP Interface | Lists REDIS Command |
  listInsert | LINSERT
  listLength | LLEN
  listMove | LMOVE
- _ | LMPOP
+ listMultiplePop | LMPOP
  listPopFront | LPOP
  listPosition | LPOS
  listPushFront | LPUSH
