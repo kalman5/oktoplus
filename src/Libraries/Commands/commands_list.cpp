@@ -42,7 +42,7 @@ grpc::Status CommandsList::listInsert(grpc::ServerContext*,
   const auto& myValue    = aRequest->value();
 
   stor::Lists::Position myListPosition;
-  if (myPosition == InsertRequest::Position::InsertRequest_Position_BEFORE) {
+  if (myPosition == InsertRequest_Position_BEFORE) {
     myListPosition = stor::Lists::Position::BEFORE;
   } else {
     myListPosition = stor::Lists::Position::AFTER;
@@ -78,16 +78,15 @@ grpc::Status CommandsList::listMove(grpc::ServerContext*,
   const auto  mySourceDirection      = aRequest->source_direction();
   const auto  myDestinationDirection = aRequest->destination_direction();
 
-  auto myRet = theLists.move(
-      mySourceName,
-      myDestinationName,
-      mySourceDirection == MoveRequest::Direction::MoveRequest_Direction_LEFT ?
-          stor::Lists::Direction::LEFT :
-          stor::Lists::Direction::RIGHT,
-      myDestinationDirection ==
-              MoveRequest::Direction::MoveRequest_Direction_LEFT ?
-          stor::Lists::Direction::LEFT :
-          stor::Lists::Direction::RIGHT);
+  auto myRet =
+      theLists.move(mySourceName,
+                    myDestinationName,
+                    mySourceDirection == MoveRequest_Direction_LEFT ?
+                        stor::Lists::Direction::LEFT :
+                        stor::Lists::Direction::RIGHT,
+                    myDestinationDirection == MoveRequest_Direction_LEFT ?
+                        stor::Lists::Direction::LEFT :
+                        stor::Lists::Direction::RIGHT);
 
   if (myRet) {
     aReply->set_value(myRet.value());
@@ -96,7 +95,28 @@ grpc::Status CommandsList::listMove(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-// LMPOP
+grpc::Status CommandsList::listMultiplePop(grpc::ServerContext*,
+                                           const MultiplePopRequest* aRequest,
+                                           MultiplePopReply*         aReply) {
+
+  std::vector<std::string> myNames;
+  myNames.reserve(aRequest->name_size());
+  for (int i = 0; i < aRequest->name_size(); ++i) {
+    myNames.push_back(aRequest->name(i));
+  }
+
+  auto myRet = theLists.multiplePop(myNames,
+                                    MultiplePopRequest_Direction_LEFT ?
+                                        stor::Lists::Direction::LEFT :
+                                        stor::Lists::Direction::RIGHT,
+                                    aRequest->count());
+
+  for (auto&& myValue : myRet) {
+    aReply->add_value(std::move(myValue));
+  }
+
+  return grpc::Status::OK;
+}
 
 grpc::Status CommandsList::listPopFront(grpc::ServerContext*,
                                         const PopFrontRequest* aRequest,

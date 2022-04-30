@@ -12,7 +12,7 @@
 namespace okts::stor {
 
 template <class CONTAINER>
-class BackOperations : virtual public GenericContainer<CONTAINER>
+class BackOperations : public GenericContainer<CONTAINER>
 {
   using Container = CONTAINER;
   using Base      = GenericContainer<Container>;
@@ -27,6 +27,16 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
   BackOperations()
       : Base() {
   }
+
+  size_t pushFront(const std::string&                   aName,
+                   const std::vector<std::string_view>& aValues);
+
+  std::list<std::string> popFront(const std::string& aName, uint64_t aCount);
+
+  size_t pushFrontExist(const std::string&                   aName,
+                        const std::vector<std::string_view>& aValues);
+
+  ////////////
 
   size_t pushBack(const std::string&                   aName,
                   const std::vector<std::string_view>& aValues);
@@ -68,12 +78,70 @@ class BackOperations : virtual public GenericContainer<CONTAINER>
   size_t pushBackExist(const std::string&                   aName,
                        const std::vector<std::string_view>& aValues);
 
+  std::list<std::string> multiplePop(const std::vector<std::string>& aNames,
+                                     Direction                       aDirection,
+                                     uint64_t                        aCount);
+
  private:
   using MoveMutex = boost::mutex;
   MoveMutex theMoveMutex;
 };
 
 //// INLINE DEFINITIONS
+
+template <class CONTAINER>
+size_t BackOperations<CONTAINER>::pushFront(
+    const std::string& aName, const std::vector<std::string_view>& aValues) {
+
+  size_t myRet;
+
+  Base::theApplyer.performOnNew(
+      aName, [&myRet, &aValues](Container& aContainer) {
+        for (const auto& myString : aValues) {
+          aContainer.push_front(std::string(myString));
+        }
+        myRet = aContainer.size();
+      });
+
+  return myRet;
+}
+
+template <class CONTAINER>
+std::list<std::string>
+BackOperations<CONTAINER>::popFront(const std::string& aName,
+                                    const uint64_t     aCount) {
+
+  std::list<std::string> myRet;
+
+  Base::theApplyer.performOnExisting(
+      aName, [&myRet, &aCount](Container& aContainer) {
+        uint64_t myCollected = 0;
+        while (!aContainer.empty() && myCollected < aCount) {
+          myRet.emplace_back(std::move(aContainer.front()));
+          aContainer.pop_front();
+          ++myCollected;
+        }
+      });
+
+  return myRet;
+}
+
+template <class CONTAINER>
+size_t BackOperations<CONTAINER>::pushFrontExist(
+    const std::string& aName, const std::vector<std::string_view>& aValues) {
+
+  size_t myRet = 0;
+
+  Base::theApplyer.performOnExisting(
+      aName, [&myRet, &aValues](Container& aContainer) {
+        for (const auto& myString : aValues) {
+          aContainer.push_front(std::string(myString));
+        }
+        myRet = aContainer.size();
+      });
+
+  return myRet;
+}
 
 template <class CONTAINER>
 size_t BackOperations<CONTAINER>::pushBack(
@@ -516,6 +584,28 @@ size_t BackOperations<CONTAINER>::pushBackExist(
         }
         myRet = aContainer.size();
       });
+
+  return myRet;
+}
+
+template <class CONTAINER>
+std::list<std::string>
+BackOperations<CONTAINER>::multiplePop(const std::vector<std::string>& aNames,
+                                       Direction aDirection,
+                                       uint64_t  aCount) {
+  std::list<std::string> myRet;
+
+  for (const auto& myName : aNames) {
+    if (aDirection == Direction::LEFT) {
+      myRet = popFront(myName, aCount);
+    } else {
+      myRet = popBack(myName, aCount);
+    }
+
+    if (!myRet.empty()) {
+      break;
+    }
+  }
 
   return myRet;
 }

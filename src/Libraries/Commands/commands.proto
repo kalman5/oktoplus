@@ -7,27 +7,27 @@ package okts.cmds;
 
 service Interface {
   // LIST
-                                                                            // BLMOVE
-                                                                            // BLMPOP
-                                                                            // BLPOP
-                                                                            // BRPOP
-                                                                            // BRPOPLPUSH
-  rpc listIndex(IndexRequest)                  returns (GetValueReply) { }  // LINDEX
-  rpc listInsert(InsertRequest)                returns (InsertReply)   { }  // LINSERT
-  rpc listLength(LengthRequest)                returns (LengthReply)   { }  // LLEN
-  rpc listMove(MoveRequest)                    returns (GetValueReply) { }  // LMOVE
-                                                                            // LMPOP
-  rpc listPopFront(PopFrontRequest)            returns (PopFrontReply) { }  // LPOP
-  rpc listPosition(PositionRequest)            returns (PositionReply) { }  // LPOS
-  rpc listPushFront(PushRequest)               returns (PushReply)     { }  // LPUSH
-  rpc listExistPushFront(PushRequest)          returns (PushReply)     { }  // LPUSHX
-  rpc listRange(RangeRequest)                  returns (RangeReply)    { }  // LRANGE
-  rpc listRemove(RemoveRequest)                returns (RemoveReply)   { }  // LREM
-  rpc listSet(SetRequest)                      returns (SetReply)      { }  // LSET
-  rpc listTrim(TrimRequest)                    returns (TrimReply)     { }  // LTRIM
-  rpc listPopBack(PopBackRequest)              returns (PopBackReply)  { }  // RPOP
-  rpc listPushBack(PushRequest)                returns (PushReply)     { }  // RPUSH
-  rpc listExistPushBack(PushRequest)           returns (PushReply)     { }  // RPUSHX
+                                                                               // BLMOVE
+                                                                               // BLMPOP
+                                                                               // BLPOP
+                                                                               // BRPOP
+                                                                               // BRPOPLPUSH
+  rpc listIndex(IndexRequest)                  returns (GetValueReply)    { }  // LINDEX
+  rpc listInsert(InsertRequest)                returns (InsertReply)      { }  // LINSERT
+  rpc listLength(LengthRequest)                returns (LengthReply)      { }  // LLEN
+  rpc listMove(MoveRequest)                    returns (GetValueReply)    { }  // LMOVE
+  rpc listMultiplePop(MultiplePopRequest)      returns (MultiplePopReply) { }  // LMPOP
+  rpc listPopFront(PopFrontRequest)            returns (PopFrontReply)    { }  // LPOP
+  rpc listPosition(PositionRequest)            returns (PositionReply)    { }  // LPOS
+  rpc listPushFront(PushRequest)               returns (PushReply)        { }  // LPUSH
+  rpc listExistPushFront(PushRequest)          returns (PushReply)        { }  // LPUSHX
+  rpc listRange(RangeRequest)                  returns (RangeReply)       { }  // LRANGE
+  rpc listRemove(RemoveRequest)                returns (RemoveReply)      { }  // LREM
+  rpc listSet(SetRequest)                      returns (SetReply)         { }  // LSET
+  rpc listTrim(TrimRequest)                    returns (TrimReply)        { }  // LTRIM
+  rpc listPopBack(PopBackRequest)              returns (PopBackReply)     { }  // RPOP
+  rpc listPushBack(PushRequest)                returns (PushReply)        { }  // RPUSH
+  rpc listExistPushBack(PushRequest)           returns (PushReply)        { }  // RPUSHX
 
   //////////////////////////////////////////////////////////////
 
@@ -49,27 +49,27 @@ service Interface {
   //////////////////////////////////////////////////////////////
 
   // DEQUE
-                                                                             // BLMOVE
-                                                                             // BLMPOP
-                                                                             // BLPOP
-                                                                             // BRPOP
-                                                                             // BRPOPLPUSH
-  rpc dequeIndex(IndexRequest)                  returns (GetValueReply) { }  // LINDEX
-  rpc dequeInsert(InsertRequest)                returns (InsertReply)   { }  // LINSERT
-  rpc dequeLength(LengthRequest)                returns (LengthReply)   { }  // LLEN
-  rpc dequeMove(MoveRequest)                    returns (GetValueReply) { }  // LMOVE
-                                                                             // LMPOP
-  rpc dequePopFront(PopFrontRequest)            returns (PopFrontReply) { }  // LPOP
-  rpc dequePosition(PositionRequest)            returns (PositionReply) { }  // LPOS
-  rpc dequePushFront(PushRequest)               returns (PushReply)     { }  // LPUSH
-  rpc dequeExistPushFront(PushRequest)          returns (PushReply)     { }  // LPUSHX
-  rpc dequeRange(RangeRequest)                  returns (RangeReply)    { }  // LRANGE
-  rpc dequeRemove(RemoveRequest)                returns (RemoveReply)   { }  // LREM
-  rpc dequeSet(SetRequest)                      returns (SetReply)      { }  // LSET
-  rpc dequeTrim(TrimRequest)                    returns (TrimReply)     { }  // LTRIM
-  rpc dequePopBack(PopBackRequest)              returns (PopBackReply)  { }  // RPOP
-  rpc dequePushBack(PushRequest)                returns (PushReply)     { }  // RPUSH
-  rpc dequeExistPushBack(PushRequest)           returns (PushReply)     { }  // RPUSHX
+                                                                                // BLMOVE
+                                                                                // BLMPOP
+                                                                                // BLPOP
+                                                                                // BRPOP
+                                                                                // BRPOPLPUSH
+  rpc dequeIndex(IndexRequest)                  returns (GetValueReply)    { }  // LINDEX
+  rpc dequeInsert(InsertRequest)                returns (InsertReply)      { }  // LINSERT
+  rpc dequeLength(LengthRequest)                returns (LengthReply)      { }  // LLEN
+  rpc dequeMove(MoveRequest)                    returns (GetValueReply)    { }  // LMOVE
+  rpc dequeMultiplePop(MultiplePopRequest)      returns (MultiplePopReply) { }  // LMPOP
+  rpc dequePopFront(PopFrontRequest)            returns (PopFrontReply)    { }  // LPOP
+  rpc dequePosition(PositionRequest)            returns (PositionReply)    { }  // LPOS
+  rpc dequePushFront(PushRequest)               returns (PushReply)        { }  // LPUSH
+  rpc dequeExistPushFront(PushRequest)          returns (PushReply)        { }  // LPUSHX
+  rpc dequeRange(RangeRequest)                  returns (RangeReply)       { }  // LRANGE
+  rpc dequeRemove(RemoveRequest)                returns (RemoveReply)      { }  // LREM
+  rpc dequeSet(SetRequest)                      returns (SetReply)         { }  // LSET
+  rpc dequeTrim(TrimRequest)                    returns (TrimReply)        { }  // LTRIM
+  rpc dequePopBack(PopBackRequest)              returns (PopBackReply)     { }  // RPOP
+  rpc dequePushBack(PushRequest)                returns (PushReply)        { }  // RPUSH
+  rpc dequeExistPushBack(PushRequest)           returns (PushReply)        { }  // RPUSHX
 
   //////////////////////////////////////////////////////////////
 

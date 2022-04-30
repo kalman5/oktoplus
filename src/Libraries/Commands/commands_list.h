@@ -33,7 +33,9 @@ class CommandsList : virtual public Interface::Service
   grpc::Status
   listMove(grpc::ServerContext*, const MoveRequest*, GetValueReply*) final;
 
-  // LMPOP
+  grpc::Status listMultiplePop(grpc::ServerContext*,
+                               const MultiplePopRequest*,
+                               MultiplePopReply*) final;
 
   grpc::Status listPopFront(grpc::ServerContext*,
                             const PopFrontRequest*,

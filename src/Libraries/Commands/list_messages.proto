@@ -59,6 +59,25 @@ message MoveRequest {
 
 //////////////////////////////////////////////////////
 
+message MultiplePopRequest {
+  enum Direction {
+    LEFT  = 0;
+    RIGHT = 1;
+  }
+
+  repeated string name      = 1;
+  Direction       direction = 2;
+  uint64          count     = 3;
+}
+
+message MultiplePopReply {
+  ResultInfo      info  = 1;
+  string          name  = 2;
+  repeated string value = 3;
+}
+
+//////////////////////////////////////////////////////
+
 message PopFrontRequest {
   string                      name  = 1;
   google.protobuf.UInt64Value count = 2;

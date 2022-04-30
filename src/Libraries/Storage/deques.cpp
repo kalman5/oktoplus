@@ -3,8 +3,7 @@
 namespace okts::stor {
 
 Deques::Deques()
-    : Base()
-    , Base2() {
+    : Base() {
 }
 
 } // namespace okts::stor
