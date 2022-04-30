@@ -91,7 +91,7 @@ class SequenceContainer : public GenericContainer<CONTAINER>
 
 using Lists   = SequenceContainer<std::list<std::string>>;
 using Deques  = SequenceContainer<std::deque<std::string>>;
-using Vectors = SequenceContainer<std::deque<std::string>>;
+using Vectors = SequenceContainer<std::vector<std::string>>;
 
 //// INLINE DEFINITIONS
 
