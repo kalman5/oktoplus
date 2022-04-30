@@ -95,7 +95,28 @@ grpc::Status CommandsDeque::dequeMove(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-// LMPOP
+grpc::Status CommandsDeque::dequeMultiplePop(grpc::ServerContext*,
+                                             const MultiplePopRequest* aRequest,
+                                             MultiplePopReply*         aReply) {
+
+  std::vector<std::string> myNames;
+  myNames.reserve(aRequest->name_size());
+  for (int i = 0; i < aRequest->name_size(); ++i) {
+    myNames.push_back(aRequest->name(i));
+  }
+
+  auto myRet = theQueues.multiplePop(myNames,
+                                     MultiplePopRequest_Direction_LEFT ?
+                                         stor::Deques::Direction::LEFT :
+                                         stor::Deques::Direction::RIGHT,
+                                     aRequest->count());
+
+  for (auto&& myValue : myRet) {
+    aReply->add_value(std::move(myValue));
+  }
+
+  return grpc::Status::OK;
+}
 
 grpc::Status CommandsDeque::dequePopFront(grpc::ServerContext*,
                                           const PopFrontRequest* aRequest,

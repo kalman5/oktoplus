@@ -33,7 +33,9 @@ class CommandsDeque : virtual public Interface::Service
   grpc::Status
   dequeMove(grpc::ServerContext*, const MoveRequest*, GetValueReply*);
 
-  // LMPOP
+  grpc::Status dequeMultiplePop(grpc::ServerContext*,
+                                const MultiplePopRequest*,
+                                MultiplePopReply*) final;
 
   grpc::Status dequePopFront(grpc::ServerContext*,
                              const PopFrontRequest*,
