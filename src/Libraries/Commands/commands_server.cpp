@@ -2,6 +2,8 @@
 
 #include <glog/logging.h>
 
+#include "Support/logo.h"
+
 #include <sstream>
 #include <string_view>
 
@@ -19,10 +21,12 @@ CommandsServer::CommandsServer(const std::string& myEndpoint)
       .RegisterService(this);
   theServer = myBuilder.BuildAndStart();
 
+  sup::logo(myEndpoint);
+
   const auto myLogService = "Oktoplus service on " + myEndpoint;
 
   if (theServer) {
-    LOG(INFO) << myLogService << ". Started.";
+    LOG(INFO) << "Started.";
   } else {
     std::stringstream myError;
     myError << "Could not start " << myLogService;
