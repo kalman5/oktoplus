@@ -6,8 +6,7 @@
 
 #include <string>
 
-namespace okts {
-namespace cfgs {
+namespace okts::cfgs {
 
 // class OktoplusConfiguration;
 
@@ -28,5 +27,4 @@ class JsonConfiguration : public OktoplusConfiguration
   const std::string theConfigurationFile;
 };
 
-} // namespace cfgs
-} // namespace okts
+} // namespace okts::cfgs

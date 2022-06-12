@@ -7,8 +7,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace okts {
-namespace cfgs {
+namespace okts::cfgs {
 
 JsonConfiguration::JsonConfiguration(const std::string& aConfigurationFile)
     : OktoplusConfiguration()
@@ -93,5 +92,4 @@ void JsonConfiguration::dump(const std::string& aConfigurationFile) {
   myConfigurationStream << myRoot;
 }
 
-} // namespace cfgs
-} // namespace okts
+} // namespace okts::cfgs

@@ -9,8 +9,7 @@
 
 namespace bpo = boost::program_options;
 
-namespace okts {
-namespace cfgs {
+namespace okts::cfgs {
 
 CommandLineConfiguration::CommandLineConfiguration(int aArgc, char** aArgv)
     : theGenerateDefaultConfigurationFile(false)
@@ -51,5 +50,4 @@ CommandLineConfiguration::CommandLineConfiguration(int aArgc, char** aArgv)
   }
 }
 
-} // namespace cfgs
-} // namespace okts
+} // namespace okts::cfgs

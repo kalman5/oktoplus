@@ -4,8 +4,7 @@
 
 #include <string>
 
-namespace okts {
-namespace cfgs {
+namespace okts::cfgs {
 
 class OktoplusConfiguration
 {
@@ -27,5 +26,4 @@ class OktoplusConfiguration
   int         theMaxPollers;
 };
 
-} // namespace cfgs
-} // namespace okts
+} // namespace okts::cfgs

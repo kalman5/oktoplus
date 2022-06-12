@@ -24,7 +24,7 @@ CommandsServer::CommandsServer(const std::string& aEndpoint,
       .RegisterService(this);
   theServer = myBuilder.BuildAndStart();
 
-  sup::logo(aEndpoint);
+  sup::logo(aEndpoint, aNumCQS, aMinPollers, aMaxPollers);
 
   const auto myLogService = "Oktoplus service on " + aEndpoint;
 

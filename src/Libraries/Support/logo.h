@@ -2,13 +2,14 @@
 
 namespace okts::sup {
 
-inline void logo(const std::string& aInfo) {
+inline void
+logo(const std::string& aInfo, int cqs, int minPollers, int maxPollers) {
   // clang-format off
   LOG(INFO) << "                             ,╓▄▓█▀▀▀▀▀▀M▄µ";
   LOG(INFO) << "                          ,▄▀▀Ñ▓▓▀ ╓╖      `▀▄  Oktoplus service on: " << aInfo;
-  LOG(INFO) << "                        ,█▀   ,,   `   ╨▀     ▀▄";                                
-  LOG(INFO) << "                       ╓▀    ▓ÑÑM          @N   █";                               
-  LOG(INFO) << "                      ▄▀      `                  █";                              
+  LOG(INFO) << "                        ,█▀   ,,   `   ╨▀     ▀▄  cqs: " << cqs;                                
+  LOG(INFO) << "                       ╓▀    ▓ÑÑM          @N   █  min pollers: " << minPollers;                               
+  LOG(INFO) << "                      ▄▀      `                  █  max pollers: " << maxPollers;
   LOG(INFO) << "                     ,▌ #▓▄                       ▌";                             
   LOG(INFO) << "                     █  `                         ▀▄";                            
   LOG(INFO) << "               ╓▓▀``▀█             ,▒▒▒▒        ,, ▐▌,▄▓";

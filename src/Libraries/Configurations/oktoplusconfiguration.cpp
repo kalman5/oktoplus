@@ -2,14 +2,13 @@
 
 #include <fstream>
 
-namespace okts {
-namespace cfgs {
+namespace okts::cfgs {
 
 OktoplusConfiguration::OktoplusConfiguration()
     : theEndpoint("127.0.0.1:6666")
-    , theNumCQS(20)
+    , theNumCQS(10)
     , theMinPollers(10)
-    , theMaxPollers(30) {
+    , theMaxPollers(20) {
 }
 
 const std::string& OktoplusConfiguration::endpoint() const {
@@ -26,5 +25,4 @@ int OktoplusConfiguration::maxPollers() const {
   return theMaxPollers;
 }
 
-} // namespace cfgs
-} // namespace okts
+} // namespace okts::cfgs

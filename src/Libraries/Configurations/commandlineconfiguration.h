@@ -4,8 +4,7 @@
 
 #include <string>
 
-namespace okts {
-namespace cfgs {
+namespace okts::cfgs {
 
 class CommandLineConfiguration
 {
@@ -38,5 +37,4 @@ class CommandLineConfiguration
   bool        theConfigurationFileSpecified;
 };
 
-} // namespace cfgs
-} // namespace okts
+} // namespace okts::cfgs
