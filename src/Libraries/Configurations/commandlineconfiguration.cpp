@@ -1,6 +1,6 @@
 #include "Configurations/commandlineconfiguration.h"
 
-#include "Configurations/defaultconfiguration.h"
+#include "Configurations/oktoplusconfiguration.h"
 
 #include <boost/program_options.hpp>
 
@@ -18,7 +18,7 @@ CommandLineConfiguration::CommandLineConfiguration(int aArgc, char** aArgv)
     , theConfigurationFilePath("oktoplus.cfg")
     , theConfigurationFileSpecified(false) {
 
-  DefaultConfiguration myDefaultConfiguration;
+  OktoplusConfiguration myDefaultConfiguration;
 
   bpo::options_description desc("Allowed options");
 

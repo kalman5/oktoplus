@@ -10,18 +10,21 @@ namespace cfgs {
 class OktoplusConfiguration
 {
  public:
-  DISABLE_EVIL_CONSTRUCTOR(OktoplusConfiguration);
-
   OktoplusConfiguration();
+  OktoplusConfiguration(const OktoplusConfiguration&) = default;
 
   virtual ~OktoplusConfiguration() = default;
 
-  void addConfiguration(const OktoplusConfiguration& aConfiguration);
-
   const std::string& endpoint() const;
+  int                numCqs() const;
+  int                minPollers() const;
+  int                maxPollers() const;
 
  protected:
   std::string theEndpoint;
+  int         theNumCQS;
+  int         theMinPollers;
+  int         theMaxPollers;
 };
 
 } // namespace cfgs

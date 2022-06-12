@@ -16,7 +16,10 @@ class CommandsServer : public CommandsDeque,
                        public CommandsVector
 {
  public:
-  CommandsServer(const std::string& myEndpoint);
+  CommandsServer(const std::string& aEndpoint,
+                 int                aNumCQS,
+                 int                aMinPollers,
+                 int                aMaxPollers);
 
   void wait();
 

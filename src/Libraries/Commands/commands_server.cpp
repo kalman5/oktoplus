@@ -10,20 +10,23 @@
 namespace okts {
 namespace cmds {
 
-CommandsServer::CommandsServer(const std::string& myEndpoint)
+CommandsServer::CommandsServer(const std::string& aEndpoint,
+                               int                aNumCQS,
+                               int                aMinPollers,
+                               int                aMaxPollers)
     : theCredentials(::grpc::InsecureServerCredentials())
     , theServer() {
   ::grpc::ServerBuilder myBuilder;
-  myBuilder.SetSyncServerOption(::grpc::ServerBuilder::NUM_CQS, 20)
-      .SetSyncServerOption(::grpc::ServerBuilder::MIN_POLLERS, 10)
-      .SetSyncServerOption(::grpc::ServerBuilder::MAX_POLLERS, 30)
-      .AddListeningPort(myEndpoint, theCredentials)
+  myBuilder.SetSyncServerOption(::grpc::ServerBuilder::NUM_CQS, aNumCQS)
+      .SetSyncServerOption(::grpc::ServerBuilder::MIN_POLLERS, aMinPollers)
+      .SetSyncServerOption(::grpc::ServerBuilder::MAX_POLLERS, aMaxPollers)
+      .AddListeningPort(aEndpoint, theCredentials)
       .RegisterService(this);
   theServer = myBuilder.BuildAndStart();
 
-  sup::logo(myEndpoint);
+  sup::logo(aEndpoint);
 
-  const auto myLogService = "Oktoplus service on " + myEndpoint;
+  const auto myLogService = "Oktoplus service on " + aEndpoint;
 
   if (theServer) {
     LOG(INFO) << "Started.";

@@ -5,16 +5,25 @@
 namespace okts {
 namespace cfgs {
 
-OktoplusConfiguration::OktoplusConfiguration() {
-}
-
-void OktoplusConfiguration::addConfiguration(
-    const OktoplusConfiguration& aConfiguration) {
-  theEndpoint = aConfiguration.endpoint();
+OktoplusConfiguration::OktoplusConfiguration()
+    : theEndpoint("127.0.0.1:6666")
+    , theNumCQS(20)
+    , theMinPollers(10)
+    , theMaxPollers(30) {
 }
 
 const std::string& OktoplusConfiguration::endpoint() const {
   return theEndpoint;
+}
+
+int OktoplusConfiguration::numCqs() const {
+  return theNumCQS;
+}
+int OktoplusConfiguration::minPollers() const {
+  return theMinPollers;
+}
+int OktoplusConfiguration::maxPollers() const {
+  return theMaxPollers;
 }
 
 } // namespace cfgs

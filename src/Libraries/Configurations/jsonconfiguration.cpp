@@ -36,13 +36,30 @@ JsonConfiguration::JsonConfiguration(const std::string& aConfigurationFile)
   } else {
     throw std::runtime_error("endpoint not found");
   }
+
+  if (myRoot.isMember("numcqs")) {
+    theNumCQS = myRoot["numcqs"].asInt();
+  } else {
+    throw std::runtime_error("numcqs not found");
+  }
+
+  if (myRoot.isMember("minpollers")) {
+    theMinPollers = myRoot["minpollers"].asInt();
+  } else {
+    throw std::runtime_error("minpollers not found");
+  }
+
+  if (myRoot.isMember("maxpollers")) {
+    theMaxPollers = myRoot["maxpollers"].asInt();
+  } else {
+    throw std::runtime_error("maxpollers not found");
+  }
 }
 
 JsonConfiguration::JsonConfiguration(
     const OktoplusConfiguration& aConfiguration)
-    : OktoplusConfiguration()
+    : OktoplusConfiguration(aConfiguration)
     , theConfigurationFile() {
-  theEndpoint = aConfiguration.endpoint();
 }
 
 void JsonConfiguration::dump() {
@@ -62,7 +79,10 @@ void JsonConfiguration::dump(const std::string& aConfigurationFile) {
 
   Json::Value myRoot;
 
-  myRoot["endpoint"] = theEndpoint;
+  myRoot["endpoint"]   = theEndpoint;
+  myRoot["numcqs"]     = theNumCQS;
+  myRoot["minpollers"] = theMinPollers;
+  myRoot["maxpollers"] = theMaxPollers;
 
   myConfigurationStream << myRoot;
 }

@@ -1,9 +1,12 @@
-#include "Configurations/defaultconfiguration.h"
 #include "Configurations/jsonconfiguration.h"
 #include "Configurations/oktoplusconfiguration.h"
 
 #include "gtest/gtest.h"
 
+#include <jsoncpp/json/json.h>
+
+#include <cstdio>
+#include <fstream>
 #include <glog/logging.h>
 
 namespace okcfgs = okts::cfgs;
@@ -15,27 +18,59 @@ class TestConfiguration : public ::testing::Test
   }
 
   void SetUp() override {
+    std::remove("configuration.json");
+  }
+
+  void TearDown() override {
+    std::remove("configuration.json");
   }
 };
 
 TEST_F(TestConfiguration, ctor) {
-  okcfgs::DefaultConfiguration myDefault;
-
-  okcfgs::OktoplusConfiguration myOktoplusConfiguration;
-  myOktoplusConfiguration.addConfiguration(myDefault);
-  ASSERT_EQ(myDefault.endpoint(), myOktoplusConfiguration.endpoint());
+  okcfgs::OktoplusConfiguration myDefault;
 
   {
-    okcfgs::JsonConfiguration myJsonConfiguration(myOktoplusConfiguration);
+    okcfgs::JsonConfiguration myJsonConfiguration(myDefault);
     myJsonConfiguration.dump("oktoplus.json");
   }
 
   okcfgs::JsonConfiguration myJsonConfiguration("oktoplus.json");
   ASSERT_EQ(myDefault.endpoint(), myJsonConfiguration.endpoint());
+  ASSERT_EQ(myDefault.numCqs(), myJsonConfiguration.numCqs());
+  ASSERT_EQ(myDefault.minPollers(), myJsonConfiguration.minPollers());
+  ASSERT_EQ(myDefault.maxPollers(), myJsonConfiguration.maxPollers());
 
   {
-    okcfgs::OktoplusConfiguration myOktoplusConfiguration;
-    myOktoplusConfiguration.addConfiguration(myJsonConfiguration);
+    okcfgs::OktoplusConfiguration myOktoplusConfiguration(myJsonConfiguration);
     ASSERT_EQ(myDefault.endpoint(), myOktoplusConfiguration.endpoint());
+    ASSERT_EQ(myDefault.numCqs(), myJsonConfiguration.numCqs());
+    ASSERT_EQ(myDefault.minPollers(), myJsonConfiguration.minPollers());
+    ASSERT_EQ(myDefault.maxPollers(), myJsonConfiguration.maxPollers());
   }
+}
+
+TEST_F(TestConfiguration, json_parse) {
+  std::string myExpectedEndpoint("10.10.10.10:8888");
+  int         myExpecteNumCqs     = 30;
+  int         myExpecteMinPollers = 31;
+  int         myExpecteMaxPollers = 32;
+  {
+    std::ofstream myConfigurationStream("configuration.json",
+                                        std::ofstream::binary);
+
+    Json::Value myRoot;
+
+    myRoot["endpoint"]   = "10.10.10.10:8888";
+    myRoot["numcqs"]     = myExpecteNumCqs;
+    myRoot["minpollers"] = myExpecteMinPollers;
+    myRoot["maxpollers"] = myExpecteMaxPollers;
+
+    myConfigurationStream << myRoot;
+  }
+
+  okcfgs::JsonConfiguration myJsonConfiguration("configuration.json");
+  ASSERT_EQ(myExpectedEndpoint, myJsonConfiguration.endpoint());
+  ASSERT_EQ(myExpecteNumCqs, myJsonConfiguration.numCqs());
+  ASSERT_EQ(myExpecteMinPollers, myJsonConfiguration.minPollers());
+  ASSERT_EQ(myExpecteMaxPollers, myJsonConfiguration.maxPollers());
 }

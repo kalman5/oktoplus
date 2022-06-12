@@ -1,6 +1,5 @@
 #include "Commands/commands_server.h"
 #include "Configurations/commandlineconfiguration.h"
-#include "Configurations/defaultconfiguration.h"
 #include "Configurations/jsonconfiguration.h"
 #include "Support/googleraii.h"
 
@@ -22,8 +21,8 @@ int main(int argc, char** argv) {
     }
 
     if (myCommandLine.generateFile()) {
-      okcfgs::DefaultConfiguration myDefault;
-      okcfgs::JsonConfiguration    myJson(myDefault);
+      okcfgs::OktoplusConfiguration myDefault;
+      okcfgs::JsonConfiguration     myJson(myDefault);
       myJson.dump(myCommandLine.configurationFile());
       return EXIT_SUCCESS;
     }
@@ -38,7 +37,8 @@ int main(int argc, char** argv) {
       throw std::runtime_error("Configuration file was not specified");
     }
 
-    okcmds::CommandsServer myServer(myOktoplusConfiguration.endpoint());
+    okcmds::CommandsServer myServer(
+        myOktoplusConfiguration.endpoint(), 10, 20, 30);
 
     myServer.wait();
 

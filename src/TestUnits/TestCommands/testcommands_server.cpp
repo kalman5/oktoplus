@@ -25,7 +25,7 @@ TEST_F(TestCommands, server_not_available) {
 }
 
 TEST_F(TestCommands, set_get) {
-  okcmds::CommandsServer myServer("127.0.0.1:6666");
+  okcmds::CommandsServer myServer("127.0.0.1:6666", 10, 20, 30);
 
   okcmds::CommandsClient myClient("127.0.0.1:6666");
 
