@@ -27,18 +27,19 @@ int main(int argc, char** argv) {
       return EXIT_SUCCESS;
     }
 
-    okcfgs::OktoplusConfiguration myOktoplusConfiguration;
+    std::unique_ptr<okcfgs::OktoplusConfiguration> myOktoplusConfiguration;
 
     if (myCommandLine.configurationFileSpecified()) {
-      okcfgs::JsonConfiguration myJsonConfiguration(
+      myOktoplusConfiguration = std::make_unique<okcfgs::JsonConfiguration>(
           myCommandLine.configurationFile());
-      myOktoplusConfiguration.addConfiguration(myJsonConfiguration);
     } else {
       throw std::runtime_error("Configuration file was not specified");
     }
 
-    okcmds::CommandsServer myServer(
-        myOktoplusConfiguration.endpoint(), 10, 20, 30);
+    okcmds::CommandsServer myServer(myOktoplusConfiguration->endpoint(),
+                                    myOktoplusConfiguration->numCqs(),
+                                    myOktoplusConfiguration->minPollers(),
+                                    myOktoplusConfiguration->maxPollers());
 
     myServer.wait();
 

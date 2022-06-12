@@ -31,26 +31,28 @@ JsonConfiguration::JsonConfiguration(const std::string& aConfigurationFile)
     throw std::runtime_error("invalid json parsing");
   }
 
-  if (myRoot.isMember("endpoint")) {
-    theEndpoint = myRoot["endpoint"].asString();
+  auto myServiceConfiguration = myRoot["service"];
+
+  if (myServiceConfiguration.isMember("endpoint")) {
+    theEndpoint = myServiceConfiguration["endpoint"].asString();
   } else {
     throw std::runtime_error("endpoint not found");
   }
 
-  if (myRoot.isMember("numcqs")) {
-    theNumCQS = myRoot["numcqs"].asInt();
+  if (myServiceConfiguration.isMember("numcqs")) {
+    theNumCQS = myServiceConfiguration["numcqs"].asInt();
   } else {
     throw std::runtime_error("numcqs not found");
   }
 
-  if (myRoot.isMember("minpollers")) {
-    theMinPollers = myRoot["minpollers"].asInt();
+  if (myServiceConfiguration.isMember("minpollers")) {
+    theMinPollers = myServiceConfiguration["minpollers"].asInt();
   } else {
     throw std::runtime_error("minpollers not found");
   }
 
-  if (myRoot.isMember("maxpollers")) {
-    theMaxPollers = myRoot["maxpollers"].asInt();
+  if (myServiceConfiguration.isMember("maxpollers")) {
+    theMaxPollers = myServiceConfiguration["maxpollers"].asInt();
   } else {
     throw std::runtime_error("maxpollers not found");
   }
@@ -79,10 +81,10 @@ void JsonConfiguration::dump(const std::string& aConfigurationFile) {
 
   Json::Value myRoot;
 
-  myRoot["endpoint"]   = theEndpoint;
-  myRoot["numcqs"]     = theNumCQS;
-  myRoot["minpollers"] = theMinPollers;
-  myRoot["maxpollers"] = theMaxPollers;
+  myRoot["service"]["endpoint"]   = theEndpoint;
+  myRoot["service"]["numcqs"]     = theNumCQS;
+  myRoot["service"]["minpollers"] = theMinPollers;
+  myRoot["service"]["maxpollers"] = theMaxPollers;
 
   myConfigurationStream << myRoot;
 }

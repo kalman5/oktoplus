@@ -60,10 +60,10 @@ TEST_F(TestConfiguration, json_parse) {
 
     Json::Value myRoot;
 
-    myRoot["endpoint"]   = "10.10.10.10:8888";
-    myRoot["numcqs"]     = myExpecteNumCqs;
-    myRoot["minpollers"] = myExpecteMinPollers;
-    myRoot["maxpollers"] = myExpecteMaxPollers;
+    myRoot["service"]["endpoint"]   = "10.10.10.10:8888";
+    myRoot["service"]["numcqs"]     = myExpecteNumCqs;
+    myRoot["service"]["minpollers"] = myExpecteMinPollers;
+    myRoot["service"]["maxpollers"] = myExpecteMaxPollers;
 
     myConfigurationStream << myRoot;
   }
