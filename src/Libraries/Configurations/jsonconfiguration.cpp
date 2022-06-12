@@ -31,30 +31,34 @@ JsonConfiguration::JsonConfiguration(const std::string& aConfigurationFile)
     throw std::runtime_error("invalid json parsing");
   }
 
+  if (!myRoot.isMember("service")) {
+    throw std::runtime_error("service section not found.");
+  }
+
   auto myServiceConfiguration = myRoot["service"];
 
   if (myServiceConfiguration.isMember("endpoint")) {
     theEndpoint = myServiceConfiguration["endpoint"].asString();
   } else {
-    throw std::runtime_error("endpoint not found");
+    throw std::runtime_error("endpoint not found.");
   }
 
   if (myServiceConfiguration.isMember("numcqs")) {
     theNumCQS = myServiceConfiguration["numcqs"].asInt();
   } else {
-    throw std::runtime_error("numcqs not found");
+    throw std::runtime_error("numcqs not found.");
   }
 
   if (myServiceConfiguration.isMember("minpollers")) {
     theMinPollers = myServiceConfiguration["minpollers"].asInt();
   } else {
-    throw std::runtime_error("minpollers not found");
+    throw std::runtime_error("minpollers not found.");
   }
 
   if (myServiceConfiguration.isMember("maxpollers")) {
     theMaxPollers = myServiceConfiguration["maxpollers"].asInt();
   } else {
-    throw std::runtime_error("maxpollers not found");
+    throw std::runtime_error("maxpollers not found.");
   }
 }
 
