@@ -27,7 +27,7 @@ The server exports a Grpc interface (https://grpc.io/). Refer to src/Libraries/C
 
 Server is multithread, two different clients working on different containers (type or name) have a minimal interaction. For example multiple clients performing a parallel batch insert on different keys can procede in parallel without blocking each other.
 
-#### Road Map
+#### Roadmap
 - Support all REDIS commands (at least the one relative to data storage)
 - Support the following containers: deque, list, map, multimap, multiset, set, unorderd_map, unordered_multimap, vector, boost::multi_index (up to at least 3 keys)
 - Make it distributed using RAFT as consensus protocol
