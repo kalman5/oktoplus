@@ -12,7 +12,7 @@ namespace okts::cmds {
 class CommandsDeque : virtual public Interface::Service
 {
  public:
-  CommandsDeque();
+  explicit CommandsDeque(stor::Deques& aDeques);
 
  private:
   // BLMOVE
@@ -75,7 +75,7 @@ class CommandsDeque : virtual public Interface::Service
                                    const PushRequest*,
                                    PushReply*) final;
 
-  stor::Deques theQueues;
+  stor::Deques& theQueues;
 };
 
 } // namespace okts::cmds

@@ -13,7 +13,7 @@ namespace cmds {
 class CommandsVector : virtual public Interface::Service
 {
  public:
-  CommandsVector();
+  explicit CommandsVector(stor::Vectors& aVectors);
 
  private:
   grpc::Status vectorPushBack(grpc::ServerContext*,
@@ -59,7 +59,7 @@ class CommandsVector : virtual public Interface::Service
                                    const PushRequest*,
                                    PushReply*) final override;
 
-  stor::Vectors theVectors;
+  stor::Vectors& theVectors;
 };
 
 } // namespace cmds

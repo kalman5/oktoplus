@@ -2,7 +2,9 @@
 
 #include "Commands/commands_deque.h"
 #include "Commands/commands_list.h"
+#include "Commands/commands_set.h"
 #include "Commands/commands_vector.h"
+#include "Storage/storage_context.h"
 
 #include <grpc++/grpc++.h>
 
@@ -13,13 +15,15 @@ namespace cmds {
 
 class CommandsServer : public CommandsDeque,
                        public CommandsList,
-                       public CommandsVector
+                       public CommandsVector,
+                       public CommandsSet
 {
  public:
-  CommandsServer(const std::string& aEndpoint,
-                 int                aNumCQS,
-                 int                aMinPollers,
-                 int                aMaxPollers);
+  CommandsServer(stor::StorageContext& aStorage,
+                 const std::string&    aEndpoint,
+                 int                   aNumCQS,
+                 int                   aMinPollers,
+                 int                   aMaxPollers);
 
   void wait();
 

@@ -12,7 +12,7 @@ namespace okts::cmds {
 class CommandsList : virtual public Interface::Service
 {
  public:
-  CommandsList();
+  explicit CommandsList(stor::Lists& aLists);
 
  private:
   // BLMOVE
@@ -73,7 +73,7 @@ class CommandsList : virtual public Interface::Service
                                   const PushRequest*,
                                   PushReply*) final;
 
-  stor::Lists theLists;
+  stor::Lists& theLists;
 };
 
 } // namespace okts::cmds

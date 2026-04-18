@@ -12,7 +12,7 @@ namespace okts::cmds {
 class CommandsSet : virtual public Interface::Service
 {
  public:
-  CommandsSet();
+  explicit CommandsSet(stor::Sets& aSets);
 
  private:
   grpc::Status setAdd(grpc::ServerContext*,
@@ -40,7 +40,7 @@ class CommandsSet : virtual public Interface::Service
   // SUNION
   // SUNIONSTORE
 
-  stor::Sets theSets;
+  stor::Sets& theSets;
 };
 
 } // namespace okts::cmds

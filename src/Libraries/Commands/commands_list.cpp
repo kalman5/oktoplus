@@ -8,8 +8,8 @@
 namespace okts {
 namespace cmds {
 
-CommandsList::CommandsList()
-    : theLists() {
+CommandsList::CommandsList(stor::Lists& aLists)
+    : theLists(aLists) {
 }
 
 // BLMOVE

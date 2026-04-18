@@ -8,8 +8,8 @@
 namespace okts {
 namespace cmds {
 
-CommandsVector::CommandsVector()
-    : theVectors() {
+CommandsVector::CommandsVector(stor::Vectors& aVectors)
+    : theVectors(aVectors) {
 }
 
 grpc::Status CommandsVector::vectorPushBack(grpc::ServerContext*,

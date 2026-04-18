@@ -8,8 +8,8 @@
 namespace okts {
 namespace cmds {
 
-CommandsSet::CommandsSet()
-    : theSets() {
+CommandsSet::CommandsSet(stor::Sets& aSets)
+    : theSets(aSets) {
 }
 
 grpc::Status CommandsSet::setAdd(grpc::ServerContext*,

@@ -7,8 +7,8 @@
 
 namespace okts::cmds {
 
-CommandsDeque::CommandsDeque()
-    : theQueues() {
+CommandsDeque::CommandsDeque(stor::Deques& aDeques)
+    : theQueues(aDeques) {
 }
 
 // BLMOVE

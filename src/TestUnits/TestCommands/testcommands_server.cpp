@@ -1,11 +1,13 @@
 #include "Commands/commands_client.h"
 #include "Commands/commands_server.h"
+#include "Storage/storage_context.h"
 
 #include "gtest/gtest.h"
 
 #include <glog/logging.h>
 
 namespace okcmds = okts::cmds;
+namespace okstor = okts::stor;
 
 class TestCommands : public ::testing::Test
 {
@@ -25,7 +27,8 @@ TEST_F(TestCommands, server_not_available) {
 }
 
 TEST_F(TestCommands, set_get) {
-  okcmds::CommandsServer myServer("127.0.0.1:6666", 10, 20, 30);
+  okstor::StorageContext myStorage;
+  okcmds::CommandsServer myServer(myStorage, "127.0.0.1:6666", 10, 20, 30);
 
   okcmds::CommandsClient myClient("127.0.0.1:6666");
 

@@ -10,11 +10,16 @@
 namespace okts {
 namespace cmds {
 
-CommandsServer::CommandsServer(const std::string& aEndpoint,
-                               int                aNumCQS,
-                               int                aMinPollers,
-                               int                aMaxPollers)
-    : theCredentials(::grpc::InsecureServerCredentials())
+CommandsServer::CommandsServer(stor::StorageContext& aStorage,
+                               const std::string&    aEndpoint,
+                               int                   aNumCQS,
+                               int                   aMinPollers,
+                               int                   aMaxPollers)
+    : CommandsDeque(aStorage.deques)
+    , CommandsList(aStorage.lists)
+    , CommandsVector(aStorage.vectors)
+    , CommandsSet(aStorage.sets)
+    , theCredentials(::grpc::InsecureServerCredentials())
     , theServer() {
   ::grpc::ServerBuilder myBuilder;
   myBuilder.SetSyncServerOption(::grpc::ServerBuilder::NUM_CQS, aNumCQS)
