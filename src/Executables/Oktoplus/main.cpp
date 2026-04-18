@@ -1,13 +1,19 @@
 #include "Commands/commands_server.h"
 #include "Configurations/commandlineconfiguration.h"
 #include "Configurations/jsonconfiguration.h"
+#include "Resp/resp_server.h"
+#include "Storage/storage_context.h"
 #include "Support/googleraii.h"
 
 #include <glog/logging.h>
 
+#include <memory>
+
 namespace okcmds = okts::cmds;
 namespace okcfgs = okts::cfgs;
+namespace okresp = okts::resp;
 namespace oksu   = okts::sup;
+namespace okstor = okts::stor;
 
 int main(int argc, char** argv) {
 
@@ -36,10 +42,20 @@ int main(int argc, char** argv) {
       throw std::runtime_error("Configuration file was not specified");
     }
 
-    okcmds::CommandsServer myServer(myOktoplusConfiguration->endpoint(),
+    okstor::StorageContext myStorage;
+
+    okcmds::CommandsServer myServer(myStorage,
+                                    myOktoplusConfiguration->endpoint(),
                                     myOktoplusConfiguration->numCqs(),
                                     myOktoplusConfiguration->minPollers(),
                                     myOktoplusConfiguration->maxPollers());
+
+    std::unique_ptr<okresp::RespServer> myRespServer;
+
+    if (myOktoplusConfiguration->hasRespEndpoint()) {
+      myRespServer = std::make_unique<okresp::RespServer>(
+          myStorage, myOktoplusConfiguration->respEndpoint());
+    }
 
     myServer.wait();
 

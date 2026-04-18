@@ -11,6 +11,7 @@ add_executable (oktoplus
 target_link_libraries(oktoplus
   oktoplus_commands
   oktoplus_configurations
+  oktoplus_resp
   oktoplus_storage
   ${GLOG}
   ${Boost_LIBRARIES}
