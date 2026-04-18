@@ -59,6 +59,10 @@ JsonConfiguration::JsonConfiguration(const std::string& aConfigurationFile)
   } else {
     throw std::runtime_error("maxpollers not found.");
   }
+
+  if (myServiceConfiguration.isMember("resp_endpoint")) {
+    theRespEndpoint = myServiceConfiguration["resp_endpoint"].asString();
+  }
 }
 
 JsonConfiguration::JsonConfiguration(
@@ -88,6 +92,10 @@ void JsonConfiguration::dump(const std::string& aConfigurationFile) {
   myRoot["service"]["numcqs"]     = theNumCQS;
   myRoot["service"]["minpollers"] = theMinPollers;
   myRoot["service"]["maxpollers"] = theMaxPollers;
+
+  if (!theRespEndpoint.empty()) {
+    myRoot["service"]["resp_endpoint"] = theRespEndpoint;
+  }
 
   myConfigurationStream << myRoot;
 }

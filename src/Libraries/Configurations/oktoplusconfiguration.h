@@ -19,11 +19,15 @@ class OktoplusConfiguration
   int                minPollers() const;
   int                maxPollers() const;
 
+  bool               hasRespEndpoint() const;
+  const std::string& respEndpoint() const;
+
  protected:
   std::string theEndpoint;
   int         theNumCQS;
   int         theMinPollers;
   int         theMaxPollers;
+  std::string theRespEndpoint;
 };
 
 } // namespace okts::cfgs
