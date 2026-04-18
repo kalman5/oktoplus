@@ -105,11 +105,13 @@ grpc::Status CommandsDeque::dequeMultiplePop(grpc::ServerContext*,
     myNames.push_back(aRequest->name(i));
   }
 
-  auto myRet = theQueues.multiplePop(myNames,
-                                     MultiplePopRequest_Direction_LEFT ?
-                                         stor::Deques::Direction::LEFT :
-                                         stor::Deques::Direction::RIGHT,
-                                     aRequest->count());
+  auto myRet =
+      theQueues.multiplePop(myNames,
+                            aRequest->direction() ==
+                                    MultiplePopRequest_Direction_LEFT ?
+                                stor::Deques::Direction::LEFT :
+                                stor::Deques::Direction::RIGHT,
+                            aRequest->count());
 
   for (auto&& myValue : myRet) {
     aReply->add_value(std::move(myValue));

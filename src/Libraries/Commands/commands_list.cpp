@@ -105,11 +105,13 @@ grpc::Status CommandsList::listMultiplePop(grpc::ServerContext*,
     myNames.push_back(aRequest->name(i));
   }
 
-  auto myRet = theLists.multiplePop(myNames,
-                                    MultiplePopRequest_Direction_LEFT ?
-                                        stor::Lists::Direction::LEFT :
-                                        stor::Lists::Direction::RIGHT,
-                                    aRequest->count());
+  auto myRet =
+      theLists.multiplePop(myNames,
+                           aRequest->direction() ==
+                                   MultiplePopRequest_Direction_LEFT ?
+                               stor::Lists::Direction::LEFT :
+                               stor::Lists::Direction::RIGHT,
+                           aRequest->count());
 
   for (auto&& myValue : myRet) {
     aReply->add_value(std::move(myValue));
