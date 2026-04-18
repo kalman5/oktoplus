@@ -10,13 +10,12 @@ find_library(JSONCPP  jsoncpp)
 
 list(APPEND CMAKE_MODULE_PATH "${Oktoplus_SOURCE_DIR}/cmake")
 
-# GMOCK/GTEST
-set(GTEST gmock_gtest)
-include_directories(${Oktoplus_SOURCE_DIR}/externals/gtest/googlemock/include)
-include_directories(${Oktoplus_SOURCE_DIR}/externals/gtest/googletest/include)
+# GMOCK/GTEST (system)
+find_package(GTest REQUIRED)
+set(GTEST GTest::gtest GTest::gmock)
 
-# ABSEIL
-include_directories(SYSTEM ${Oktoplus_SOURCE_DIR}/externals/abseil-cpp)
+# ABSEIL (system)
+find_package(absl REQUIRED)
 
 # Boost libraries
 set(Boost_USE_STATIC_LIBS FALSE)
