@@ -54,31 +54,16 @@ def short_name(test: str) -> str:
 
 
 def svg_open(width: int, height: int) -> list[str]:
-    # The SVG is loaded as its own document by GitHub's markdown renderer,
-    # so prefers-color-scheme works. We supply two themes:
-    #   * light mode: white background, dark text
-    #   * dark mode:  GitHub-dark background (#0d1117), light text
-    # Bar/line colors stay constant — they're chosen to be readable on both.
+    # GitHub serves SVG via <img> and sanitises away <style>/@media
+    # queries, so we can't theme via prefers-color-scheme. Instead we
+    # paint a fixed white background with dark text — always readable
+    # regardless of the surrounding page theme. All colors are inline
+    # attributes (no class refs).
     return [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}" font-family="-apple-system, Segoe UI, '
         'Helvetica, Arial, sans-serif" font-size="12">',
-        "<style>"
-        ".bg{fill:#ffffff}"
-        ".title{font-size:15px;font-weight:600;fill:#24292f}"
-        ".axis{stroke:#57606a;stroke-width:1}"
-        ".gridline{stroke:#d0d7de;stroke-width:1}"
-        ".label{fill:#24292f}"
-        ".legend{font-size:12px;fill:#24292f}"
-        ".bar-okto{fill:#3fb950}.bar-redis{fill:#f85149}"
-        "@media (prefers-color-scheme: dark){"
-        ".bg{fill:#0d1117}"
-        ".title,.label,.legend{fill:#c9d1d9}"
-        ".axis{stroke:#8b949e}"
-        ".gridline{stroke:#21262d}"
-        "}"
-        "</style>",
-        f'<rect class="bg" width="{width}" height="{height}"/>',
+        f'<rect width="{width}" height="{height}" fill="#ffffff"/>',
     ]
 
 
@@ -86,83 +71,85 @@ def svg_close() -> list[str]:
     return ["</svg>"]
 
 
+TEXT = "#24292f"
+AXIS = "#57606a"
+GRID = "#d0d7de"
+
+
 def grouped_bar_chart(
     title: str,
-    series: list[tuple[str, list[float], str]],  # (label, values, css class)
+    series: list[tuple[str, list[float], str]],  # (label, values, hex color)
     categories: list[str],
     y_max: float,
     out_path: pathlib.Path,
 ) -> None:
-    """series: list of (legend_label, values_per_category, css_class)."""
     width, height = 880, 420
     margin_l, margin_r, margin_t, margin_b = 70, 20, 60, 70
     plot_w = width - margin_l - margin_r
     plot_h = height - margin_t - margin_b
-    n = len(categories)
     n_series = len(series)
-    group_w = plot_w / n
+    group_w = plot_w / len(categories)
     bar_w = group_w * 0.36
     bar_gap = group_w * 0.05
 
     parts = svg_open(width, height)
-    # Title
     parts.append(
-        f'<text class="title" x="{width/2}" y="22" text-anchor="middle">{title}</text>'
+        f'<text x="{width/2}" y="22" text-anchor="middle" '
+        f'fill="{TEXT}" font-size="15" font-weight="600">{title}</text>'
     )
 
-    # Y gridlines + labels
+    # Y gridlines + tick labels
     n_yticks = 5
     for i in range(n_yticks + 1):
         v = y_max * i / n_yticks
         y = margin_t + plot_h - (v / y_max) * plot_h
         parts.append(
-            f'<line class="gridline" x1="{margin_l}" y1="{y}" '
-            f'x2="{width - margin_r}" y2="{y}"/>'
+            f'<line x1="{margin_l}" y1="{y}" x2="{width - margin_r}" y2="{y}" '
+            f'stroke="{GRID}" stroke-width="1"/>'
         )
         parts.append(
-            f'<text class="label" x="{margin_l - 8}" y="{y + 4}" '
-            f'text-anchor="end">{int(v):,}</text>'
+            f'<text x="{margin_l - 8}" y="{y + 4}" text-anchor="end" '
+            f'fill="{TEXT}">{int(v):,}</text>'
         )
 
-    # Y axis
+    # Axes
     parts.append(
-        f'<line class="axis" x1="{margin_l}" y1="{margin_t}" '
-        f'x2="{margin_l}" y2="{margin_t + plot_h}"/>'
+        f'<line x1="{margin_l}" y1="{margin_t}" x2="{margin_l}" '
+        f'y2="{margin_t + plot_h}" stroke="{AXIS}" stroke-width="1"/>'
     )
-    # X axis
     parts.append(
-        f'<line class="axis" x1="{margin_l}" y1="{margin_t + plot_h}" '
-        f'x2="{width - margin_r}" y2="{margin_t + plot_h}"/>'
+        f'<line x1="{margin_l}" y1="{margin_t + plot_h}" '
+        f'x2="{width - margin_r}" y2="{margin_t + plot_h}" '
+        f'stroke="{AXIS}" stroke-width="1"/>'
     )
 
     # Bars
     for ci, cat in enumerate(categories):
         group_x = margin_l + ci * group_w + group_w / 2
-        # category label
         parts.append(
-            f'<text class="label" x="{group_x}" y="{margin_t + plot_h + 18}" '
-            f'text-anchor="middle">{cat}</text>'
+            f'<text x="{group_x}" y="{margin_t + plot_h + 18}" '
+            f'text-anchor="middle" fill="{TEXT}">{cat}</text>'
         )
-        for si, (_, values, css) in enumerate(series):
+        for si, (_, values, color) in enumerate(series):
             v = values[ci]
             bar_h = (v / y_max) * plot_h
             x = group_x + (si - (n_series - 1) / 2) * (bar_w + bar_gap) - bar_w / 2
             y = margin_t + plot_h - bar_h
             parts.append(
-                f'<rect class="{css}" x="{x:.1f}" y="{y:.1f}" '
-                f'width="{bar_w:.1f}" height="{bar_h:.1f}"/>'
+                f'<rect x="{x:.1f}" y="{y:.1f}" width="{bar_w:.1f}" '
+                f'height="{bar_h:.1f}" fill="{color}"/>'
             )
 
     # Legend
-    legend_x = margin_l
     legend_y = height - 18
-    for si, (label, _, css) in enumerate(series):
-        sx = legend_x + si * 160
+    for si, (label, _, color) in enumerate(series):
+        sx = margin_l + si * 160
         parts.append(
-            f'<rect class="{css}" x="{sx}" y="{legend_y - 11}" width="14" height="14"/>'
+            f'<rect x="{sx}" y="{legend_y - 11}" width="14" height="14" '
+            f'fill="{color}"/>'
         )
         parts.append(
-            f'<text class="legend" x="{sx + 20}" y="{legend_y}">{label}</text>'
+            f'<text x="{sx + 20}" y="{legend_y}" fill="{TEXT}">{label}</text>'
         )
 
     parts.extend(svg_close())
@@ -184,7 +171,8 @@ def line_chart(
 
     parts = svg_open(width, height)
     parts.append(
-        f'<text class="title" x="{width/2}" y="22" text-anchor="middle">{title}</text>'
+        f'<text x="{width/2}" y="22" text-anchor="middle" '
+        f'fill="{TEXT}" font-size="15" font-weight="600">{title}</text>'
     )
 
     n_yticks = 5
@@ -192,36 +180,36 @@ def line_chart(
         v = y_max * i / n_yticks
         y = margin_t + plot_h - (v / y_max) * plot_h
         parts.append(
-            f'<line class="gridline" x1="{margin_l}" y1="{y}" '
-            f'x2="{width - margin_r}" y2="{y}"/>'
+            f'<line x1="{margin_l}" y1="{y}" x2="{width - margin_r}" y2="{y}" '
+            f'stroke="{GRID}" stroke-width="1"/>'
         )
         parts.append(
-            f'<text class="label" x="{margin_l - 8}" y="{y + 4}" '
-            f'text-anchor="end">{int(v):,}</text>'
+            f'<text x="{margin_l - 8}" y="{y + 4}" text-anchor="end" '
+            f'fill="{TEXT}">{int(v):,}</text>'
         )
 
     parts.append(
-        f'<line class="axis" x1="{margin_l}" y1="{margin_t}" '
-        f'x2="{margin_l}" y2="{margin_t + plot_h}"/>'
+        f'<line x1="{margin_l}" y1="{margin_t}" x2="{margin_l}" '
+        f'y2="{margin_t + plot_h}" stroke="{AXIS}" stroke-width="1"/>'
     )
     parts.append(
-        f'<line class="axis" x1="{margin_l}" y1="{margin_t + plot_h}" '
-        f'x2="{width - margin_r}" y2="{margin_t + plot_h}"/>'
+        f'<line x1="{margin_l}" y1="{margin_t + plot_h}" '
+        f'x2="{width - margin_r}" y2="{margin_t + plot_h}" '
+        f'stroke="{AXIS}" stroke-width="1"/>'
     )
 
-    # X positions: log-friendly even spacing
     n = len(x_values)
     xs = [margin_l + (i / max(n - 1, 1)) * plot_w for i in range(n)]
 
     for i, xv in enumerate(x_values):
         parts.append(
-            f'<text class="label" x="{xs[i]}" y="{margin_t + plot_h + 18}" '
-            f'text-anchor="middle">{xv}</text>'
+            f'<text x="{xs[i]}" y="{margin_t + plot_h + 18}" '
+            f'text-anchor="middle" fill="{TEXT}">{xv}</text>'
         )
 
     parts.append(
-        f'<text class="label" x="{width/2}" y="{height - 28}" '
-        f'text-anchor="middle">{x_label}</text>'
+        f'<text x="{width/2}" y="{height - 28}" text-anchor="middle" '
+        f'fill="{TEXT}">{x_label}</text>'
     )
 
     for label, ys, color in series:
@@ -239,15 +227,14 @@ def line_chart(
                 f'<circle cx="{xs[i]:.1f}" cy="{y:.1f}" r="3.5" fill="{color}"/>'
             )
 
-    legend_x = margin_l
     legend_y = height - 8
     for si, (label, _, color) in enumerate(series):
-        sx = legend_x + si * 160
+        sx = margin_l + si * 160
         parts.append(
             f'<rect x="{sx}" y="{legend_y - 11}" width="14" height="14" fill="{color}"/>'
         )
         parts.append(
-            f'<text class="legend" x="{sx + 20}" y="{legend_y}">{label}</text>'
+            f'<text x="{sx + 20}" y="{legend_y}" fill="{TEXT}">{label}</text>'
         )
 
     parts.extend(svg_close())

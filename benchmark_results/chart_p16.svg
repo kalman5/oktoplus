@@ -1,47 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="880" height="420" viewBox="0 0 880 420" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12">
-<style>.bg{fill:#ffffff}.title{font-size:15px;font-weight:600;fill:#24292f}.axis{stroke:#57606a;stroke-width:1}.gridline{stroke:#d0d7de;stroke-width:1}.label{fill:#24292f}.legend{font-size:12px;fill:#24292f}.bar-okto{fill:#3fb950}.bar-redis{fill:#f85149}@media (prefers-color-scheme: dark){.bg{fill:#0d1117}.title,.label,.legend{fill:#c9d1d9}.axis{stroke:#8b949e}.gridline{stroke:#21262d}}</style>
-<rect class="bg" width="880" height="420"/>
-<text class="title" x="440.0" y="22" text-anchor="middle">Single client, pipelined (-P 16) — rps (higher is better)</text>
-<line class="gridline" x1="70" y1="350.0" x2="860" y2="350.0"/>
-<text class="label" x="62" y="354.0" text-anchor="end">0</text>
-<line class="gridline" x1="70" y1="292.0" x2="860" y2="292.0"/>
-<text class="label" x="62" y="296.0" text-anchor="end">92,436</text>
-<line class="gridline" x1="70" y1="234.0" x2="860" y2="234.0"/>
-<text class="label" x="62" y="238.0" text-anchor="end">184,873</text>
-<line class="gridline" x1="70" y1="176.0" x2="860" y2="176.0"/>
-<text class="label" x="62" y="180.0" text-anchor="end">277,310</text>
-<line class="gridline" x1="70" y1="118.0" x2="860" y2="118.0"/>
-<text class="label" x="62" y="122.0" text-anchor="end">369,747</text>
-<line class="gridline" x1="70" y1="60.0" x2="860" y2="60.0"/>
-<text class="label" x="62" y="64.0" text-anchor="end">462,184</text>
-<line class="axis" x1="70" y1="60" x2="70" y2="350"/>
-<line class="axis" x1="70" y1="350" x2="860" y2="350"/>
-<text class="label" x="119.375" y="368" text-anchor="middle">LPUSH</text>
-<rect class="bar-okto" x="81.4" y="150.8" width="35.5" height="199.2"/>
-<rect class="bar-redis" x="121.8" y="96.0" width="35.5" height="254.0"/>
-<text class="label" x="218.125" y="368" text-anchor="middle">SADD</text>
-<rect class="bar-okto" x="180.1" y="176.2" width="35.5" height="173.8"/>
-<rect class="bar-redis" x="220.6" y="140.8" width="35.5" height="209.2"/>
-<text class="label" x="316.875" y="368" text-anchor="middle">LRANGE_100</text>
-<rect class="bar-okto" x="278.9" y="298.0" width="35.5" height="52.0"/>
-<rect class="bar-redis" x="319.3" y="285.0" width="35.5" height="65.0"/>
-<text class="label" x="415.625" y="368" text-anchor="middle">RPUSH</text>
-<rect class="bar-okto" x="377.6" y="277.9" width="35.5" height="72.1"/>
-<rect class="bar-redis" x="418.1" y="169.7" width="35.5" height="180.3"/>
-<text class="label" x="514.375" y="368" text-anchor="middle">LPOP</text>
-<rect class="bar-okto" x="476.4" y="228.4" width="35.5" height="121.6"/>
-<rect class="bar-redis" x="516.8" y="131.4" width="35.5" height="218.6"/>
-<text class="label" x="613.125" y="368" text-anchor="middle">RPOP</text>
-<rect class="bar-okto" x="575.1" y="214.8" width="35.5" height="135.2"/>
-<rect class="bar-redis" x="615.6" y="86.4" width="35.5" height="263.6"/>
-<text class="label" x="711.875" y="368" text-anchor="middle">LLEN</text>
-<rect class="bar-okto" x="673.9" y="125.1" width="35.5" height="224.9"/>
-<rect class="bar-redis" x="714.3" y="108.7" width="35.5" height="241.3"/>
-<text class="label" x="810.625" y="368" text-anchor="middle">SCARD</text>
-<rect class="bar-okto" x="772.6" y="104.9" width="35.5" height="245.1"/>
-<rect class="bar-redis" x="813.1" y="105.9" width="35.5" height="244.1"/>
-<rect class="bar-okto" x="70" y="391" width="14" height="14"/>
-<text class="legend" x="90" y="402">Oktoplus</text>
-<rect class="bar-redis" x="230" y="391" width="14" height="14"/>
-<text class="legend" x="250" y="402">Redis</text>
+<rect width="880" height="420" fill="#ffffff"/>
+<text x="440.0" y="22" text-anchor="middle" fill="#24292f" font-size="15" font-weight="600">Single client, pipelined (-P 16) — rps (higher is better)</text>
+<line x1="70" y1="350.0" x2="860" y2="350.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="354.0" text-anchor="end" fill="#24292f">0</text>
+<line x1="70" y1="292.0" x2="860" y2="292.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="296.0" text-anchor="end" fill="#24292f">92,436</text>
+<line x1="70" y1="234.0" x2="860" y2="234.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="238.0" text-anchor="end" fill="#24292f">184,873</text>
+<line x1="70" y1="176.0" x2="860" y2="176.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="180.0" text-anchor="end" fill="#24292f">277,310</text>
+<line x1="70" y1="118.0" x2="860" y2="118.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="122.0" text-anchor="end" fill="#24292f">369,747</text>
+<line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="64.0" text-anchor="end" fill="#24292f">462,184</text>
+<line x1="70" y1="60" x2="70" y2="350" stroke="#57606a" stroke-width="1"/>
+<line x1="70" y1="350" x2="860" y2="350" stroke="#57606a" stroke-width="1"/>
+<text x="119.375" y="368" text-anchor="middle" fill="#24292f">LPUSH</text>
+<rect x="81.4" y="150.8" width="35.5" height="199.2" fill="bar-okto"/>
+<rect x="121.8" y="96.0" width="35.5" height="254.0" fill="bar-redis"/>
+<text x="218.125" y="368" text-anchor="middle" fill="#24292f">SADD</text>
+<rect x="180.1" y="176.2" width="35.5" height="173.8" fill="bar-okto"/>
+<rect x="220.6" y="140.8" width="35.5" height="209.2" fill="bar-redis"/>
+<text x="316.875" y="368" text-anchor="middle" fill="#24292f">LRANGE_100</text>
+<rect x="278.9" y="298.0" width="35.5" height="52.0" fill="bar-okto"/>
+<rect x="319.3" y="285.0" width="35.5" height="65.0" fill="bar-redis"/>
+<text x="415.625" y="368" text-anchor="middle" fill="#24292f">RPUSH</text>
+<rect x="377.6" y="277.9" width="35.5" height="72.1" fill="bar-okto"/>
+<rect x="418.1" y="169.7" width="35.5" height="180.3" fill="bar-redis"/>
+<text x="514.375" y="368" text-anchor="middle" fill="#24292f">LPOP</text>
+<rect x="476.4" y="228.4" width="35.5" height="121.6" fill="bar-okto"/>
+<rect x="516.8" y="131.4" width="35.5" height="218.6" fill="bar-redis"/>
+<text x="613.125" y="368" text-anchor="middle" fill="#24292f">RPOP</text>
+<rect x="575.1" y="214.8" width="35.5" height="135.2" fill="bar-okto"/>
+<rect x="615.6" y="86.4" width="35.5" height="263.6" fill="bar-redis"/>
+<text x="711.875" y="368" text-anchor="middle" fill="#24292f">LLEN</text>
+<rect x="673.9" y="125.1" width="35.5" height="224.9" fill="bar-okto"/>
+<rect x="714.3" y="108.7" width="35.5" height="241.3" fill="bar-redis"/>
+<text x="810.625" y="368" text-anchor="middle" fill="#24292f">SCARD</text>
+<rect x="772.6" y="104.9" width="35.5" height="245.1" fill="bar-okto"/>
+<rect x="813.1" y="105.9" width="35.5" height="244.1" fill="bar-redis"/>
+<rect x="70" y="391" width="14" height="14" fill="bar-okto"/>
+<text x="90" y="402" fill="#24292f">Oktoplus</text>
+<rect x="230" y="391" width="14" height="14" fill="bar-redis"/>
+<text x="250" y="402" fill="#24292f">Redis</text>
 </svg>

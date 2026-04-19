@@ -1,27 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="880" height="380" viewBox="0 0 880 380" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12">
-<style>.bg{fill:#ffffff}.title{font-size:15px;font-weight:600;fill:#24292f}.axis{stroke:#57606a;stroke-width:1}.gridline{stroke:#d0d7de;stroke-width:1}.label{fill:#24292f}.legend{font-size:12px;fill:#24292f}.bar-okto{fill:#3fb950}.bar-redis{fill:#f85149}@media (prefers-color-scheme: dark){.bg{fill:#0d1117}.title,.label,.legend{fill:#c9d1d9}.axis{stroke:#8b949e}.gridline{stroke:#21262d}}</style>
-<rect class="bg" width="880" height="380"/>
-<text class="title" x="440.0" y="22" text-anchor="middle">LPUSH on a hot key, varying clients (-P 1) — rps (higher is better)</text>
-<line class="gridline" x1="70" y1="320.0" x2="860" y2="320.0"/>
-<text class="label" x="62" y="324.0" text-anchor="end">0</text>
-<line class="gridline" x1="70" y1="268.0" x2="860" y2="268.0"/>
-<text class="label" x="62" y="272.0" text-anchor="end">21,803</text>
-<line class="gridline" x1="70" y1="216.0" x2="860" y2="216.0"/>
-<text class="label" x="62" y="220.0" text-anchor="end">43,607</text>
-<line class="gridline" x1="70" y1="163.99999999999997" x2="860" y2="163.99999999999997"/>
-<text class="label" x="62" y="167.99999999999997" text-anchor="end">65,411</text>
-<line class="gridline" x1="70" y1="112.0" x2="860" y2="112.0"/>
-<text class="label" x="62" y="116.0" text-anchor="end">87,215</text>
-<line class="gridline" x1="70" y1="60.0" x2="860" y2="60.0"/>
-<text class="label" x="62" y="64.0" text-anchor="end">109,018</text>
-<line class="axis" x1="70" y1="60" x2="70" y2="320"/>
-<line class="axis" x1="70" y1="320" x2="860" y2="320"/>
-<text class="label" x="70.0" y="338" text-anchor="middle">1</text>
-<text class="label" x="267.5" y="338" text-anchor="middle">10</text>
-<text class="label" x="465.0" y="338" text-anchor="middle">50</text>
-<text class="label" x="662.5" y="338" text-anchor="middle">100</text>
-<text class="label" x="860.0" y="338" text-anchor="middle">200</text>
-<text class="label" x="440.0" y="352" text-anchor="middle">concurrent clients</text>
+<rect width="880" height="380" fill="#ffffff"/>
+<text x="440.0" y="22" text-anchor="middle" fill="#24292f" font-size="15" font-weight="600">LPUSH on a hot key, varying clients (-P 1) — rps (higher is better)</text>
+<line x1="70" y1="320.0" x2="860" y2="320.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="324.0" text-anchor="end" fill="#24292f">0</text>
+<line x1="70" y1="268.0" x2="860" y2="268.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="272.0" text-anchor="end" fill="#24292f">21,803</text>
+<line x1="70" y1="216.0" x2="860" y2="216.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="220.0" text-anchor="end" fill="#24292f">43,607</text>
+<line x1="70" y1="163.99999999999997" x2="860" y2="163.99999999999997" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="167.99999999999997" text-anchor="end" fill="#24292f">65,411</text>
+<line x1="70" y1="112.0" x2="860" y2="112.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="116.0" text-anchor="end" fill="#24292f">87,215</text>
+<line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="64.0" text-anchor="end" fill="#24292f">109,018</text>
+<line x1="70" y1="60" x2="70" y2="320" stroke="#57606a" stroke-width="1"/>
+<line x1="70" y1="320" x2="860" y2="320" stroke="#57606a" stroke-width="1"/>
+<text x="70.0" y="338" text-anchor="middle" fill="#24292f">1</text>
+<text x="267.5" y="338" text-anchor="middle" fill="#24292f">10</text>
+<text x="465.0" y="338" text-anchor="middle" fill="#24292f">50</text>
+<text x="662.5" y="338" text-anchor="middle" fill="#24292f">100</text>
+<text x="860.0" y="338" text-anchor="middle" fill="#24292f">200</text>
+<text x="440.0" y="352" text-anchor="middle" fill="#24292f">concurrent clients</text>
 <polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,244.7 267.5,126.4 465.0,148.5 662.5,153.6 860.0,153.0"/>
 <circle cx="70.0" cy="244.7" r="3.5" fill="#3fb950"/>
 <circle cx="267.5" cy="126.4" r="3.5" fill="#3fb950"/>
@@ -35,7 +34,7 @@
 <circle cx="662.5" cy="119.8" r="3.5" fill="#f85149"/>
 <circle cx="860.0" cy="113.7" r="3.5" fill="#f85149"/>
 <rect x="70" y="361" width="14" height="14" fill="#3fb950"/>
-<text class="legend" x="90" y="372">Oktoplus</text>
+<text x="90" y="372" fill="#24292f">Oktoplus</text>
 <rect x="230" y="361" width="14" height="14" fill="#f85149"/>
-<text class="legend" x="250" y="372">Redis</text>
+<text x="250" y="372" fill="#24292f">Redis</text>
 </svg>
