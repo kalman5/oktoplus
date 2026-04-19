@@ -20,16 +20,16 @@
 <text x="596.6666666666666" y="338" text-anchor="middle" fill="#24292f">100</text>
 <text x="860.0" y="338" text-anchor="middle" fill="#24292f">200</text>
 <text x="440.0" y="352" text-anchor="middle" fill="#24292f">concurrent clients</text>
-<polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,258.6 333.3,265.3 596.7,267.5 860.0,269.8"/>
-<circle cx="70.0" cy="258.6" r="3.5" fill="#3fb950"/>
-<circle cx="333.3" cy="265.3" r="3.5" fill="#3fb950"/>
-<circle cx="596.7" cy="267.5" r="3.5" fill="#3fb950"/>
-<circle cx="860.0" cy="269.8" r="3.5" fill="#3fb950"/>
-<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,92.1 333.3,83.6 596.7,90.0 860.0,105.5"/>
-<circle cx="70.0" cy="92.1" r="3.5" fill="#f85149"/>
+<polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,242.4 333.3,252.3 596.7,251.6 860.0,255.5"/>
+<circle cx="70.0" cy="242.4" r="3.5" fill="#3fb950"/>
+<circle cx="333.3" cy="252.3" r="3.5" fill="#3fb950"/>
+<circle cx="596.7" cy="251.6" r="3.5" fill="#3fb950"/>
+<circle cx="860.0" cy="255.5" r="3.5" fill="#3fb950"/>
+<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,98.0 333.3,83.6 596.7,90.0 860.0,99.9"/>
+<circle cx="70.0" cy="98.0" r="3.5" fill="#f85149"/>
 <circle cx="333.3" cy="83.6" r="3.5" fill="#f85149"/>
 <circle cx="596.7" cy="90.0" r="3.5" fill="#f85149"/>
-<circle cx="860.0" cy="105.5" r="3.5" fill="#f85149"/>
+<circle cx="860.0" cy="99.9" r="3.5" fill="#f85149"/>
 <rect x="70" y="361" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="372" fill="#24292f">Oktoplus</text>
 <rect x="230" y="361" width="14" height="14" fill="#f85149"/>
