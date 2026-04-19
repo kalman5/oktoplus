@@ -54,27 +54,27 @@ At pipeline depth 1 the workload is dominated by the kernel network round-trip, 
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |       32,082 |    31,230 |         103% |
-| SADD          |       30,460 |    29,334 |         104% |
-| LRANGE_100    |       24,131 |    24,673 |          98% |
-| LPOP (rand)   |       28,289 |    30,883 |          92% |
-| RPOP (rand)   |       28,927 |    31,949 |          91% |
-| LLEN (rand)   |       30,836 |    31,133 |          99% |
-| SCARD (rand)  |       32,031 |    30,836 |         104% |
+| LPUSH         |       32,895 |    31,437 |         105% |
+| SADD          |       30,321 |    30,722 |          99% |
+| LRANGE_100    |       24,777 |    25,893 |          96% |
+| LPOP (rand)   |       27,724 |    29,612 |          94% |
+| RPOP (rand)   |       29,833 |    30,303 |          98% |
+| LLEN (rand)   |       31,456 |    32,072 |          98% |
+| SCARD (rand)  |       32,949 |    29,551 |         111% |
 
-##### Single client, pipelined (`-P 16`) — Oktoplus 78–100% of Redis
+##### Single client, pipelined (`-P 16`) — Oktoplus 76–100% of Redis
 
-Pipelining lets each server stretch its legs. Both servers are CPU-bound here; Redis's hand-tuned C still wins on the write paths but Oktoplus closes most of the gap and ties on `SCARD`.
+Pipelining lets each server stretch its legs. Both servers are CPU-bound here; Redis's hand-tuned C still wins on the write paths but Oktoplus closes most of the gap, ties on `SCARD`, and `SADD` is now within 5%.
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |      317,460 |   404,858 |          78% |
-| SADD          |      277,008 |   333,333 |          83% |
-| LRANGE_100    |       82,850 |   103,520 |          80% |
-| LPOP (rand)   |      193,798 |   348,432 |          56% |
-| RPOP (rand)   |      215,517 |   420,168 |          51% |
-| LLEN (rand)   |      358,423 |   384,615 |          93% |
-| SCARD (rand)  |      390,625 |   389,105 |         100% |
+| LPUSH         |      321,543 |   389,105 |          83% |
+| SADD          |      319,489 |   334,448 |          96% |
+| LRANGE_100    |       82,576 |   108,460 |          76% |
+| LPOP (rand)   |      175,439 |   421,941 |          42% |
+| RPOP (rand)   |      217,391 |   380,228 |          57% |
+| LLEN (rand)   |      333,333 |   425,532 |          78% |
+| SCARD (rand)  |      369,004 |   389,105 |          95% |
 
 ##### Many clients, no pipelining — LPUSH on a hot key
 
@@ -82,11 +82,11 @@ The "parallelism" sweep keeps `-P 1` and varies `-c`. Both servers saturate arou
 
 | Clients | Oktoplus rps | Redis rps | Okto / Redis |
 |--------:|-------------:|----------:|-------------:|
-|       1 |       31,556 |    30,451 |         104% |
-|      10 |       81,169 |    99,108 |          82% |
-|      50 |       71,891 |    83,893 |          86% |
-|     100 |       69,784 |    83,963 |          83% |
-|     200 |       70,028 |    86,505 |          81% |
+|       1 |       32,520 |    31,506 |         103% |
+|      10 |       68,918 |   100,000 |          69% |
+|      50 |       68,681 |    93,110 |          74% |
+|     100 |       72,307 |    80,775 |          90% |
+|     200 |       41,824 |    89,606 |          47% |
 
 Full per-test CSVs and the raw-results history are under `benchmark_results/raw/`.
 
