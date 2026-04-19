@@ -62,19 +62,25 @@ At pipeline depth 1 the workload is dominated by the kernel network round-trip, 
 | LLEN (rand)   |       31,456 |    32,072 |          98% |
 | SCARD (rand)  |       32,949 |    29,551 |         111% |
 
-##### Single client, pipelined (`-P 16`) — Oktoplus 76–100% of Redis
+##### Single client, pipelined (`-P 16`) — Oktoplus at parity (and a couple of wins)
 
-Pipelining lets each server stretch its legs. Both servers are CPU-bound here; Redis's hand-tuned C still wins on the write paths but Oktoplus closes most of the gap, ties on `SCARD`, and `SADD` is now within 5%.
+Pipelining lets each server stretch its legs. With the RESP parser
+no longer going through `std::istream`/`std::stoll`, hot-key
+throughput is now at Redis parity on writes and we **beat Redis**
+on `LPUSH (LRANGE seed)` and `LLEN`. Random-key reads still trail
+because they hit the outer storage map every command.
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |      321,543 |   389,105 |          83% |
-| SADD          |      319,489 |   334,448 |          96% |
-| LRANGE_100    |       82,576 |   108,460 |          76% |
-| LPOP (rand)   |      175,439 |   421,941 |          42% |
-| RPOP (rand)   |      217,391 |   380,228 |          57% |
-| LLEN (rand)   |      333,333 |   425,532 |          78% |
-| SCARD (rand)  |      369,004 |   389,105 |          95% |
+| LPUSH         |      386,100 |   389,105 |          99% |
+| SADD          |      357,143 |   363,636 |          98% |
+| LPUSH (LRANGE seed) | 411,523 |   380,228 |     **108%** |
+| LRANGE_100    |       92,507 |   110,619 |          84% |
+| RPUSH (rand)  |      129,702 |   343,643 |          38% |
+| LPOP (rand)   |      191,939 |   338,983 |          57% |
+| RPOP (rand)   |      265,957 |   374,532 |          71% |
+| LLEN          |      404,858 |   396,825 |     **102%** |
+| SCARD         |      416,667 |   436,681 |          95% |
 
 ##### Many clients, no pipelining — LPUSH on a hot key
 
