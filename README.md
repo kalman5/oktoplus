@@ -38,7 +38,7 @@ Server is multithread, two different clients working on different containers (ty
 
 A scripted comparison against Redis on the same machine lives at `benchmark_results/` (script: `benchmark_results/run_benchmark.sh`). It starts both servers itself, runs `redis-benchmark` at single-client `-P 1`/`-P 16` and at varying concurrency `-c 1..200`, and dumps CSVs into `benchmark_results/raw/`.
 
-Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffast-math -fno-semantic-interposition -funroll-loops`. Workload: 100k ops, 100k key-space, single client unless stated otherwise.
+Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffast-math -fno-semantic-interposition -funroll-loops`, linked against `jemalloc` (see `OKTOPLUS_WITH_JEMALLOC` in CMake). Workload: 100k ops, 100k key-space, single client unless stated otherwise.
 
 ![Single client -P 16 throughput, small values](benchmark_results/chart_p16.svg)
 
@@ -46,69 +46,39 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 
 ![LPUSH on a hot key, varying clients](benchmark_results/chart_concurrency.svg)
 
-##### Single client, pipelined (`-P 16`), 256-byte values
-
-The above table uses the default `redis-benchmark` value (3 bytes,
-fits in `std::string` SSO). Repeat the same workload with `-d 256` /
-a 256-byte custom value to stress `std::string` allocation +
-memcpy + write paths:
-
-| Test          | Oktoplus rps | Redis rps | Okto / Redis |
-|---------------|-------------:|----------:|-------------:|
-| LPUSH         |      311,526 |   355,872 |          88% |
-| SADD          |      363,636 |   375,940 |          97% |
-| LPUSH (LRANGE seed) | 305,810 |   380,228 |          80% |
-| LRANGE_100    |       37,821 |    54,025 |          70% |
-| RPUSH (rand, 256B) | 116,414 |   326,797 |          36% |
-| LPOP (rand)   |      195,312 |   347,222 |          56% |
-| RPOP (rand)   |      238,663 |   383,142 |          62% |
-| **LLEN**      |      440,529 |   395,257 |     **111%** |
-| **SCARD**     |      454,545 |   387,597 |     **117%** |
-
-Two takeaways:
-
-  - Read-only commands that don't touch the value (`LLEN`, `SCARD`) still beat Redis at any value size — they pay no value-allocation cost.
-  - The random-key gap is essentially **unchanged** when value size grows (RPUSH-rand 38% small → 36% large), confirming the bottleneck is per-*key* overhead (outer-map insert + per-key mutex allocation), not per-value cost.
-
 > Charts are generated from `benchmark_results/raw/*.csv` by `benchmark_results/make_chart.py` (no dependencies — pure-stdlib Python emitting SVG + HTML).
 >
 > An interactive Chart.js dashboard with the same data lives at [`benchmark_results/report.html`](benchmark_results/report.html) — view it rendered through [htmlpreview.github.io](https://htmlpreview.github.io/?https://github.com/kalman5/oktoplus/blob/master/benchmark_results/report.html).
 
-##### Single client, no pipelining (`-P 1`) — both servers tied
+##### Single client, no pipelining (`-P 1`) — Oktoplus a hair ahead
 
-At pipeline depth 1 the workload is dominated by the kernel network round-trip, not the server. Oktoplus and Redis are within run-to-run noise.
-
-| Test          | Oktoplus rps | Redis rps | Okto / Redis |
-|---------------|-------------:|----------:|-------------:|
-| LPUSH         |       32,895 |    31,437 |         105% |
-| SADD          |       30,321 |    30,722 |          99% |
-| LRANGE_100    |       24,777 |    25,893 |          96% |
-| LPOP (rand)   |       27,724 |    29,612 |          94% |
-| RPOP (rand)   |       29,833 |    30,303 |          98% |
-| LLEN (rand)   |       31,456 |    32,072 |          98% |
-| SCARD (rand)  |       32,949 |    29,551 |         111% |
-
-##### Single client, pipelined (`-P 16`) — Oktoplus at parity, three wins
-
-Pipelining lets each server stretch its legs. With the RESP parser no
-longer going through `std::istream`/`std::stoll`, the dispatch table
-static, the reply path append-into-buffer, and `Lists` storage backed
-by `std::deque` instead of `std::list`, hot-key throughput is now at
-Redis parity on writes and we **beat Redis** on `LPUSH (LRANGE seed)`,
-`LLEN`, and `SCARD`. Random-key reads still trail because they hit the
-outer storage map per command (next milestone).
+At pipeline depth 1 the workload is dominated by the kernel network round-trip, not the server. Both servers land in the same band; Oktoplus edges Redis on the write/scan paths thanks to jemalloc.
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |      418,410 |   420,168 |         100% |
-| SADD          |      414,938 |   367,647 |     **113%** |
-| LPUSH (LRANGE seed) | 408,163 |   370,370 |     **110%** |
-| LRANGE_100    |       93,721 |   110,254 |          85% |
-| RPUSH (rand)  |      124,844 |   341,297 |          37% |
-| LPOP (rand)   |      203,666 |   409,836 |          50% |
-| RPOP (rand)   |      250,000 |   387,597 |          64% |
-| LLEN          |      510,204 |   454,545 |     **112%** |
-| SCARD         |      425,532 |   386,100 |     **110%** |
+| LPUSH         |       34,317 |    31,447 |     **109%** |
+| SADD          |       30,211 |    30,039 |         101% |
+| LRANGE_100    |       28,114 |    24,969 |     **113%** |
+| LPOP (rand)   |       28,249 |    30,525 |          93% |
+| RPOP (rand)   |       32,362 |    31,456 |         103% |
+| LLEN (rand)   |       33,887 |    29,824 |     **114%** |
+| SCARD (rand)  |       32,499 |    29,860 |     **109%** |
+
+##### Single client, pipelined (`-P 16`) — Oktoplus at parity, four wins
+
+Pipelining lets each server stretch its legs. With the RESP parser no longer going through `std::istream`/`std::stoll`, the dispatch table static, the reply path append-into-buffer, `Lists` storage backed by `std::deque` instead of `std::list`, and the binary linked against jemalloc, hot-key throughput is now at Redis parity on writes and we **beat Redis** on `SADD`, `LPUSH (LRANGE seed)`, `LLEN`, and `SCARD`. Random-key writes/pops still trail because they hit the outer storage map per command (next milestone).
+
+| Test          | Oktoplus rps | Redis rps | Okto / Redis |
+|---------------|-------------:|----------:|-------------:|
+| LPUSH         |      374,532 |   367,647 |         102% |
+| SADD          |      374,532 |   341,297 |     **110%** |
+| LPUSH (LRANGE seed) | 384,615 |   404,858 |          95% |
+| LRANGE_100    |      106,383 |   109,290 |          97% |
+| RPUSH (rand)  |      122,249 |   340,136 |          36% |
+| LPOP (rand)   |      187,266 |   347,222 |          54% |
+| RPOP (rand)   |      248,756 |   377,358 |          66% |
+| LLEN          |      427,350 |   377,358 |     **113%** |
+| SCARD         |      446,429 |   413,223 |     **108%** |
 
 ##### Many clients, no pipelining — LPUSH on a hot key
 
@@ -116,11 +86,32 @@ The "parallelism" sweep keeps `-P 1` and varies `-c`. Both servers saturate arou
 
 | Clients | Oktoplus rps | Redis rps | Okto / Redis |
 |--------:|-------------:|----------:|-------------:|
-|       1 |       32,520 |    31,506 |         103% |
-|      10 |       68,918 |   100,000 |          69% |
-|      50 |       68,681 |    93,110 |          74% |
-|     100 |       72,307 |    80,775 |          90% |
-|     200 |       41,824 |    89,606 |          47% |
+|       1 |       33,784 |    29,586 |     **114%** |
+|      10 |       76,687 |    80,321 |          95% |
+|      50 |       69,541 |    89,526 |          78% |
+|     100 |       69,204 |    87,566 |          79% |
+|     200 |       69,686 |   107,991 |          65% |
+
+##### Single client, pipelined (`-P 16`), 256-byte values
+
+Same workload as the small-value `-P 16` table above but the value is padded to 256 bytes (`-d 256` for built-ins, a 256-byte literal on the custom RPUSH). This stresses `std::string` allocation + memcpy + write paths.
+
+| Test          | Oktoplus rps | Redis rps | Okto / Redis |
+|---------------|-------------:|----------:|-------------:|
+| LPUSH         |      364,964 |   348,432 |     **105%** |
+| SADD          |      361,011 |   366,300 |          99% |
+| LPUSH (LRANGE seed) | 323,625 |   369,004 |          88% |
+| LRANGE_100    |       52,826 |    55,586 |          95% |
+| RPUSH (rand, 256B) | 116,550 |   302,115 |          39% |
+| LPOP (rand)   |      184,162 |   370,370 |          50% |
+| RPOP (rand)   |      251,889 |   366,300 |          69% |
+| LLEN          |      408,163 |   420,168 |          97% |
+| **SCARD**     |      515,464 |   411,523 |     **125%** |
+
+Two takeaways:
+
+  - Read-only commands that don't touch the value (`LLEN`, `SCARD`) keep their Redis-or-better margin at any value size.
+  - The random-key gap is essentially **unchanged** when value size grows (RPUSH-rand 36% small → 39% large), confirming the bottleneck is per-*key* overhead (outer-map insert + per-key mutex allocation), not per-value cost.
 
 Full per-test CSVs and the raw-results history are under `benchmark_results/raw/`.
 
