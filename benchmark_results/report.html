@@ -32,12 +32,12 @@
 </head>
 <body>
 
-<h1>🐙 Redis vs Oktoplus — Benchmark Report</h1>
-<h2>Date: 2026-04-18 &nbsp;|&nbsp; Host: devvm, Linux 6.16.1 &nbsp;|&nbsp; 100K ops per test &nbsp;|&nbsp; redis-benchmark with random keys</h2>
+<h1>&#x1F419; Redis vs Oktoplus — Benchmark Report</h1>
+<h2>Date: 2026-04-19 &nbsp;|&nbsp; Build: Optimized (-O3 -DNDEBUG) &nbsp;|&nbsp; Host: devvm, Linux 6.16.1 &nbsp;|&nbsp; 100K ops per test &nbsp;|&nbsp; redis-benchmark with random keys</h2>
 
 <div class="legend">
-  <span><span class="dot redis-color"></span> Redis (single-threaded, port 6380)</span>
-  <span><span class="dot okto-color"></span> Oktoplus (multithreaded, port 6379)</span>
+  <span><span class="dot redis-color"></span> Redis (single-threaded, port 6380, -O2)</span>
+  <span><span class="dot okto-color"></span> Oktoplus (multithreaded, port 6379, -O3)</span>
 </div>
 
 <!-- SPEED: Single Client -->
@@ -51,7 +51,7 @@
 </div>
 
 <div class="finding">
-  <strong>Verdict:</strong> Dead even. Oktoplus matches Redis within 7% on all operations. No measurable overhead from the threading infrastructure.
+  <strong>Verdict:</strong> Dead even. Oktoplus matches Redis within 8% on all operations. No measurable overhead from the threading infrastructure.
 </div>
 
 <!-- PIPELINING -->
@@ -117,7 +117,7 @@
 </div>
 
 <div class="finding warn">
-  <strong>Surprise:</strong> Oktoplus does NOT outscale Redis despite per-key locking. Redis peaks ~80-100K ops/sec, Oktoplus plateaus at ~70-80K. Likely causes: lock contention overhead, thread-per-connection model, or shared resource bottleneck.
+  <strong>Surprise:</strong> Oktoplus does NOT outscale Redis despite per-key locking. Redis peaks at ~99K ops/sec (100 clients), Oktoplus plateaus at ~68-72K. The gap is worst at 50-100 clients (0.69-0.74x). Likely causes: outer map mutex contention, thread-per-connection overhead, or shared resource bottleneck.
 </div>
 
 <!-- LATENCY -->
@@ -130,6 +130,10 @@
   </div>
 </div>
 
+<div class="finding warn">
+  <strong>Tail latency:</strong> LRANGE_100 p99=8.39ms (max=196ms) on Oktoplus vs p99=2.33ms (max=2.85ms) on Redis. LPUSH also shows a 59ms max spike. Other commands are comparable.
+</div>
+
 <!-- RECOMMENDATIONS -->
 <h3>6. Recommendations</h3>
 
@@ -137,13 +141,13 @@
   <strong>1. Implement pipelining</strong> — 10x throughput sitting on the table. Most Redis clients pipeline by default.
 </div>
 <div class="finding">
-  <strong>2. Profile contention</strong> — Run perf/flamegraph under 50-200 client load to find what's limiting scaling.
+  <strong>2. Profile contention</strong> — Run perf/flamegraph under 50-100 client load. The 0.61x ratio on POP at 50 clients points to a specific serialization point.
 </div>
 <div class="finding">
-  <strong>3. Async I/O</strong> — Replace thread-per-connection with io_context thread pool + async_accept/async_read.
+  <strong>3. Shard the key map</strong> — Replace the single outer mutex in ContainerFunctorApplier with a sharded map (64 shards) to reduce map-level lock contention.
 </div>
 <div class="finding">
-  <strong>4. Test with larger payloads</strong> — Current tests use 3-byte values. Real workloads may shift the picture.
+  <strong>4. Async I/O</strong> — Replace thread-per-connection with io_context thread pool + async_accept/async_read.
 </div>
 
 <script>
@@ -162,14 +166,14 @@ const oktoColor = '#3fb950';
 const redisBg = 'rgba(248,81,73,0.7)';
 const oktoBg = 'rgba(63,185,80,0.7)';
 
-// 1. Speed Chart
+// 1. Speed Chart (pipeline=1)
 new Chart(document.getElementById('speedChart'), {
   type: 'bar',
   data: {
     labels: ['LPUSH', 'RPUSH', 'LPOP', 'RPOP', 'LRANGE_100', 'LLEN', 'SADD', 'SCARD'],
     datasets: [
-      { label: 'Redis', data: [32342, 30534, 28011, 31928, 25284, 30684, 28810, 29904], backgroundColor: redisBg, borderColor: redisColor, borderWidth: 1 },
-      { label: 'Oktoplus', data: [32041, 29223, 25967, 31143, 23524, 31387, 31676, 35014], backgroundColor: oktoBg, borderColor: oktoColor, borderWidth: 1 }
+      { label: 'Redis', data: [32499, 30665, 29913, 32103, 25621, 30817, 33080, 29949], backgroundColor: redisBg, borderColor: redisColor, borderWidth: 1 },
+      { label: 'Oktoplus', data: [32819, 28960, 30211, 29931, 24114, 30998, 30331, 31114], backgroundColor: oktoBg, borderColor: oktoColor, borderWidth: 1 }
     ]
   },
   options: chartDefaults
@@ -181,8 +185,8 @@ new Chart(document.getElementById('pipelineChart'), {
   data: {
     labels: ['LPUSH', 'RPUSH', 'LPOP', 'RPOP', 'LRANGE_100', 'LLEN', 'SADD', 'SCARD'],
     datasets: [
-      { label: 'Redis P=16', data: [398406, 374532, 363636, 377359, 108578, 446429, 425532, 387597], backgroundColor: redisBg, borderColor: redisColor, borderWidth: 1 },
-      { label: 'Redis P=1', data: [32342, 30534, 28011, 31928, 25284, 30684, 28810, 29904], backgroundColor: 'rgba(248,81,73,0.3)', borderColor: redisColor, borderWidth: 1, borderDash: [5,5] }
+      { label: 'Redis P=16', data: [446429, 337838, 353357, 389105, 109769, 471698, 361011, 438597], backgroundColor: redisBg, borderColor: redisColor, borderWidth: 1 },
+      { label: 'Redis P=1', data: [32499, 30665, 29913, 32103, 25621, 30817, 33080, 29949], backgroundColor: 'rgba(248,81,73,0.3)', borderColor: redisColor, borderWidth: 1, borderDash: [5,5] }
     ]
   },
   options: {...chartDefaults, plugins: { legend: { display: true, labels: { color: '#8b949e' } } } }
@@ -209,14 +213,14 @@ function makeParChart(id, redisData, oktoData) {
   });
 }
 
-makeParChart('parLpush',  [31476,81235,98135,104603,80972], [31546,71582,77160,75873,78125]);
-makeParChart('parRpush',  [29248,80321,83264,83612,84459],  [27367,75529,74239,70373,74349]);
-makeParChart('parLpop',   [32873,88339,83612,75758,82645],  [31027,72939,71480,70922,71788]);
-makeParChart('parRpop',   [31908,83056,90334,76687,82645],  [29621,72727,72674,70028,71429]);
-makeParChart('parLrange', [25654,59524,69204,63532,57307],  [24390,55617,58106,52798,47281]);
-makeParChart('parLlen',   [31240,93023,84602,74850,82988],  [33245,72993,72359,69686,78802]);
-makeParChart('parSadd',   [31075,81433,106157,82508,80386], [32321,70771,82440,72202,76453]);
-makeParChart('parScard',  [32648,79618,92166,75358,80515],  [33036,72359,71633,71073,81103]);
+makeParChart('parLpush',  [31017,81037,84317,90171,80775],   [32884,68776,72569,74019,69300]);
+makeParChart('parRpush',  [31736,80972,84034,112613,85985],  [28703,76394,70572,69493,73638]);
+makeParChart('parLpop',   [30553,83126,113895,113766,93545], [29577,74294,69493,70323,73260]);
+makeParChart('parRpop',   [31536,97182,114286,112867,81301], [30488,74294,69979,70621,72993]);
+makeParChart('parLrange', [26483,58343,74405,66622,59312],   [24969,56402,54975,52549,48263]);
+makeParChart('parLlen',   [30893,79872,89127,88106,83472],   [32404,81037,70028,71174,69109]);
+makeParChart('parSadd',   [29904,80972,94967,113766,81433],  [30432,68681,70972,68027,70175]);
+makeParChart('parScard',  [30048,81900,82850,94518,88731],   [31172,78678,69930,71839,69204]);
 
 // 4. Average Scaling
 new Chart(document.getElementById('avgScaling'), {
@@ -224,8 +228,8 @@ new Chart(document.getElementById('avgScaling'), {
   data: {
     labels: clients,
     datasets: [
-      { label: 'Redis', data: [30515,80819,88372,79688,79115], borderColor: redisColor, backgroundColor: 'rgba(248,81,73,0.15)', fill: true, tension: 0.3, pointRadius: 5, borderWidth: 3 },
-      { label: 'Oktoplus', data: [30319,70502,72474,69095,72542], borderColor: oktoColor, backgroundColor: 'rgba(63,185,80,0.15)', fill: true, tension: 0.3, pointRadius: 5, borderWidth: 3 }
+      { label: 'Redis', data: [30271,80425,92235,99053,81819], borderColor: redisColor, backgroundColor: 'rgba(248,81,73,0.15)', fill: true, tension: 0.3, pointRadius: 5, borderWidth: 3 },
+      { label: 'Oktoplus', data: [30079,72320,68565,68506,68243], borderColor: oktoColor, backgroundColor: 'rgba(63,185,80,0.15)', fill: true, tension: 0.3, pointRadius: 5, borderWidth: 3 }
     ]
   },
   options: {
@@ -238,14 +242,14 @@ new Chart(document.getElementById('avgScaling'), {
   }
 });
 
-// 5. Latency Chart (p99 at 200 clients - estimated from report data)
+// 5. Latency Chart (p99 at 200 clients)
 new Chart(document.getElementById('latencyChart'), {
   type: 'bar',
   data: {
     labels: ['LPUSH', 'RPUSH', 'LPOP', 'RPOP', 'LRANGE_100', 'LLEN', 'SADD', 'SCARD'],
     datasets: [
-      { label: 'Redis p99', data: [2.1, 2.2, 2.1, 2.1, 2.31, 2.0, 2.1, 2.1], backgroundColor: redisBg, borderColor: redisColor, borderWidth: 1 },
-      { label: 'Oktoplus p99', data: [2.4, 2.5, 2.5, 2.5, 10.99, 2.3, 2.4, 2.3], backgroundColor: oktoBg, borderColor: oktoColor, borderWidth: 1 }
+      { label: 'Redis p99', data: [1.38, 1.70, 1.74, 1.56, 2.33, 1.40, 1.40, 1.86], backgroundColor: redisBg, borderColor: redisColor, borderWidth: 1 },
+      { label: 'Oktoplus p99', data: [2.16, 1.58, 1.70, 1.85, 8.39, 1.99, 2.09, 2.09], backgroundColor: oktoBg, borderColor: oktoColor, borderWidth: 1 }
     ]
   },
   options: {
