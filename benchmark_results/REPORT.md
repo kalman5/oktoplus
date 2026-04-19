@@ -1,10 +1,10 @@
 # Redis vs Oktoplus Benchmark Report
 
-**Date:** 2026-04-19
-**Build:** Optimized (`-O3 -g3 -DNDEBUG -funroll-loops -ffast-math`)
-**Host:** devvm, Linux 6.16.1
-**Redis:** port 6380 (single-threaded, default config, compiled with `-O3`)
-**Oktoplus:** port 6379 (multithreaded, per-key locking)
+**Date:** 2026-04-19 (re-run with verified optimized build)
+**Build:** Optimized (`-O3 -g3 -DNDEBUG -funroll-loops -ffast-math`, GCC 11.5, verified via VERBOSE=1)
+**Host:** devvm, Linux 6.16.1, 96 cores
+**Redis:** port 6380 (single-threaded, `-O3 -flto`, jemalloc)
+**Oktoplus:** port 6379 (multithreaded, per-key locking, gRPC-based RESP)
 **Tool:** redis-benchmark, 100K operations per test, `-r 100000` (random keys)
 
 ---
@@ -13,16 +13,14 @@
 
 | Command | Redis (ops/sec) | Oktoplus (ops/sec) | Ratio (Okto/Redis) |
 |---------|----------------:|-------------------:|-------------------:|
-| LPUSH | 30,276 | 32,092 | 1.06x |
-| RPUSH | 29,507 | 27,655 | 0.94x |
-| LPOP | 30,979 | 29,647 | 0.96x |
-| RPOP | 29,842 | 30,562 | 1.02x |
-| LRANGE_100 | 26,185 | 22,676 | 0.87x |
-| LLEN | 26,476 | 30,294 | 1.14x |
-| SADD | 31,857 | 31,221 | 0.98x |
-| SCARD | 21,372 | 30,432 | 1.42x |
+| LPUSH | 32,563 | 31,348 | 0.96x |
+| RPUSH | 29,913 | 31,417 | 1.05x |
+| LPOP | 31,172 | 29,317 | 0.94x |
+| RPOP | 29,053 | 31,486 | 1.08x |
+| SADD | 30,432 | 29,700 | 0.98x |
+| LRANGE_100 | 24,655 | 24,600 | 1.00x |
 
-**Takeaway:** Single-client performance is at parity or better. Oktoplus outperforms Redis on SCARD (+42%), LLEN (+14%), and LPUSH (+6%). LRANGE_100 is the weakest point at 0.87x. Note that Redis's SCARD result (21K) appears anomalously low in this run.
+**Takeaway:** Single-client performance is at parity. All operations within ±8% of Redis. RPOP and RPUSH are slightly faster on Oktoplus; LPOP slightly slower. LRANGE_100 is essentially identical. The optimized build performs at the same level as the previous run, confirming the bottleneck is I/O round-trip latency, not CPU.
 
 ---
 
@@ -30,102 +28,80 @@
 
 | Command | Redis (ops/sec) | Oktoplus (ops/sec) | Ratio (Okto/Redis) |
 |---------|----------------:|-------------------:|-------------------:|
-| LPUSH | 386,100 | ❌ N/A | — |
-| RPUSH | 340,136 | ❌ N/A | — |
-| LPOP | 349,650 | ❌ N/A | — |
-| RPOP | 355,872 | ❌ N/A | — |
-| LRANGE_100 | 106,496 | ❌ N/A | — |
-| LLEN | 420,168 | ❌ N/A | — |
-| SADD | 361,011 | ❌ N/A | — |
-| SCARD | 373,134 | ❌ N/A | — |
+| LPUSH | 390,625 | 391 | 0.001x |
+| RPUSH | 398,406 | 391 | 0.001x |
+| LPOP | 393,701 | 391 | 0.001x |
+| RPOP | 384,615 | 391 | 0.001x |
+| SADD | 364,964 | 391 | 0.001x |
+| LRANGE_100 | 108,578 | N/A | — |
 
-**Takeaway:** Oktoplus does not support command pipelining. Redis gets a 10-14x throughput boost from pipelining (up to 420K ops/sec for LLEN). **This remains the single biggest performance gap.**
+**Takeaway:** Oktoplus has a **critical pipelining bug**. Rather than simply not benefiting from pipelining (which would give ~30K ops/sec), it actively degrades to ~391 ops/sec — **80x slower than single-command mode**. The constant 391 rps across all commands suggests Oktoplus is processing entire pipeline batches synchronously with a fixed per-batch overhead (~2.5ms/batch of 16 = ~40ms total per 16-op batch). Redis benefits 10-12x from pipelining, reaching 390K+ ops/sec.
 
 ---
 
 ## Part 3: Parallelism — Throughput Scaling with Concurrent Clients
 
-All tests use random keys (`-r 100000`) so Oktoplus per-key locking can parallelize.
+All tests use pipeline=1 and random keys (`-r 100000`) so Oktoplus per-key locking can parallelize.
 
 ### LPUSH (ops/sec)
 
 | Clients | Redis | Oktoplus | Ratio (Okto/Redis) |
 |--------:|------:|---------:|-------------------:|
-| 1 | 33,058 | 32,154 | 0.97x |
-| 10 | 115,340 | 68,120 | 0.59x |
-| 50 | 84,104 | 71,942 | 0.86x |
-| 100 | 96,993 | 67,250 | 0.69x |
-| 200 | 97,276 | 56,085 | 0.58x |
+| 1 | 31,476 | 31,990 | 1.02x |
+| 10 | 94,251 | 75,586 | 0.80x |
+| 50 | 94,518 | 71,582 | 0.76x |
+| 100 | 81,103 | 72,939 | 0.90x |
+| 200 | 87,566 | 73,475 | 0.84x |
 
 ### RPUSH (ops/sec)
 
 | Clients | Redis | Oktoplus | Ratio (Okto/Redis) |
 |--------:|------:|---------:|-------------------:|
-| 1 | 31,270 | 28,114 | 0.90x |
-| 10 | 83,612 | 71,839 | 0.86x |
-| 50 | 88,652 | 72,516 | 0.82x |
-| 100 | 89,767 | 72,411 | 0.81x |
-| 200 | 82,440 | 69,979 | 0.85x |
+| 1 | 32,830 | 32,310 | 0.98x |
+| 10 | 79,745 | 76,220 | 0.96x |
+| 50 | 83,056 | 72,150 | 0.87x |
+| 100 | 82,988 | 73,746 | 0.89x |
+| 200 | 111,359 | 36,738 | 0.33x |
 
 ### LPOP (ops/sec)
 
 | Clients | Redis | Oktoplus | Ratio (Okto/Redis) |
 |--------:|------:|---------:|-------------------:|
-| 1 | 30,239 | 30,377 | 1.00x |
-| 10 | 81,833 | 72,727 | 0.89x |
-| 50 | 83,333 | 73,368 | 0.88x |
-| 100 | 81,566 | 73,421 | 0.90x |
-| 200 | 81,900 | 66,357 | 0.81x |
+| 1 | 33,647 | 34,590 | 1.03x |
+| 10 | 80,321 | 76,220 | 0.95x |
+| 50 | 81,766 | 75,075 | 0.92x |
+| 100 | 83,403 | 73,910 | 0.89x |
+| 200 | 105,485 | 72,359 | 0.69x |
 
 ### RPOP (ops/sec)
 
 | Clients | Redis | Oktoplus | Ratio (Okto/Redis) |
 |--------:|------:|---------:|-------------------:|
-| 1 | 30,788 | 31,387 | 1.02x |
-| 10 | 78,678 | 74,184 | 0.94x |
-| 50 | 82,508 | 69,930 | 0.85x |
-| 100 | 101,937 | 76,746 | 0.75x |
-| 200 | 82,713 | 67,069 | 0.81x |
-
-### LRANGE_100 (ops/sec)
-
-| Clients | Redis | Oktoplus | Ratio (Okto/Redis) |
-|--------:|------:|---------:|-------------------:|
-| 1 | 26,089 | 23,866 | 0.91x |
-| 10 | 61,087 | 55,556 | 0.91x |
-| 50 | 59,559 | 54,975 | 0.92x |
-| 100 | 62,189 | 53,022 | 0.85x |
-| 200 | 61,843 | 52,882 | 0.86x |
-
-### LLEN (ops/sec)
-
-| Clients | Redis | Oktoplus | Ratio (Okto/Redis) |
-|--------:|------:|---------:|-------------------:|
-| 1 | 29,002 | 32,982 | 1.14x |
-| 10 | 90,334 | 75,529 | 0.84x |
-| 50 | 97,371 | 72,622 | 0.75x |
-| 100 | 81,967 | 74,850 | 0.91x |
-| 200 | 81,301 | 68,074 | 0.84x |
+| 1 | 32,062 | 32,595 | 1.02x |
+| 10 | 83,472 | 76,805 | 0.92x |
+| 50 | 81,766 | 74,074 | 0.91x |
+| 100 | 82,102 | 72,833 | 0.89x |
+| 200 | 86,356 | 71,736 | 0.83x |
 
 ### SADD (ops/sec)
 
 | Clients | Redis | Oktoplus | Ratio (Okto/Redis) |
 |--------:|------:|---------:|-------------------:|
-| 1 | 30,628 | 32,723 | 1.07x |
-| 10 | 91,408 | 68,166 | 0.75x |
-| 50 | 83,542 | 71,633 | 0.86x |
-| 100 | 107,066 | 72,359 | 0.68x |
-| 200 | 82,034 | 69,979 | 0.85x |
+| 1 | 30,193 | 31,162 | 1.03x |
+| 10 | 89,767 | 79,681 | 0.89x |
+| 50 | 82,781 | 73,801 | 0.89x |
+| 100 | 80,906 | 71,633 | 0.89x |
+| 200 | 82,781 | 71,327 | 0.86x |
 
-### SCARD (ops/sec)
+### LRANGE_100 (ops/sec)
 
 | Clients | Redis | Oktoplus | Ratio (Okto/Redis) |
 |--------:|------:|---------:|-------------------:|
-| 1 | 31,124 | 33,467 | 1.08x |
-| 10 | 87,719 | 68,074 | 0.78x |
-| 50 | 90,498 | 69,348 | 0.77x |
-| 100 | 90,580 | 73,638 | 0.81x |
-| 200 | 85,911 | 67,024 | 0.78x |
+| 1 | 25,044 | 24,408 | 0.97x |
+| 10 | 72,780 | 57,937 | 0.80x |
+| 50 | 61,538 | 53,390 | 0.87x |
+| 100 | 58,309 | 55,679 | 0.95x |
+| 200 | 60,314 | 52,301 | 0.87x |
 
 ---
 
@@ -133,11 +109,11 @@ All tests use random keys (`-r 100000`) so Oktoplus per-key locking can parallel
 
 | Clients | Redis avg (ops/sec) | Oktoplus avg (ops/sec) | Okto/Redis |
 |--------:|--------------------:|-----------------------:|-----------:|
-| 1 | 30,274 | 30,633 | 1.01x |
-| 10 | 86,251 | 69,274 | 0.80x |
-| 50 | 83,695 | 69,541 | 0.83x |
-| 100 | 89,008 | 70,462 | 0.79x |
-| 200 | 81,927 | 64,681 | 0.79x |
+| 1 | 30,875 | 31,176 | 1.01x |
+| 10 | 83,389 | 73,742 | 0.88x |
+| 50 | 80,904 | 70,012 | 0.87x |
+| 100 | 78,135 | 70,123 | 0.90x |
+| 200 | 88,977 | 62,989 | 0.71x |
 
 ---
 
@@ -145,47 +121,41 @@ All tests use random keys (`-r 100000`) so Oktoplus per-key locking can parallel
 
 | Command | Redis p99 (ms) | Oktoplus p99 (ms) | Redis max (ms) | Oktoplus max (ms) |
 |---------|---------------:|------------------:|---------------:|------------------:|
-| LPUSH | 1.61 | 28.73 | 2.37 | 284.42 |
-| RPUSH | 1.53 | 4.01 | 2.77 | 29.25 |
-| LPOP | 1.35 | 1.94 | 2.24 | 4.61 |
-| RPOP | 1.36 | 2.02 | 2.06 | 3.29 |
-| LRANGE_100 | 1.94 | 2.21 | 2.76 | 6.54 |
-| LLEN | 1.41 | 2.02 | 1.94 | 2.79 |
-| SADD | 1.37 | 2.02 | 2.10 | 2.79 |
-| SCARD | 1.37 | 2.27 | 1.84 | 2.77 |
+| LPUSH | 1.34 | 1.94 | 2.47 | 2.60 |
+| RPUSH | 1.01 | 70.91 | 1.66 | 544.26 |
+| LPOP | 1.30 | 1.90 | 1.66 | 2.54 |
+| RPOP | 1.38 | 1.93 | 1.93 | 2.54 |
+| SADD | 1.44 | 1.98 | 1.98 | 2.56 |
+| LRANGE_100 | 1.98 | 2.22 | 3.06 | 45.57 |
 
 ---
 
 ## Key Findings
 
-### 1. Single-client speed is at parity or better (optimized build)
-At 1 client, Oktoplus matches or beats Redis on most operations (~30K ops/sec). SCARD is notably faster (+42%), LLEN (+14%). LRANGE_100 is the weakest spot at 0.87x — likely due to serialization overhead copying 100 elements.
+### 1. Single-client speed is at parity (confirmed)
+At 1 client/pipeline 1, Oktoplus matches Redis within ±8% across all operations (~30K ops/sec). The optimized build shows no meaningful change from previous results, confirming I/O latency is the bottleneck — not CPU.
 
-### 2. Pipelining is not supported by Oktoplus
-Redis gets a 10-14x throughput boost from 16-command pipelines (up to 420K ops/sec). Oktoplus does not benefit from pipelining. **This is the single biggest performance gap.**
+### 2. Pipelining is broken, not just unsupported
+Oktoplus with pipeline=16 drops to **391 ops/sec** — 80x slower than pipeline=1 (31K). This is not "no benefit from pipelining" — it's **active degradation**. The RESP handler likely processes pipelined commands one-at-a-time with a per-batch synchronization penalty. This is the **#1 priority bug**.
 
-### 3. Parallelism does NOT show the expected Oktoplus advantage
-Despite using random keys (which should allow per-key locking to parallelize), Oktoplus does NOT scale better than Redis with concurrent clients:
-- Redis scales to ~2.8x at 10 clients and sustains ~82-89K ops/sec
-- Oktoplus scales to ~2.3x at 10 clients and plateaus around 65-70K ops/sec
-- At 200 clients, the gap widens: Redis sustains ~82K avg, Oktoplus drops to ~65K avg (0.79x)
-- LPUSH is the worst performer under concurrency (0.58x at 200 clients)
+### 3. Parallelism scaling is modest (0.87-0.90x Redis)
+Despite multithreading and per-key locking, Oktoplus scales to only ~74K ops/sec at 10+ clients (vs Redis ~83-89K). The gap is consistent across operations. At 200 clients, the average drops to 0.71x due to a catastrophic RPUSH outlier (36K, max latency 544ms).
 
-### 4. Tail latency is significantly worse under high concurrency
-At 200 clients, LPUSH shows a severe tail latency spike: p99=28.7ms, max=284ms (vs Redis p99=1.6ms, max=2.4ms). RPUSH also shows elevated max latency (29ms). This suggests lock contention storms or allocator contention on list prepend/append paths.
+### 4. RPUSH at 200 clients has a severe contention bug
+RPUSH with 200 clients shows: 36,738 ops/sec (vs Redis 111K), p99=70.9ms, max=544ms. All other commands at 200 clients are 71-73K. This suggests a specific lock contention or data structure issue in the RPUSH path under high concurrency. LRANGE_100 also shows elevated max latency (45ms).
 
-### 5. Optimized vs Debug build comparison
-The optimized build numbers are consistent with the previous debug build results. The `-O3` optimization did not materially change throughput, confirming the bottleneck is I/O and synchronization, not CPU-bound computation.
+### 5. Redis benefits from event loop architecture
+Redis's single-threaded event loop avoids all locking overhead. Its 10+ client scaling (~80-110K ops/sec) matches or exceeds Oktoplus's multithreaded approach, suggesting the locking overhead in Oktoplus outweighs the parallelism benefit for these small operations.
 
 ---
 
 ## Recommendations
 
-1. **Implement pipelining support** — this is the largest gap and would give an immediate 10x+ throughput improvement for pipeline-capable clients
-2. **Profile the LPUSH tail latency** — the 284ms max at 200 clients is a red flag; run perf/flamegraph to identify the contention point
-3. **Investigate thread-per-connection overhead** — consider switching to io_context thread pool + async I/O to reduce thread count
-4. **Try jemalloc or mimalloc** — if the default allocator is a contention point, a concurrent allocator could help significantly
-5. **Test with larger data** — current tests use small values (3 bytes); real workloads with larger payloads may shift the picture
+1. **Fix the pipelining bug** — this is the #1 priority. Pipelined throughput should be >= single-command throughput. Likely fix: batch-process multiple RESP commands from a single read() without per-command synchronization
+2. **Investigate RPUSH contention at 200 clients** — the 544ms max latency and 0.33x ratio suggests a specific bug (lock ordering? allocator contention? resize under contention?)
+3. **Profile lock contention** — run `perf lock` or use ThreadSanitizer to identify the contention points causing the 10-15% gap at moderate concurrency
+4. **Consider lock-free data structures** — for simple ops like LLEN/SCARD, atomic counters could eliminate locking entirely
+5. **Benchmark with larger payloads** — current tests use 3-byte values; real workloads may shift CPU vs I/O balance
 
 ---
 
