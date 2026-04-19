@@ -6,7 +6,23 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/Libraries)
 # Libraries
 find_library(GLOG     glog)
 find_library(JSONCPP  jsoncpp)
-#find_library(TCMALLOC_LIB NAMES libtcmalloc_minimal tcmalloc_minimal)
+
+# jemalloc replaces glibc malloc transparently when linked into the
+# executable. Big wins on alloc-heavy paths (LRANGE_100, RPUSH random
+# key) — see benchmark_results/PERF_TODO.md item H. Optional: skip the
+# link by passing -DOKTOPLUS_WITH_JEMALLOC=OFF to cmake.
+option(OKTOPLUS_WITH_JEMALLOC "Link the oktoplus binary against jemalloc" ON)
+if(OKTOPLUS_WITH_JEMALLOC)
+  # Some distros ship only the runtime .so without the unversioned
+  # symlink (jemalloc-devel provides it). Search for both names.
+  find_library(JEMALLOC NAMES jemalloc libjemalloc.so.2)
+  if(NOT JEMALLOC)
+    message(WARNING "jemalloc requested but not found; falling back to glibc malloc")
+    set(OKTOPLUS_WITH_JEMALLOC OFF)
+  else()
+    message("Linking oktoplus binary with jemalloc: ${JEMALLOC}")
+  endif()
+endif()
 
 list(APPEND CMAKE_MODULE_PATH "${Oktoplus_SOURCE_DIR}/cmake")
 

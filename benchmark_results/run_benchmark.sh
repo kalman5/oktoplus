@@ -101,9 +101,14 @@ start_servers() {
     fi
 
     kill_listener_on_port "$OKTO_PORT" "oktoplus"
-    log "Starting Oktoplus on $OKTO_PORT (binary: $OKTO_BIN)"
+    log "Starting Oktoplus on $OKTO_PORT (binary: $OKTO_BIN)${OKTO_LD_PRELOAD:+ [LD_PRELOAD=$OKTO_LD_PRELOAD]}"
     ensure_okto_config
-    "$OKTO_BIN" -c "$OKTO_CONFIG" > "$LOG_DIR/oktoplus.log" 2>&1 &
+    if [ -n "${OKTO_LD_PRELOAD:-}" ]; then
+        LD_PRELOAD="$OKTO_LD_PRELOAD" \
+            "$OKTO_BIN" -c "$OKTO_CONFIG" > "$LOG_DIR/oktoplus.log" 2>&1 &
+    else
+        "$OKTO_BIN" -c "$OKTO_CONFIG" > "$LOG_DIR/oktoplus.log" 2>&1 &
+    fi
     OKTO_PID=$!
     STARTED_OKTO=1
     if ! wait_for_port "$OKTO_PORT"; then

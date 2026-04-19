@@ -16,5 +16,13 @@ target_link_libraries(oktoplus
   ${GLOG}
   ${Boost_LIBRARIES}
   ${PROTOBUF_LIBRARIES}
+  absl::flat_hash_set
 )
+
+# Wire jemalloc as the executable's malloc implementation when
+# requested. Linking the .so before libc means jemalloc's exported
+# malloc/free/realloc symbols win the dynamic-linker race.
+if(OKTOPLUS_WITH_JEMALLOC AND JEMALLOC)
+  target_link_libraries(oktoplus ${JEMALLOC})
+endif()
 

@@ -135,17 +135,21 @@ moves the needle.
 - **Effort**: small.
 - **Risk**: low.
 
-## H. Allocator: tcmalloc or jemalloc
+## H. [x] Allocator: jemalloc (landed)
 
-Both unavailable in default repos on this devserver. If we can
-install (`sudo dnf install gperftools-libs` or `jemalloc`), `LD_PRELOAD`
-the .so and re-bench. RPUSH-rand path is alloc-heavy so this is
-where it would show.
+Tried tcmalloc and jemalloc via `LD_PRELOAD`, then wired jemalloc
+into the executable link line (`OKTOPLUS_WITH_JEMALLOC=ON` by
+default in CMake). jemalloc won the head-to-head:
 
-- **Expected lift**: 5–20% on alloc-heavy paths.
-- **Effort**: install + `LD_PRELOAD` for bench, optional CMake link
-  for production.
-- **Risk**: low — pure allocator swap.
+  LRANGE_100 d256:   38K  -> 52K  (+38%)
+  LRANGE_100 small:  94K  -> 106K (+13%)
+  LPUSH-warmup d256: 306K -> 347K (+13.5%)
+  SCARD d256:        455K -> 515K (+13%)
+  RPUSH-rand c100:   65K  -> 71K  (+9%)
+  Most other paths:  flat or small positive
+
+tcmalloc had a similar LRANGE win but slightly regressed LPUSH;
+jemalloc was a more uniform improvement.
 
 ## I. List byte-packing (Redis-style quicklist)
 
