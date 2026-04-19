@@ -40,6 +40,12 @@ A scripted comparison against Redis on the same machine lives at `benchmark_resu
 
 Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffast-math -fno-semantic-interposition -funroll-loops`. Workload: 100k ops, 100k key-space, single client unless stated otherwise.
 
+![Single client -P 16 throughput](benchmark_results/chart_p16.svg)
+
+![LPUSH on a hot key, varying clients](benchmark_results/chart_concurrency.svg)
+
+> Charts are generated from `benchmark_results/raw/*.csv` by `benchmark_results/make_chart.py` (no dependencies — pure-stdlib Python emitting SVG).
+
 ##### Single client, no pipelining (`-P 1`) — both servers tied
 
 At pipeline depth 1 the workload is dominated by the kernel network round-trip, not the server. Oktoplus and Redis are within run-to-run noise.
