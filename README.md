@@ -62,25 +62,27 @@ At pipeline depth 1 the workload is dominated by the kernel network round-trip, 
 | LLEN (rand)   |       31,456 |    32,072 |          98% |
 | SCARD (rand)  |       32,949 |    29,551 |         111% |
 
-##### Single client, pipelined (`-P 16`) — Oktoplus at parity (and a couple of wins)
+##### Single client, pipelined (`-P 16`) — Oktoplus at parity, three wins
 
-Pipelining lets each server stretch its legs. With the RESP parser
-no longer going through `std::istream`/`std::stoll`, hot-key
-throughput is now at Redis parity on writes and we **beat Redis**
-on `LPUSH (LRANGE seed)` and `LLEN`. Random-key reads still trail
-because they hit the outer storage map every command.
+Pipelining lets each server stretch its legs. With the RESP parser no
+longer going through `std::istream`/`std::stoll`, the dispatch table
+static, the reply path append-into-buffer, and `Lists` storage backed
+by `std::deque` instead of `std::list`, hot-key throughput is now at
+Redis parity on writes and we **beat Redis** on `LPUSH (LRANGE seed)`,
+`LLEN`, and `SCARD`. Random-key reads still trail because they hit the
+outer storage map per command (next milestone).
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |      386,100 |   389,105 |          99% |
-| SADD          |      357,143 |   363,636 |          98% |
-| LPUSH (LRANGE seed) | 411,523 |   380,228 |     **108%** |
-| LRANGE_100    |       92,507 |   110,619 |          84% |
-| RPUSH (rand)  |      129,702 |   343,643 |          38% |
-| LPOP (rand)   |      191,939 |   338,983 |          57% |
-| RPOP (rand)   |      265,957 |   374,532 |          71% |
-| LLEN          |      404,858 |   396,825 |     **102%** |
-| SCARD         |      416,667 |   436,681 |          95% |
+| LPUSH         |      418,410 |   420,168 |         100% |
+| SADD          |      414,938 |   367,647 |     **113%** |
+| LPUSH (LRANGE seed) | 408,163 |   370,370 |     **110%** |
+| LRANGE_100    |       93,721 |   110,254 |          85% |
+| RPUSH (rand)  |      124,844 |   341,297 |          37% |
+| LPOP (rand)   |      203,666 |   409,836 |          50% |
+| RPOP (rand)   |      250,000 |   387,597 |          64% |
+| LLEN          |      510,204 |   454,545 |     **112%** |
+| SCARD         |      425,532 |   386,100 |     **110%** |
 
 ##### Many clients, no pipelining — LPUSH on a hot key
 
