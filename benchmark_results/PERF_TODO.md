@@ -135,7 +135,7 @@ moves the needle.
 - **Effort**: small.
 - **Risk**: low.
 
-## H. [x] Allocator: jemalloc (landed)
+## H. [x] Allocator: jemalloc (landed in 3c50fac, README refresh in c972d42)
 
 Tried tcmalloc and jemalloc via `LD_PRELOAD`, then wired jemalloc
 into the executable link line (`OKTOPLUS_WITH_JEMALLOC=ON` by
@@ -187,6 +187,8 @@ use-after-free-on-shutdown latent bug Paladin flagged.
 
 ## Suggested order
 
+(H done — jemalloc linked.)
+
 1. **F** (multi-iteration harness) — pre-requisite for trustworthy
    measurement of everything else.
 2. **E** (PGO) — likely cheap win, validates the harness.
@@ -200,6 +202,5 @@ use-after-free-on-shutdown latent bug Paladin flagged.
    throughput beyond the current ceiling.
 7. **I** (quicklist) — only if A landed and tiny-value workloads
    are a real target.
-8. **H** (tcmalloc/jemalloc) — try opportunistically if available.
-9. **D** (sharded outer) — only if (J) lands and we have real
+8. **D** (sharded outer) — only if (J) lands and we have real
    contention on the outer mutex with many connections.
