@@ -2,17 +2,18 @@
 
 #include <cstdint>
 #include <string>
-#include <unordered_set>
 #include <vector>
+
+#include <absl/container/flat_hash_set.h>
 
 #include "Storage/genericcontainer.h"
 #include "Support/noncopyable.h"
 
 namespace okts::stor {
 
-class Sets : public GenericContainer<std::unordered_set<std::string>>
+class Sets : public GenericContainer<absl::flat_hash_set<std::string>>
 {
-  using Container = std::unordered_set<std::string>;
+  using Container = absl::flat_hash_set<std::string>;
   using Base      = GenericContainer<Container>;
 
  public:

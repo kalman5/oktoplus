@@ -43,10 +43,10 @@ size_t Sets::cardinality(const std::string& aName) const {
   return myRet;
 }
 
-std::unordered_set<std::string>
+Sets::Container
 Sets::diff(const std::vector<std::string_view>& aNames) {
 
-  std::unordered_set<std::string> myRet;
+  Sets::Container myRet;
 
   if (aNames.empty()) {
     return myRet;
@@ -60,13 +60,9 @@ Sets::diff(const std::vector<std::string_view>& aNames) {
 
     theApplyer.performOnExisting(
         std::string(aNames[i]), [&myRet](const Container& aContainer) {
-          for (auto it = myRet.begin(); it != myRet.end(); /*void*/) {
-            if (aContainer.count(*it)) {
-              it = myRet.erase(it);
-            } else {
-              ++it;
-            }
-          }
+          absl::erase_if(myRet, [&aContainer](const std::string& aVal) {
+            return aContainer.count(aVal) > 0;
+          });
         });
   }
 
@@ -104,13 +100,9 @@ Sets::Container Sets::inter(const std::vector<std::string_view>& aNames) {
   for (size_t i = 1; i < aNames.size() && !myRet.empty(); ++i) {
     theApplyer.performOnExisting(
         std::string(aNames[i]), [&myRet](const Container& aContainer) {
-          for (auto it = myRet.begin(); it != myRet.end();) {
-            if (aContainer.count(*it) == 0) {
-              it = myRet.erase(it);
-            } else {
-              ++it;
-            }
-          }
+          absl::erase_if(myRet, [&aContainer](const std::string& aVal) {
+            return aContainer.count(aVal) == 0;
+          });
         });
   }
 
