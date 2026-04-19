@@ -4,3 +4,4 @@ build/clang
 .cache/
 compile_commands.json
 benchmark_results/server_logs/
+build/last_build_command.txt
