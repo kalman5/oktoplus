@@ -50,6 +50,19 @@ class RespHandler
   std::string handleSadd(const std::vector<std::string>& aArgs);
   std::string handleScard(const std::vector<std::string>& aArgs);
   std::string handleSdiff(const std::vector<std::string>& aArgs);
+  std::string handleSdiffstore(const std::vector<std::string>& aArgs);
+  std::string handleSinter(const std::vector<std::string>& aArgs);
+  std::string handleSintercard(const std::vector<std::string>& aArgs);
+  std::string handleSinterstore(const std::vector<std::string>& aArgs);
+  std::string handleSismember(const std::vector<std::string>& aArgs);
+  std::string handleSmismember(const std::vector<std::string>& aArgs);
+  std::string handleSmembers(const std::vector<std::string>& aArgs);
+  std::string handleSmove(const std::vector<std::string>& aArgs);
+  std::string handleSpop(const std::vector<std::string>& aArgs);
+  std::string handleSrandmember(const std::vector<std::string>& aArgs);
+  std::string handleSrem(const std::vector<std::string>& aArgs);
+  std::string handleSunion(const std::vector<std::string>& aArgs);
+  std::string handleSunionstore(const std::vector<std::string>& aArgs);
 
   stor::StorageContext&                      theStorage;
   std::unordered_map<std::string, HandlerFunc> theHandlers;
