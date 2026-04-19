@@ -385,8 +385,8 @@ def main() -> int:
     grouped_bar_chart(
         title="Single client, pipelined (-P 16) — rps (higher is better)",
         series=[
-            ("Oktoplus", okto_vals, "bar-okto"),
-            ("Redis", redis_vals, "bar-redis"),
+            ("Oktoplus", okto_vals, "#3fb950"),
+            ("Redis", redis_vals, "#f85149"),
         ],
         categories=cats,
         y_max=y_max,

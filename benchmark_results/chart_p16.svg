@@ -16,31 +16,31 @@
 <line x1="70" y1="60" x2="70" y2="350" stroke="#57606a" stroke-width="1"/>
 <line x1="70" y1="350" x2="860" y2="350" stroke="#57606a" stroke-width="1"/>
 <text x="119.375" y="368" text-anchor="middle" fill="#24292f">LPUSH</text>
-<rect x="81.4" y="150.8" width="35.5" height="199.2" fill="bar-okto"/>
-<rect x="121.8" y="96.0" width="35.5" height="254.0" fill="bar-redis"/>
+<rect x="81.4" y="150.8" width="35.5" height="199.2" fill="#3fb950"/>
+<rect x="121.8" y="96.0" width="35.5" height="254.0" fill="#f85149"/>
 <text x="218.125" y="368" text-anchor="middle" fill="#24292f">SADD</text>
-<rect x="180.1" y="176.2" width="35.5" height="173.8" fill="bar-okto"/>
-<rect x="220.6" y="140.8" width="35.5" height="209.2" fill="bar-redis"/>
+<rect x="180.1" y="176.2" width="35.5" height="173.8" fill="#3fb950"/>
+<rect x="220.6" y="140.8" width="35.5" height="209.2" fill="#f85149"/>
 <text x="316.875" y="368" text-anchor="middle" fill="#24292f">LRANGE_100</text>
-<rect x="278.9" y="298.0" width="35.5" height="52.0" fill="bar-okto"/>
-<rect x="319.3" y="285.0" width="35.5" height="65.0" fill="bar-redis"/>
+<rect x="278.9" y="298.0" width="35.5" height="52.0" fill="#3fb950"/>
+<rect x="319.3" y="285.0" width="35.5" height="65.0" fill="#f85149"/>
 <text x="415.625" y="368" text-anchor="middle" fill="#24292f">RPUSH</text>
-<rect x="377.6" y="277.9" width="35.5" height="72.1" fill="bar-okto"/>
-<rect x="418.1" y="169.7" width="35.5" height="180.3" fill="bar-redis"/>
+<rect x="377.6" y="277.9" width="35.5" height="72.1" fill="#3fb950"/>
+<rect x="418.1" y="169.7" width="35.5" height="180.3" fill="#f85149"/>
 <text x="514.375" y="368" text-anchor="middle" fill="#24292f">LPOP</text>
-<rect x="476.4" y="228.4" width="35.5" height="121.6" fill="bar-okto"/>
-<rect x="516.8" y="131.4" width="35.5" height="218.6" fill="bar-redis"/>
+<rect x="476.4" y="228.4" width="35.5" height="121.6" fill="#3fb950"/>
+<rect x="516.8" y="131.4" width="35.5" height="218.6" fill="#f85149"/>
 <text x="613.125" y="368" text-anchor="middle" fill="#24292f">RPOP</text>
-<rect x="575.1" y="214.8" width="35.5" height="135.2" fill="bar-okto"/>
-<rect x="615.6" y="86.4" width="35.5" height="263.6" fill="bar-redis"/>
+<rect x="575.1" y="214.8" width="35.5" height="135.2" fill="#3fb950"/>
+<rect x="615.6" y="86.4" width="35.5" height="263.6" fill="#f85149"/>
 <text x="711.875" y="368" text-anchor="middle" fill="#24292f">LLEN</text>
-<rect x="673.9" y="125.1" width="35.5" height="224.9" fill="bar-okto"/>
-<rect x="714.3" y="108.7" width="35.5" height="241.3" fill="bar-redis"/>
+<rect x="673.9" y="125.1" width="35.5" height="224.9" fill="#3fb950"/>
+<rect x="714.3" y="108.7" width="35.5" height="241.3" fill="#f85149"/>
 <text x="810.625" y="368" text-anchor="middle" fill="#24292f">SCARD</text>
-<rect x="772.6" y="104.9" width="35.5" height="245.1" fill="bar-okto"/>
-<rect x="813.1" y="105.9" width="35.5" height="244.1" fill="bar-redis"/>
-<rect x="70" y="391" width="14" height="14" fill="bar-okto"/>
+<rect x="772.6" y="104.9" width="35.5" height="245.1" fill="#3fb950"/>
+<rect x="813.1" y="105.9" width="35.5" height="244.1" fill="#f85149"/>
+<rect x="70" y="391" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="402" fill="#24292f">Oktoplus</text>
-<rect x="230" y="391" width="14" height="14" fill="bar-redis"/>
+<rect x="230" y="391" width="14" height="14" fill="#f85149"/>
 <text x="250" y="402" fill="#24292f">Redis</text>
 </svg>
