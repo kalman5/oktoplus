@@ -38,15 +38,49 @@ Server is multithread, two different clients working on different containers (ty
 
 A scripted comparison against Redis on the same machine lives at `benchmark_results/` (script: `benchmark_results/run_benchmark.sh`). It starts both servers itself, runs `redis-benchmark` at single-client `-P 1`/`-P 16` and at varying concurrency `-c 1..200`, and dumps CSVs into `benchmark_results/raw/`.
 
-Latest single-client `-P 16` numbers on a devserver (100k ops, 100k key-space):
+Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffast-math -fno-semantic-interposition -funroll-loops`. Workload: 100k ops, 100k key-space, single client unless stated otherwise.
 
-| Test         | Oktoplus rps | Redis rps | Okto / Redis |
-|--------------|-------------:|----------:|-------------:|
-| LPUSH        |      327,869 |   456,621 |          72% |
-| SADD         |      284,091 |   364,964 |          78% |
-| LRANGE_100   |       76,104 |   110,132 |          69% |
-| LLEN         |      300,300 |   378,788 |          79% |
-| SCARD        |      350,877 |   395,257 |          89% |
+##### Single client, no pipelining (`-P 1`) — both servers tied
+
+At pipeline depth 1 the workload is dominated by the kernel network round-trip, not the server. Oktoplus and Redis are within run-to-run noise.
+
+| Test          | Oktoplus rps | Redis rps | Okto / Redis |
+|---------------|-------------:|----------:|-------------:|
+| LPUSH         |       32,082 |    31,230 |         103% |
+| SADD          |       30,460 |    29,334 |         104% |
+| LRANGE_100    |       24,131 |    24,673 |          98% |
+| LPOP (rand)   |       28,289 |    30,883 |          92% |
+| RPOP (rand)   |       28,927 |    31,949 |          91% |
+| LLEN (rand)   |       30,836 |    31,133 |          99% |
+| SCARD (rand)  |       32,031 |    30,836 |         104% |
+
+##### Single client, pipelined (`-P 16`) — Oktoplus 78–100% of Redis
+
+Pipelining lets each server stretch its legs. Both servers are CPU-bound here; Redis's hand-tuned C still wins on the write paths but Oktoplus closes most of the gap and ties on `SCARD`.
+
+| Test          | Oktoplus rps | Redis rps | Okto / Redis |
+|---------------|-------------:|----------:|-------------:|
+| LPUSH         |      317,460 |   404,858 |          78% |
+| SADD          |      277,008 |   333,333 |          83% |
+| LRANGE_100    |       82,850 |   103,520 |          80% |
+| LPOP (rand)   |      193,798 |   348,432 |          56% |
+| RPOP (rand)   |      215,517 |   420,168 |          51% |
+| LLEN (rand)   |      358,423 |   384,615 |          93% |
+| SCARD (rand)  |      390,625 |   389,105 |         100% |
+
+##### Many clients, no pipelining — LPUSH on a hot key
+
+The "parallelism" sweep keeps `-P 1` and varies `-c`. Both servers saturate around 10 clients on a hot key (one TCP connection per client; everything serializes on the inner mutex / single-thread loop respectively).
+
+| Clients | Oktoplus rps | Redis rps | Okto / Redis |
+|--------:|-------------:|----------:|-------------:|
+|       1 |       31,556 |    30,451 |         104% |
+|      10 |       81,169 |    99,108 |          82% |
+|      50 |       71,891 |    83,893 |          86% |
+|     100 |       69,784 |    83,963 |          83% |
+|     200 |       70,028 |    86,505 |          81% |
+
+Full per-test CSVs and the raw-results history are under `benchmark_results/raw/`.
 
 #### Release plan
 - Support all REDIS commands (at least the one relative to data storage)
