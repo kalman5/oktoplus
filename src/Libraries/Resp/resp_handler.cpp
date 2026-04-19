@@ -127,6 +127,8 @@ RespHandler::RespHandler(stor::StorageContext& aStorage)
     {"CLIENT",       [this](const Args& a) { return handleClient(a); }},
     {"SELECT",       [this](const Args& a) { return handleSelect(a); }},
     {"INFO",         [this](const Args& a) { return handleInfo(a); }},
+    {"FLUSHDB",      [this](const Args& a) { return handleFlush(a); }},
+    {"FLUSHALL",     [this](const Args& a) { return handleFlush(a); }},
 
     // List push (generic)
     {"LPUSH",        [this](const Args& a) { return handlePush(a, "lpush",  &stor::Lists::pushFront); }},
@@ -259,6 +261,17 @@ std::string RespHandler::handleSelect(const Args&) {
 std::string RespHandler::handleInfo(const Args&) {
   return RespParser::formatBulkString(
       "# Server\r\noktoplus_version:0.1.0\r\n");
+}
+
+std::string RespHandler::handleFlush(const Args&) {
+  // FLUSHDB / FLUSHALL: Oktoplus has a single global namespace and
+  // ignores SELECT, so both drop every container in every storage type.
+  // Trailing options (ASYNC / SYNC) are accepted and ignored.
+  theStorage.lists.clear();
+  theStorage.deques.clear();
+  theStorage.vectors.clear();
+  theStorage.sets.clear();
+  return RespParser::formatSimpleString("OK");
 }
 
 // ---- List commands ----

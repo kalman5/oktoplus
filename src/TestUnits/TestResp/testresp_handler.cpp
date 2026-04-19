@@ -114,3 +114,27 @@ TEST_F(TestRespHandler, lmpop_no_keys_returns_null) {
       theHandler.handle({"LMPOP", "1", "missing", "LEFT", "COUNT", "2"});
   EXPECT_EQ("$-1\r\n", myReply);
 }
+
+TEST_F(TestRespHandler, flushall_drops_lists_and_sets) {
+  ASSERT_EQ(":3\r\n", theHandler.handle({"RPUSH", "L", "a", "b", "c"}));
+  ASSERT_EQ(":2\r\n", theHandler.handle({"SADD",  "S", "x", "y"}));
+  ASSERT_EQ(":3\r\n", theHandler.handle({"LLEN", "L"}));
+  ASSERT_EQ(":2\r\n", theHandler.handle({"SCARD", "S"}));
+
+  EXPECT_EQ("+OK\r\n", theHandler.handle({"FLUSHALL"}));
+
+  EXPECT_EQ(":0\r\n", theHandler.handle({"LLEN", "L"}));
+  EXPECT_EQ(":0\r\n", theHandler.handle({"SCARD", "S"}));
+}
+
+TEST_F(TestRespHandler, flushdb_is_alias_of_flushall) {
+  ASSERT_EQ(":2\r\n", theHandler.handle({"RPUSH", "L", "a", "b"}));
+  EXPECT_EQ("+OK\r\n", theHandler.handle({"FLUSHDB"}));
+  EXPECT_EQ(":0\r\n", theHandler.handle({"LLEN", "L"}));
+}
+
+TEST_F(TestRespHandler, flush_accepts_async_option) {
+  ASSERT_EQ(":1\r\n", theHandler.handle({"RPUSH", "L", "a"}));
+  EXPECT_EQ("+OK\r\n", theHandler.handle({"FLUSHALL", "ASYNC"}));
+  EXPECT_EQ(":0\r\n", theHandler.handle({"LLEN", "L"}));
+}

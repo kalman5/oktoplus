@@ -34,6 +34,11 @@ class ContainerFunctorApplier
 
   size_t hostedKeys() const;
 
+  // Drop every container. Blocks until all per-key locks are observed
+  // free; intended for FLUSHDB / FLUSHALL and test resets, not the hot
+  // request path.
+  void clear();
+
   // Apply the aFunctor on a "possibly" new container (if the container at the
   // given key aName doesn't exist it's then created). Functor should not
   // consume the container.
@@ -93,6 +98,19 @@ template <class CONTAINER>
 size_t ContainerFunctorApplier<CONTAINER>::hostedKeys() const {
   const boost::lock_guard myLock(theMutex);
   return theStorage.size();
+}
+
+template <class CONTAINER>
+void ContainerFunctorApplier<CONTAINER>::clear() {
+  const boost::lock_guard myLock(theMutex);
+  // Each ProtectedContainer destructor releases its mutex when no one
+  // holds it; if a per-key op is in flight we wait for the outer mutex
+  // and then for the inner.
+  for (auto& myEntry : theStorage) {
+    boost::lock_guard<ContainerMutex> myInner(*myEntry.second.mutex);
+    myEntry.second.storage.clear();
+  }
+  theStorage.clear();
 }
 
 template <class CONTAINER>

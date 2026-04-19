@@ -22,6 +22,10 @@ class GenericContainer
     return theApplyer.hostedKeys();
   }
 
+  void clear() {
+    theApplyer.clear();
+  }
+
  protected:
   sup::ContainerFunctorApplier<CONTAINER> theApplyer;
 };
