@@ -1,6 +1,7 @@
 add_library (testunit_teststorage SHARED
   testsequencecontainer.cpp
   testsets.cpp
+  teststorageconcurrency.cpp
 )
 
 target_link_libraries (testunit_teststorage
