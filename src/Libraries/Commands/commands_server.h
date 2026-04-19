@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Commands/commands_admin.h"
 #include "Commands/commands_deque.h"
 #include "Commands/commands_list.h"
 #include "Commands/commands_set.h"
@@ -13,7 +14,8 @@
 namespace okts {
 namespace cmds {
 
-class CommandsServer : public CommandsDeque,
+class CommandsServer : public CommandsAdmin,
+                       public CommandsDeque,
                        public CommandsList,
                        public CommandsVector,
                        public CommandsSet

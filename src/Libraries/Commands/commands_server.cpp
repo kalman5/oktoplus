@@ -15,7 +15,8 @@ CommandsServer::CommandsServer(stor::StorageContext& aStorage,
                                int                   aNumCQS,
                                int                   aMinPollers,
                                int                   aMaxPollers)
-    : CommandsDeque(aStorage.deques)
+    : CommandsAdmin(aStorage)
+    , CommandsDeque(aStorage.deques)
     , CommandsList(aStorage.lists)
     , CommandsVector(aStorage.vectors)
     , CommandsSet(aStorage.sets)

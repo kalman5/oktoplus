@@ -33,6 +33,9 @@ class CommandsClient final
   size_t listLength(const std::string& aContainerName);
   size_t dequeLength(const std::string& aContainerName);
 
+  void flushAll();
+  void flushDb();
+
  private:
   size_t pushFront(
       const std::string&              aContainerName,

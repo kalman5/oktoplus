@@ -2,10 +2,15 @@ syntax = "proto3";
 
 import "list_messages.proto";
 import "set_messages.proto";
+import "types.proto";
 
 package okts.cmds;
 
 service Interface {
+  // ADMIN
+  rpc flushAll(Void) returns (Void) { }                                          // FLUSHALL
+  rpc flushDb(Void)  returns (Void) { }                                          // FLUSHDB
+
   // LIST
                                                                                // BLMOVE
                                                                                // BLMPOP

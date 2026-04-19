@@ -44,6 +44,22 @@ TEST_F(TestCommands, set_get) {
   }
 }
 
+TEST_F(TestCommands, flush_all_drops_lists) {
+  okstor::StorageContext myStorage;
+  okcmds::CommandsServer myServer(myStorage, "127.0.0.1:6667", 10, 20, 30);
+
+  okcmds::CommandsClient myClient("127.0.0.1:6667");
+
+  for (size_t i = 0; i < 10; ++i) {
+    myClient.listPushFront("L", {std::to_string(i)});
+  }
+  ASSERT_EQ(10u, myClient.listLength("L"));
+
+  myClient.flushAll();
+
+  EXPECT_EQ(0u, myClient.listLength("L"));
+}
+
 TEST_F(TestCommands, DISABLED_perf) {
   okcmds::CommandsClient myClient("127.0.0.1:6666");
 

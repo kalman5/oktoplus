@@ -106,6 +106,26 @@ size_t CommandsClient::dequeLength(const std::string& aContainerName) {
                 });
 }
 
+void CommandsClient::flushAll() {
+  ::grpc::ClientContext myContext;
+  Void                  myReq;
+  Void                  myReply;
+  auto myStatus = theStub->flushAll(&myContext, myReq, &myReply);
+  if (!myStatus.ok()) {
+    throw std::runtime_error("flushAll failed: " + myStatus.error_message());
+  }
+}
+
+void CommandsClient::flushDb() {
+  ::grpc::ClientContext myContext;
+  Void                  myReq;
+  Void                  myReply;
+  auto myStatus = theStub->flushDb(&myContext, myReq, &myReply);
+  if (!myStatus.ok()) {
+    throw std::runtime_error("flushDb failed: " + myStatus.error_message());
+  }
+}
+
 ////
 
 size_t CommandsClient::pushFront(
