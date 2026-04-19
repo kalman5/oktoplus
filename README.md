@@ -44,7 +44,9 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 
 ![LPUSH on a hot key, varying clients](benchmark_results/chart_concurrency.svg)
 
-> Charts are generated from `benchmark_results/raw/*.csv` by `benchmark_results/make_chart.py` (no dependencies — pure-stdlib Python emitting SVG).
+> Charts are generated from `benchmark_results/raw/*.csv` by `benchmark_results/make_chart.py` (no dependencies — pure-stdlib Python emitting SVG + HTML).
+>
+> An interactive Chart.js dashboard with the same data lives at [`benchmark_results/report.html`](benchmark_results/report.html) — view it rendered through [htmlpreview.github.io](https://htmlpreview.github.io/?https://github.com/kalman5/oktoplus/blob/master/benchmark_results/report.html).
 
 ##### Single client, no pipelining (`-P 1`) — both servers tied
 
