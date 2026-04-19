@@ -1,8 +1,8 @@
 #pragma once
 
-#include <functional>
 #include <optional>
 #include <unordered_map>
+#include <utility>
 
 #include <boost/thread/lock_guard.hpp>
 #include <boost/thread/mutex.hpp>
@@ -20,9 +20,7 @@ namespace sup {
 template <class CONTAINER>
 class ContainerFunctorApplier
 {
-  using Container    = CONTAINER;
-  using Functor      = std::function<void(Container& aList)>;
-  using ConstFunctor = std::function<void(const Container& aList)>;
+  using Container = CONTAINER;
 
  public:
   DISABLE_EVIL_CONSTRUCTOR(ContainerFunctorApplier);
@@ -39,21 +37,22 @@ class ContainerFunctorApplier
   // request path.
   void clear();
 
-  // Apply the aFunctor on a "possibly" new container (if the container at the
-  // given key aName doesn't exist it's then created). Functor should not
-  // consume the container.
-  void performOnNew(const std::string& aName, const Functor& aFunctor);
+  // Apply aFunctor to a "possibly" new container (if the container at the
+  // given key aName doesn't exist it's created). Functor must not consume
+  // the container. Templated to avoid std::function heap-allocs on the
+  // hot path; F is invocable as F(Container&).
+  template <class F>
+  void performOnNew(const std::string& aName, F&& aFunctor);
 
-  // Apply the aFunction to an already existing container (as a pop),
-  // functor can make the container empty, in that case the container is
-  // removed.
-  void performOnExisting(const std::string& aName, const Functor& aFunctor);
+  // Apply aFunctor to an already existing container (e.g. pop). Functor
+  // may leave the container empty, in which case it's removed.
+  template <class F>
+  void performOnExisting(const std::string& aName, F&& aFunctor);
 
-  // Apply the aFunction to an already existing container (as a
-  // legth), functor takes the container as const hence the container can not be
-  // modified.
-  void performOnExisting(const std::string&  aName,
-                         const ConstFunctor& aFunctor) const;
+  // Apply aFunctor to an already existing container, read-only. Functor
+  // takes a const Container& so the container cannot be modified.
+  template <class F>
+  void performOnExisting(const std::string& aName, F&& aFunctor) const;
 
  private:
   // This needs to be recursive indeed some operations can work on multiple
@@ -114,8 +113,9 @@ void ContainerFunctorApplier<CONTAINER>::clear() {
 }
 
 template <class CONTAINER>
+template <class F>
 void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
-                                                      const Functor& aFunctor) {
+                                                      F&& aFunctor) {
 
   ProtectedContainer* myContainer = nullptr;
 
@@ -140,8 +140,9 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
 }
 
 template <class CONTAINER>
+template <class F>
 void ContainerFunctorApplier<CONTAINER>::performOnExisting(
-    const std::string& aName, const Functor& aFunctor) {
+    const std::string& aName, F&& aFunctor) {
 
   // This looks a bit gymnic but we need to obey to the following:
   // after the operation if the list is empty has to be removed from storage.
@@ -222,8 +223,9 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
 }
 
 template <class CONTAINER>
+template <class F>
 void ContainerFunctorApplier<CONTAINER>::performOnExisting(
-    const std::string& aName, const ConstFunctor& aFunctor) const {
+    const std::string& aName, F&& aFunctor) const {
 
   const ProtectedContainer* myContainer = nullptr;
 

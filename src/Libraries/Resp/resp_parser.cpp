@@ -118,14 +118,9 @@ std::string RespParser::formatInteger(int64_t aValue) {
 }
 
 std::string RespParser::formatBulkString(std::string_view aValue) {
-  auto myLen = std::to_string(aValue.size());
   std::string myResult;
-  myResult.reserve(1 + myLen.size() + 2 + aValue.size() + 2);
-  myResult += '$';
-  myResult += myLen;
-  myResult += "\r\n";
-  myResult.append(aValue);
-  myResult += "\r\n";
+  myResult.reserve(8 + aValue.size());
+  appendBulkString(myResult, aValue);
   return myResult;
 }
 
@@ -135,10 +130,13 @@ std::string RespParser::formatNullBulkString() {
 
 std::string
 RespParser::formatArray(const std::vector<std::string>& aElements) {
+  size_t myReserved = 16;
+  for (const auto& myElement : aElements) {
+    myReserved += myElement.size();
+  }
   std::string myResult;
-  myResult += '*';
-  myResult += std::to_string(aElements.size());
-  myResult += "\r\n";
+  myResult.reserve(myReserved);
+  appendArrayHeader(myResult, aElements.size());
   for (const auto& myElement : aElements) {
     myResult += myElement;
   }
@@ -147,6 +145,27 @@ RespParser::formatArray(const std::vector<std::string>& aElements) {
 
 std::string RespParser::formatEmptyArray() {
   return "*0\r\n";
+}
+
+void RespParser::appendBulkString(std::string&     aOut,
+                                  std::string_view aValue) {
+  aOut += '$';
+  aOut += std::to_string(aValue.size());
+  aOut += "\r\n";
+  aOut.append(aValue.data(), aValue.size());
+  aOut += "\r\n";
+}
+
+void RespParser::appendArrayHeader(std::string& aOut, size_t aCount) {
+  aOut += '*';
+  aOut += std::to_string(aCount);
+  aOut += "\r\n";
+}
+
+void RespParser::appendInteger(std::string& aOut, int64_t aValue) {
+  aOut += ':';
+  aOut += std::to_string(aValue);
+  aOut += "\r\n";
 }
 
 } // namespace okts::resp

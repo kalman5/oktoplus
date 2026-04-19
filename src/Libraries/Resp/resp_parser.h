@@ -23,6 +23,14 @@ class RespParser
   static std::string formatArray(const std::vector<std::string>& aElements);
   static std::string formatEmptyArray();
 
+  // Append-into-out variants for the hot reply path: writers like
+  // formatBulkStringArray() produce N bulk strings + an array header,
+  // which used to allocate N intermediate std::string's. The append
+  // overloads write directly into a caller-owned buffer instead.
+  static void appendBulkString(std::string& aOut, std::string_view aValue);
+  static void appendArrayHeader(std::string& aOut, size_t aCount);
+  static void appendInteger(std::string& aOut, int64_t aValue);
+
  private:
   static std::string readLine(boost::asio::ip::tcp::socket& aSocket,
                               boost::asio::streambuf&       aBuffer);

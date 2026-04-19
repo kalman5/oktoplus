@@ -110,127 +110,144 @@ std::string RespHandler::handleSetOp(const Args& aArgs,
 // ---- Table-driven registration ----
 
 RespHandler::RespHandler(stor::StorageContext& aStorage)
-    : theStorage(aStorage)
-    , theHandlers() {
-
-  struct Entry {
-    const char* name;
-    HandlerFunc handler;
-  };
-
-  // clang-format off
-  Entry myEntries[] = {
-    // General
-    {"PING",         [this](const Args& a) { return handlePing(a); }},
-    {"QUIT",         [this](const Args& a) { return handleQuit(a); }},
-    {"COMMAND",      [this](const Args& a) { return handleCommand(a); }},
-    {"CLIENT",       [this](const Args& a) { return handleClient(a); }},
-    {"SELECT",       [this](const Args& a) { return handleSelect(a); }},
-    {"INFO",         [this](const Args& a) { return handleInfo(a); }},
-    {"FLUSHDB",      [this](const Args& a) { return handleFlush(a); }},
-    {"FLUSHALL",     [this](const Args& a) { return handleFlush(a); }},
-
-    // List push (generic)
-    {"LPUSH",        [this](const Args& a) { return handlePush(a, "lpush",  &stor::Lists::pushFront); }},
-    {"RPUSH",        [this](const Args& a) { return handlePush(a, "rpush",  &stor::Lists::pushBack); }},
-    {"LPUSHX",       [this](const Args& a) { return handlePush(a, "lpushx", &stor::Lists::pushFrontExist); }},
-    {"RPUSHX",       [this](const Args& a) { return handlePush(a, "rpushx", &stor::Lists::pushBackExist); }},
-
-    // List pop (generic)
-    {"LPOP",         [this](const Args& a) {
-      return handlePopWithOptionalCount(a, "lpop", [this](const std::string& k, uint64_t c) {
-        return theStorage.lists.popFront(k, c);
-      });
-    }},
-    {"RPOP",         [this](const Args& a) {
-      return handlePopWithOptionalCount(a, "rpop", [this](const std::string& k, uint64_t c) {
-        return theStorage.lists.popBack(k, c);
-      });
-    }},
-
-    // List commands (unique logic)
-    {"LLEN",         [this](const Args& a) { return handleLlen(a); }},
-    {"LINDEX",       [this](const Args& a) { return handleLindex(a); }},
-    {"LINSERT",      [this](const Args& a) { return handleLinsert(a); }},
-    {"LRANGE",       [this](const Args& a) { return handleLrange(a); }},
-    {"LREM",         [this](const Args& a) { return handleLrem(a); }},
-    {"LSET",         [this](const Args& a) { return handleLset(a); }},
-    {"LTRIM",        [this](const Args& a) { return handleLtrim(a); }},
-    {"LMOVE",        [this](const Args& a) { return handleLmove(a); }},
-    {"LPOS",         [this](const Args& a) { return handleLpos(a); }},
-    {"LMPOP",        [this](const Args& a) { return handleLmpop(a); }},
-
-    // Set commands (generic multi-key ops)
-    {"SDIFF",        [this](const Args& a) {
-      return handleSetOp(a, "sdiff", 1, [this](const std::vector<std::string_view>& k) {
-        return theStorage.sets.diff(k);
-      });
-    }},
-    {"SINTER",       [this](const Args& a) {
-      return handleSetOp(a, "sinter", 1, [this](const std::vector<std::string_view>& k) {
-        return theStorage.sets.inter(k);
-      });
-    }},
-    {"SUNION",       [this](const Args& a) {
-      return handleSetOp(a, "sunion", 1, [this](const std::vector<std::string_view>& k) {
-        return theStorage.sets.unionSets(k);
-      });
-    }},
-    {"SMEMBERS",     [this](const Args& a) {
-      return handleSetOp(a, "smembers", 1, [this](const std::vector<std::string_view>& k) {
-        return theStorage.sets.members(std::string(k[0]));
-      });
-    }},
-
-    // Set pop/random (generic)
-    {"SPOP",         [this](const Args& a) {
-      return handlePopWithOptionalCount(a, "spop", [this](const std::string& k, uint64_t c) {
-        return theStorage.sets.pop(k, static_cast<size_t>(c));
-      });
-    }},
-    {"SRANDMEMBER",  [this](const Args& a) {
-      return handlePopWithOptionalCount(a, "srandmember", [this](const std::string& k, uint64_t c) {
-        return theStorage.sets.randMember(k, static_cast<int64_t>(c));
-      });
-    }},
-
-    // Set commands (unique logic)
-    {"SADD",         [this](const Args& a) { return handleSadd(a); }},
-    {"SCARD",        [this](const Args& a) { return handleScard(a); }},
-    {"SDIFFSTORE",   [this](const Args& a) { return handleSdiffstore(a); }},
-    {"SINTERCARD",   [this](const Args& a) { return handleSintercard(a); }},
-    {"SINTERSTORE",  [this](const Args& a) { return handleSinterstore(a); }},
-    {"SISMEMBER",    [this](const Args& a) { return handleSismember(a); }},
-    {"SMISMEMBER",   [this](const Args& a) { return handleSmismember(a); }},
-    {"SMOVE",        [this](const Args& a) { return handleSmove(a); }},
-    {"SREM",         [this](const Args& a) { return handleSrem(a); }},
-    {"SUNIONSTORE",  [this](const Args& a) { return handleSunionstore(a); }},
-  };
-  // clang-format on
-
-  for (auto& myEntry : myEntries) {
-    theHandlers[myEntry.name] = std::move(myEntry.handler);
-  }
+    : theStorage(aStorage) {
 }
+
+namespace {
+
+// Maximum command-name length we accept for stack-buffer upper-casing.
+// All implemented RESP commands fit (longest is SUNIONSTORE = 11).
+constexpr size_t kMaxCmdLen = 16;
+
+// Upper-case `aIn` into `aBuf` and return a string_view over it.
+// Returns std::string_view{} on overflow (caller treats as unknown).
+std::string_view toUpperStack(std::string_view aIn,
+                              char (&aBuf)[kMaxCmdLen]) {
+  if (aIn.size() > kMaxCmdLen) {
+    return {};
+  }
+  for (size_t i = 0; i < aIn.size(); ++i) {
+    aBuf[i] = static_cast<char>(
+        std::toupper(static_cast<unsigned char>(aIn[i])));
+  }
+  return std::string_view(aBuf, aIn.size());
+}
+
+} // namespace
 
 std::string RespHandler::handle(const Args& aArgs) {
   if (aArgs.empty()) {
     return RespParser::formatError("ERR empty command");
   }
 
-  auto myCommand = toUpper(aArgs[0]);
+  // Build the dispatch table once at first call. Lambdas have no
+  // capture, so they decay to function pointers — the whole table
+  // lives in rodata. No per-connection allocations.
+  // clang-format off
+  static const Entry kHandlers[] = {
+    // General
+    {"PING",         [](RespHandler& h, const Args& a) { return h.handlePing(a); }},
+    {"QUIT",         [](RespHandler& h, const Args& a) { return h.handleQuit(a); }},
+    {"COMMAND",      [](RespHandler& h, const Args& a) { return h.handleCommand(a); }},
+    {"CLIENT",       [](RespHandler& h, const Args& a) { return h.handleClient(a); }},
+    {"SELECT",       [](RespHandler& h, const Args& a) { return h.handleSelect(a); }},
+    {"INFO",         [](RespHandler& h, const Args& a) { return h.handleInfo(a); }},
+    {"FLUSHDB",      [](RespHandler& h, const Args& a) { return h.handleFlush(a); }},
+    {"FLUSHALL",     [](RespHandler& h, const Args& a) { return h.handleFlush(a); }},
 
-  auto myIt = theHandlers.find(myCommand);
-  if (myIt == theHandlers.end()) {
-    return RespParser::formatError(
-        "ERR unknown command '" + aArgs[0] + "'");
-  }
+    // List push (generic)
+    {"LPUSH",        [](RespHandler& h, const Args& a) { return h.handlePush(a, "lpush",  &stor::Lists::pushFront); }},
+    {"RPUSH",        [](RespHandler& h, const Args& a) { return h.handlePush(a, "rpush",  &stor::Lists::pushBack); }},
+    {"LPUSHX",       [](RespHandler& h, const Args& a) { return h.handlePush(a, "lpushx", &stor::Lists::pushFrontExist); }},
+    {"RPUSHX",       [](RespHandler& h, const Args& a) { return h.handlePush(a, "rpushx", &stor::Lists::pushBackExist); }},
 
-  try {
-    return myIt->second(aArgs);
-  } catch (const std::exception& e) {
-    return RespParser::formatError(std::string("ERR ") + e.what());
+    // List pop (generic)
+    {"LPOP",         [](RespHandler& h, const Args& a) {
+      return h.handlePopWithOptionalCount(a, "lpop", [&h](const std::string& k, uint64_t c) {
+        return h.theStorage.lists.popFront(k, c);
+      });
+    }},
+    {"RPOP",         [](RespHandler& h, const Args& a) {
+      return h.handlePopWithOptionalCount(a, "rpop", [&h](const std::string& k, uint64_t c) {
+        return h.theStorage.lists.popBack(k, c);
+      });
+    }},
+
+    // List commands (unique logic)
+    {"LLEN",         [](RespHandler& h, const Args& a) { return h.handleLlen(a); }},
+    {"LINDEX",       [](RespHandler& h, const Args& a) { return h.handleLindex(a); }},
+    {"LINSERT",      [](RespHandler& h, const Args& a) { return h.handleLinsert(a); }},
+    {"LRANGE",       [](RespHandler& h, const Args& a) { return h.handleLrange(a); }},
+    {"LREM",         [](RespHandler& h, const Args& a) { return h.handleLrem(a); }},
+    {"LSET",         [](RespHandler& h, const Args& a) { return h.handleLset(a); }},
+    {"LTRIM",        [](RespHandler& h, const Args& a) { return h.handleLtrim(a); }},
+    {"LMOVE",        [](RespHandler& h, const Args& a) { return h.handleLmove(a); }},
+    {"LPOS",         [](RespHandler& h, const Args& a) { return h.handleLpos(a); }},
+    {"LMPOP",        [](RespHandler& h, const Args& a) { return h.handleLmpop(a); }},
+
+    // Set commands (generic multi-key ops)
+    {"SDIFF",        [](RespHandler& h, const Args& a) {
+      return h.handleSetOp(a, "sdiff", 1, [&h](const std::vector<std::string_view>& k) {
+        return h.theStorage.sets.diff(k);
+      });
+    }},
+    {"SINTER",       [](RespHandler& h, const Args& a) {
+      return h.handleSetOp(a, "sinter", 1, [&h](const std::vector<std::string_view>& k) {
+        return h.theStorage.sets.inter(k);
+      });
+    }},
+    {"SUNION",       [](RespHandler& h, const Args& a) {
+      return h.handleSetOp(a, "sunion", 1, [&h](const std::vector<std::string_view>& k) {
+        return h.theStorage.sets.unionSets(k);
+      });
+    }},
+    {"SMEMBERS",     [](RespHandler& h, const Args& a) {
+      return h.handleSetOp(a, "smembers", 1, [&h](const std::vector<std::string_view>& k) {
+        return h.theStorage.sets.members(std::string(k[0]));
+      });
+    }},
+
+    // Set pop/random (generic)
+    {"SPOP",         [](RespHandler& h, const Args& a) {
+      return h.handlePopWithOptionalCount(a, "spop", [&h](const std::string& k, uint64_t c) {
+        return h.theStorage.sets.pop(k, static_cast<size_t>(c));
+      });
+    }},
+    {"SRANDMEMBER",  [](RespHandler& h, const Args& a) {
+      return h.handlePopWithOptionalCount(a, "srandmember", [&h](const std::string& k, uint64_t c) {
+        return h.theStorage.sets.randMember(k, static_cast<int64_t>(c));
+      });
+    }},
+
+    // Set commands (unique logic)
+    {"SADD",         [](RespHandler& h, const Args& a) { return h.handleSadd(a); }},
+    {"SCARD",        [](RespHandler& h, const Args& a) { return h.handleScard(a); }},
+    {"SDIFFSTORE",   [](RespHandler& h, const Args& a) { return h.handleSdiffstore(a); }},
+    {"SINTERCARD",   [](RespHandler& h, const Args& a) { return h.handleSintercard(a); }},
+    {"SINTERSTORE",  [](RespHandler& h, const Args& a) { return h.handleSinterstore(a); }},
+    {"SISMEMBER",    [](RespHandler& h, const Args& a) { return h.handleSismember(a); }},
+    {"SMISMEMBER",   [](RespHandler& h, const Args& a) { return h.handleSmismember(a); }},
+    {"SMOVE",        [](RespHandler& h, const Args& a) { return h.handleSmove(a); }},
+    {"SREM",         [](RespHandler& h, const Args& a) { return h.handleSrem(a); }},
+    {"SUNIONSTORE",  [](RespHandler& h, const Args& a) { return h.handleSunionstore(a); }},
+  };
+  // clang-format on
+
+  char            myBuf[kMaxCmdLen];
+  std::string_view myCmd = toUpperStack(aArgs[0], myBuf);
+
+  if (!myCmd.empty()) {
+    for (const auto& myEntry : kHandlers) {
+      if (myEntry.name == myCmd) {
+        try {
+          return myEntry.fn(*this, aArgs);
+        } catch (const std::exception& e) {
+          return RespParser::formatError(std::string("ERR ") + e.what());
+        }
+      }
+    }
   }
+  return RespParser::formatError("ERR unknown command '" + aArgs[0] + "'");
 }
 
 // ---- General commands ----

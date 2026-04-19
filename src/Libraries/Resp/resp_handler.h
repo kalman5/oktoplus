@@ -3,10 +3,8 @@
 #include "Storage/storage_context.h"
 #include "Resp/resp_parser.h"
 
-#include <functional>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
 
 namespace okts::resp {
@@ -20,7 +18,12 @@ class RespHandler
 
  private:
   using Args        = std::vector<std::string>;
-  using HandlerFunc = std::function<std::string(const Args&)>;
+  using HandlerFn   = std::string (*)(RespHandler&, const Args&);
+
+  struct Entry {
+    std::string_view name;   // already upper-cased
+    HandlerFn        fn;
+  };
 
   // Helpers
   static std::string validateMinArgs(const Args& aArgs,
@@ -28,14 +31,23 @@ class RespHandler
                                      std::string_view aCommand);
   static std::vector<std::string_view> extractValues(const Args& aArgs,
                                                      size_t aFrom);
+  // Format `aValues` as a RESP bulk-string array directly into one
+  // pre-reserved std::string. Avoids the intermediate
+  // std::vector<std::string> + N small std::string allocations the old
+  // implementation did per multi-element reply.
   template <typename Container>
   static std::string formatBulkStringArray(const Container& aValues) {
-    std::vector<std::string> myFormatted;
-    myFormatted.reserve(aValues.size());
+    size_t myReserved = 16; // "*N\r\n" plus margin
     for (const auto& myVal : aValues) {
-      myFormatted.push_back(RespParser::formatBulkString(myVal));
+      myReserved += 8 + myVal.size(); // "$LL\r\nDATA\r\n" overhead ≈ 8
     }
-    return RespParser::formatArray(myFormatted);
+    std::string myResult;
+    myResult.reserve(myReserved);
+    RespParser::appendArrayHeader(myResult, aValues.size());
+    for (const auto& myVal : aValues) {
+      RespParser::appendBulkString(myResult, myVal);
+    }
+    return myResult;
   }
 
   // Generic push: parameterized by storage method
@@ -91,8 +103,7 @@ class RespHandler
   std::string handleSrem(const Args& aArgs);
   std::string handleSunionstore(const Args& aArgs);
 
-  stor::StorageContext&                        theStorage;
-  std::unordered_map<std::string, HandlerFunc> theHandlers;
+  stor::StorageContext& theStorage;
 };
 
 } // namespace okts::resp
