@@ -12,11 +12,11 @@ If this reminds you of REDIS then you are right, I was inspired by it, however:
  - For instance the Redis command LINDEX is O(n), so if you need to access a value with an index would be better to use a Vector style container
   - There is no analogue of multi-set in Redis
 
-Redis Commands Compatibility
+Redis Commands Compatibility (gRPC / RESP)
 
-  - [LISTS](docs/compatibility_lists.md) 76% Completed
-  - [SETS](docs/compatibility_sets.md) 18% Completed
-  - [STRINGS](docs/compatibility_strings.md) 0% Completed
+  - [LISTS](docs/compatibility_lists.md) — 76% / 76% (16 / 21, blocking variants TBD)
+  - [SETS](docs/compatibility_sets.md) — 18% / 94% (3 gRPC, 16 RESP of 17)
+  - [STRINGS](docs/compatibility_strings.md) — 0% / 0%
 
 **Oktoplus** specific containers (already implemented, see specific documentation)
 
@@ -28,9 +28,9 @@ Redis Commands Compatibility
 The server exposes the same data through two interfaces:
 
   - **gRPC** (default port `50051`) — see `src/Libraries/Commands/commands.proto`. Use it to generate a client in your favourite language. Includes admin RPCs `flushAll` / `flushDb` plus all the list / set / deque / vector commands.
-  - **RESP** (default port `6379`, optional) — wire-compatible with Redis, so existing tooling like `redis-cli` and `redis-benchmark` works out of the box. Enabled by setting `service.resp_endpoint` in the JSON config.
+  - **RESP** (default port `6379`, optional) — wire-compatible with Redis, so existing tooling like `redis-cli` and `redis-benchmark` works out of the box. Enabled by setting `service.resp_endpoint` in the JSON config. Plus the admin commands `FLUSHDB` / `FLUSHALL`.
 
-Currently implemented RESP commands include `PING`, `QUIT`, `INFO`, `SELECT`, `CLIENT`, `COMMAND`, `FLUSHDB`, `FLUSHALL`, the list family (`LPUSH`/`RPUSH`/`LPUSHX`/`RPUSHX`/`LPOP`/`RPOP`/`LLEN`/`LINDEX`/`LINSERT`/`LRANGE`/`LREM`/`LSET`/`LTRIM`/`LMOVE`/`LPOS`/`LMPOP`), and the set family (`SADD`/`SCARD`/`SDIFF`/`SDIFFSTORE`/`SINTER`/`SINTERCARD`/`SINTERSTORE`/`SISMEMBER`/`SMISMEMBER`/`SMEMBERS`/`SMOVE`/`SPOP`/`SRANDMEMBER`/`SREM`/`SUNION`/`SUNIONSTORE`).
+The per-family compatibility tables ([LISTS](docs/compatibility_lists.md), [SETS](docs/compatibility_sets.md), [STRINGS](docs/compatibility_strings.md)) include a column showing which Redis commands are wired to gRPC and to RESP today.
 
 Server is multithread, two different clients working on different containers (type or name) have a minimal interaction. For example multiple clients performing a parallel batch insert on different keys can procede in parallel without blocking each other.
 

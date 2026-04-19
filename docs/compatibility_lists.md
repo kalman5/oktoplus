@@ -1,25 +1,27 @@
+## Lists — command compatibility
 
+| gRPC Interface       | RESP   | REDIS command  |
+|----------------------|:------:|:--------------:|
+| _                    | _      | BLMOVE         |
+| _                    | _      | BLMPOP         |
+| _                    | _      | BLPOP          |
+| _                    | _      | BRPOP          |
+| _                    | _      | BRPOPLPUSH     |
+| listIndex            | LINDEX | LINDEX         |
+| listInsert           | LINSERT | LINSERT       |
+| listLength           | LLEN   | LLEN           |
+| listMove             | LMOVE  | LMOVE          |
+| listMultiplePop      | LMPOP  | LMPOP          |
+| listPopFront         | LPOP   | LPOP           |
+| listPosition         | LPOS   | LPOS           |
+| listPushFront        | LPUSH  | LPUSH          |
+| listExistPushFront   | LPUSHX | LPUSHX         |
+| listRange            | LRANGE | LRANGE         |
+| listRemove           | LREM   | LREM           |
+| listSet              | LSET   | LSET           |
+| listTrim             | LTRIM  | LTRIM          |
+| listPopBack          | RPOP   | RPOP           |
+| listPushBack         | RPUSH  | RPUSH          |
+| listExistPushBack    | RPUSHX | RPUSHX         |
 
-GRP Interface | Lists REDIS Command |
----|:---:
- _ | BLMOVE
- _ | BLMPOP
- _ | BLPOP
- _ | BRPOP
- _ | BRPOPLPUSH
- listIndex | LINDEX
- listInsert | LINSERT
- listLength | LLEN
- listMove | LMOVE
- listMultiplePop | LMPOP
- listPopFront | LPOP
- listPosition | LPOS
- listPushFront | LPUSH
- listPushFrontExist | LPUSHX
- listRange | LRANGE
- listRemove | LREM
- listSet | LSET
- listTrim | LTRIM
- listPopBack | RPOP
- listPushBack | RPUSH
- listPushBackExist | RPUSHX
+`_` indicates "not implemented".
