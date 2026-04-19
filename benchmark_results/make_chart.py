@@ -54,13 +54,31 @@ def short_name(test: str) -> str:
 
 
 def svg_open(width: int, height: int) -> list[str]:
+    # The SVG is loaded as its own document by GitHub's markdown renderer,
+    # so prefers-color-scheme works. We supply two themes:
+    #   * light mode: white background, dark text
+    #   * dark mode:  GitHub-dark background (#0d1117), light text
+    # Bar/line colors stay constant — they're chosen to be readable on both.
     return [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}" font-family="-apple-system, Segoe UI, '
         'Helvetica, Arial, sans-serif" font-size="12">',
-        '<style>.title{font-size:15px;font-weight:600}.axis{stroke:#888;stroke-width:1}'
-        '.gridline{stroke:#e5e5e5;stroke-width:1}.label{fill:#333}.bar-okto{fill:#5b8def}'
-        '.bar-redis{fill:#e0584d}.legend{font-size:12px}</style>',
+        "<style>"
+        ".bg{fill:#ffffff}"
+        ".title{font-size:15px;font-weight:600;fill:#24292f}"
+        ".axis{stroke:#57606a;stroke-width:1}"
+        ".gridline{stroke:#d0d7de;stroke-width:1}"
+        ".label{fill:#24292f}"
+        ".legend{font-size:12px;fill:#24292f}"
+        ".bar-okto{fill:#3fb950}.bar-redis{fill:#f85149}"
+        "@media (prefers-color-scheme: dark){"
+        ".bg{fill:#0d1117}"
+        ".title,.label,.legend{fill:#c9d1d9}"
+        ".axis{stroke:#8b949e}"
+        ".gridline{stroke:#21262d}"
+        "}"
+        "</style>",
+        f'<rect class="bg" width="{width}" height="{height}"/>',
     ]
 
 
@@ -399,8 +417,8 @@ def main() -> int:
         title="LPUSH on a hot key, varying clients (-P 1) — rps (higher is better)",
         x_values=concurrencies,
         series=[
-            ("Oktoplus", okto_lpush, "#5b8def"),
-            ("Redis", redis_lpush, "#e0584d"),
+            ("Oktoplus", okto_lpush, "#3fb950"),
+            ("Redis", redis_lpush, "#f85149"),
         ],
         x_label="concurrent clients",
         y_max=max(max(okto_lpush), max(redis_lpush)) * 1.10,

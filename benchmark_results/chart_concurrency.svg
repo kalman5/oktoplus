@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="880" height="380" viewBox="0 0 880 380" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12">
-<style>.title{font-size:15px;font-weight:600}.axis{stroke:#888;stroke-width:1}.gridline{stroke:#e5e5e5;stroke-width:1}.label{fill:#333}.bar-okto{fill:#5b8def}.bar-redis{fill:#e0584d}.legend{font-size:12px}</style>
+<style>.bg{fill:#ffffff}.title{font-size:15px;font-weight:600;fill:#24292f}.axis{stroke:#57606a;stroke-width:1}.gridline{stroke:#d0d7de;stroke-width:1}.label{fill:#24292f}.legend{font-size:12px;fill:#24292f}.bar-okto{fill:#3fb950}.bar-redis{fill:#f85149}@media (prefers-color-scheme: dark){.bg{fill:#0d1117}.title,.label,.legend{fill:#c9d1d9}.axis{stroke:#8b949e}.gridline{stroke:#21262d}}</style>
+<rect class="bg" width="880" height="380"/>
 <text class="title" x="440.0" y="22" text-anchor="middle">LPUSH on a hot key, varying clients (-P 1) — rps (higher is better)</text>
 <line class="gridline" x1="70" y1="320.0" x2="860" y2="320.0"/>
 <text class="label" x="62" y="324.0" text-anchor="end">0</text>
@@ -21,20 +22,20 @@
 <text class="label" x="662.5" y="338" text-anchor="middle">100</text>
 <text class="label" x="860.0" y="338" text-anchor="middle">200</text>
 <text class="label" x="440.0" y="352" text-anchor="middle">concurrent clients</text>
-<polyline fill="none" stroke="#5b8def" stroke-width="2.5" points="70.0,244.7 267.5,126.4 465.0,148.5 662.5,153.6 860.0,153.0"/>
-<circle cx="70.0" cy="244.7" r="3.5" fill="#5b8def"/>
-<circle cx="267.5" cy="126.4" r="3.5" fill="#5b8def"/>
-<circle cx="465.0" cy="148.5" r="3.5" fill="#5b8def"/>
-<circle cx="662.5" cy="153.6" r="3.5" fill="#5b8def"/>
-<circle cx="860.0" cy="153.0" r="3.5" fill="#5b8def"/>
-<polyline fill="none" stroke="#e0584d" stroke-width="2.5" points="70.0,247.4 267.5,83.6 465.0,119.9 662.5,119.8 860.0,113.7"/>
-<circle cx="70.0" cy="247.4" r="3.5" fill="#e0584d"/>
-<circle cx="267.5" cy="83.6" r="3.5" fill="#e0584d"/>
-<circle cx="465.0" cy="119.9" r="3.5" fill="#e0584d"/>
-<circle cx="662.5" cy="119.8" r="3.5" fill="#e0584d"/>
-<circle cx="860.0" cy="113.7" r="3.5" fill="#e0584d"/>
-<rect x="70" y="361" width="14" height="14" fill="#5b8def"/>
+<polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,244.7 267.5,126.4 465.0,148.5 662.5,153.6 860.0,153.0"/>
+<circle cx="70.0" cy="244.7" r="3.5" fill="#3fb950"/>
+<circle cx="267.5" cy="126.4" r="3.5" fill="#3fb950"/>
+<circle cx="465.0" cy="148.5" r="3.5" fill="#3fb950"/>
+<circle cx="662.5" cy="153.6" r="3.5" fill="#3fb950"/>
+<circle cx="860.0" cy="153.0" r="3.5" fill="#3fb950"/>
+<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,247.4 267.5,83.6 465.0,119.9 662.5,119.8 860.0,113.7"/>
+<circle cx="70.0" cy="247.4" r="3.5" fill="#f85149"/>
+<circle cx="267.5" cy="83.6" r="3.5" fill="#f85149"/>
+<circle cx="465.0" cy="119.9" r="3.5" fill="#f85149"/>
+<circle cx="662.5" cy="119.8" r="3.5" fill="#f85149"/>
+<circle cx="860.0" cy="113.7" r="3.5" fill="#f85149"/>
+<rect x="70" y="361" width="14" height="14" fill="#3fb950"/>
 <text class="legend" x="90" y="372">Oktoplus</text>
-<rect x="230" y="361" width="14" height="14" fill="#e0584d"/>
+<rect x="230" y="361" width="14" height="14" fill="#f85149"/>
 <text class="legend" x="250" y="372">Redis</text>
 </svg>
