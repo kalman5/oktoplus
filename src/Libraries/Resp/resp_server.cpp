@@ -100,6 +100,9 @@ void RespServer::acceptLoop() {
       LOG(INFO) << "RESP client connected: "
                 << mySocket.remote_endpoint();
 
+      boost::system::error_code myNoDelayEc;
+      mySocket.set_option(boost::asio::ip::tcp::no_delay(true), myNoDelayEc);
+
       std::thread([this, s = std::move(mySocket)]() mutable {
         handleConnection(std::move(s));
       }).detach();
@@ -114,24 +117,46 @@ void RespServer::acceptLoop() {
 
 void RespServer::handleConnection(
     boost::asio::ip::tcp::socket aSocket) {
-  RespHandler         myHandler(theStorage);
+  RespHandler            myHandler(theStorage);
   boost::asio::streambuf myBuffer;
+  std::string            myBatchedReply;
+  myBatchedReply.reserve(1024);
+
+  auto myProcess = [&](const std::vector<std::string>& aCmd) {
+    myBatchedReply.append(myHandler.handle(aCmd));
+    return toUpper(aCmd[0]) == "QUIT";
+  };
 
   while (theRunning) {
+    // Block for at least one command.
     auto myCmd = RespParser::readCommand(aSocket, myBuffer);
     if (!myCmd || myCmd->empty()) {
       break;
     }
 
-    auto myResponse = myHandler.handle(*myCmd);
+    bool myQuit = myProcess(*myCmd);
+
+    // Drain any further already-buffered pipelined commands so we can
+    // coalesce their responses into a single socket write. With Nagle off
+    // (set in acceptLoop) plus batched writes, -P N benchmarks scale
+    // properly instead of stalling one reply per delayed-ACK.
+    while (!myQuit && theRunning && myBuffer.size() > 0) {
+      auto myMore = RespParser::readCommand(aSocket, myBuffer);
+      if (!myMore || myMore->empty()) {
+        myQuit = true;
+        break;
+      }
+      myQuit = myProcess(*myMore);
+    }
 
     try {
-      boost::asio::write(aSocket, boost::asio::buffer(myResponse));
+      boost::asio::write(aSocket, boost::asio::buffer(myBatchedReply));
     } catch (const boost::system::system_error&) {
       break;
     }
+    myBatchedReply.clear();
 
-    if (toUpper((*myCmd)[0]) == "QUIT") {
+    if (myQuit) {
       break;
     }
   }
