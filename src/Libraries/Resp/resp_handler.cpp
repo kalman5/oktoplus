@@ -28,54 +28,190 @@ stor::Lists::Direction parseDirection(const std::string& aDir) {
 
 } // namespace
 
+// ---- Helpers ----
+
+std::string RespHandler::validateMinArgs(const Args& aArgs,
+                                         size_t aMin,
+                                         std::string_view aCommand) {
+  if (aArgs.size() >= aMin) {
+    return {};
+  }
+  return RespParser::formatError(
+      "ERR wrong number of arguments for '" + std::string(aCommand) +
+      "' command");
+}
+
+std::vector<std::string_view> RespHandler::extractValues(const Args& aArgs,
+                                                         size_t aFrom) {
+  std::vector<std::string_view> myValues;
+  myValues.reserve(aArgs.size() - aFrom);
+  for (size_t i = aFrom; i < aArgs.size(); ++i) {
+    myValues.emplace_back(aArgs[i]);
+  }
+  return myValues;
+}
+
+// ---- Generic push (lpush/rpush/lpushx/rpushx) ----
+
+std::string RespHandler::handlePush(const Args& aArgs,
+                                    std::string_view aCommand,
+                                    PushMethod aMethod) {
+  auto myErr = validateMinArgs(aArgs, 3, aCommand);
+  if (!myErr.empty()) return myErr;
+
+  auto myValues = extractValues(aArgs, 2);
+  auto mySize   = (theStorage.lists.*aMethod)(aArgs[1], myValues);
+  return RespParser::formatInteger(static_cast<int64_t>(mySize));
+}
+
+// ---- Generic pop with optional count (lpop/rpop/spop/srandmember) ----
+
+template <typename PopFunc>
+std::string RespHandler::handlePopWithOptionalCount(const Args& aArgs,
+                                                    std::string_view aCommand,
+                                                    PopFunc&& aPopFunc) {
+  auto myErr = validateMinArgs(aArgs, 2, aCommand);
+  if (!myErr.empty()) return myErr;
+
+  uint64_t myCount = 1;
+  bool     myMulti = false;
+
+  if (aArgs.size() > 2) {
+    myCount = std::stoull(aArgs[2]);
+    myMulti = true;
+  }
+
+  auto myValues = aPopFunc(aArgs[1], myCount);
+
+  if (myMulti) {
+    return formatBulkStringArray(myValues);
+  }
+  if (myValues.empty()) {
+    return RespParser::formatNullBulkString();
+  }
+  return RespParser::formatBulkString(myValues.front());
+}
+
+// ---- Generic multi-key set operation ----
+
+template <typename SetOpFunc>
+std::string RespHandler::handleSetOp(const Args& aArgs,
+                                     std::string_view aCommand,
+                                     size_t aKeysFrom,
+                                     SetOpFunc&& aFunc) {
+  auto myErr = validateMinArgs(aArgs, aKeysFrom + 1, aCommand);
+  if (!myErr.empty()) return myErr;
+
+  auto myKeys   = extractValues(aArgs, aKeysFrom);
+  auto myResult = aFunc(myKeys);
+  return formatBulkStringArray(myResult);
+}
+
+// ---- Table-driven registration ----
+
 RespHandler::RespHandler(stor::StorageContext& aStorage)
     : theStorage(aStorage)
     , theHandlers() {
 
-  using namespace std::placeholders;
-  theHandlers["PING"]    = std::bind(&RespHandler::handlePing, this, _1);
-  theHandlers["QUIT"]    = std::bind(&RespHandler::handleQuit, this, _1);
-  theHandlers["COMMAND"] = std::bind(&RespHandler::handleCommand, this, _1);
-  theHandlers["CLIENT"]  = std::bind(&RespHandler::handleClient, this, _1);
-  theHandlers["SELECT"]  = std::bind(&RespHandler::handleSelect, this, _1);
-  theHandlers["INFO"]    = std::bind(&RespHandler::handleInfo, this, _1);
+  struct Entry {
+    const char* name;
+    HandlerFunc handler;
+  };
 
-  theHandlers["LPUSH"]   = std::bind(&RespHandler::handleLpush, this, _1);
-  theHandlers["RPUSH"]   = std::bind(&RespHandler::handleRpush, this, _1);
-  theHandlers["LPOP"]    = std::bind(&RespHandler::handleLpop, this, _1);
-  theHandlers["RPOP"]    = std::bind(&RespHandler::handleRpop, this, _1);
-  theHandlers["LLEN"]    = std::bind(&RespHandler::handleLlen, this, _1);
-  theHandlers["LINDEX"]  = std::bind(&RespHandler::handleLindex, this, _1);
-  theHandlers["LINSERT"] = std::bind(&RespHandler::handleLinsert, this, _1);
-  theHandlers["LRANGE"]  = std::bind(&RespHandler::handleLrange, this, _1);
-  theHandlers["LREM"]    = std::bind(&RespHandler::handleLrem, this, _1);
-  theHandlers["LSET"]    = std::bind(&RespHandler::handleLset, this, _1);
-  theHandlers["LTRIM"]   = std::bind(&RespHandler::handleLtrim, this, _1);
-  theHandlers["LPUSHX"]  = std::bind(&RespHandler::handleLpushx, this, _1);
-  theHandlers["RPUSHX"]  = std::bind(&RespHandler::handleRpushx, this, _1);
-  theHandlers["LMOVE"]   = std::bind(&RespHandler::handleLmove, this, _1);
-  theHandlers["LPOS"]    = std::bind(&RespHandler::handleLpos, this, _1);
-  theHandlers["LMPOP"]   = std::bind(&RespHandler::handleLmpop, this, _1);
+  // clang-format off
+  Entry myEntries[] = {
+    // General
+    {"PING",         [this](const Args& a) { return handlePing(a); }},
+    {"QUIT",         [this](const Args& a) { return handleQuit(a); }},
+    {"COMMAND",      [this](const Args& a) { return handleCommand(a); }},
+    {"CLIENT",       [this](const Args& a) { return handleClient(a); }},
+    {"SELECT",       [this](const Args& a) { return handleSelect(a); }},
+    {"INFO",         [this](const Args& a) { return handleInfo(a); }},
 
-  theHandlers["SADD"]       = std::bind(&RespHandler::handleSadd, this, _1);
-  theHandlers["SCARD"]      = std::bind(&RespHandler::handleScard, this, _1);
-  theHandlers["SDIFF"]      = std::bind(&RespHandler::handleSdiff, this, _1);
-  theHandlers["SDIFFSTORE"] = std::bind(&RespHandler::handleSdiffstore, this, _1);
-  theHandlers["SINTER"]     = std::bind(&RespHandler::handleSinter, this, _1);
-  theHandlers["SINTERCARD"] = std::bind(&RespHandler::handleSintercard, this, _1);
-  theHandlers["SINTERSTORE"]= std::bind(&RespHandler::handleSinterstore, this, _1);
-  theHandlers["SISMEMBER"]  = std::bind(&RespHandler::handleSismember, this, _1);
-  theHandlers["SMISMEMBER"] = std::bind(&RespHandler::handleSmismember, this, _1);
-  theHandlers["SMEMBERS"]   = std::bind(&RespHandler::handleSmembers, this, _1);
-  theHandlers["SMOVE"]      = std::bind(&RespHandler::handleSmove, this, _1);
-  theHandlers["SPOP"]       = std::bind(&RespHandler::handleSpop, this, _1);
-  theHandlers["SRANDMEMBER"]= std::bind(&RespHandler::handleSrandmember, this, _1);
-  theHandlers["SREM"]       = std::bind(&RespHandler::handleSrem, this, _1);
-  theHandlers["SUNION"]     = std::bind(&RespHandler::handleSunion, this, _1);
-  theHandlers["SUNIONSTORE"]= std::bind(&RespHandler::handleSunionstore, this, _1);
+    // List push (generic)
+    {"LPUSH",        [this](const Args& a) { return handlePush(a, "lpush",  &stor::Lists::pushFront); }},
+    {"RPUSH",        [this](const Args& a) { return handlePush(a, "rpush",  &stor::Lists::pushBack); }},
+    {"LPUSHX",       [this](const Args& a) { return handlePush(a, "lpushx", &stor::Lists::pushFrontExist); }},
+    {"RPUSHX",       [this](const Args& a) { return handlePush(a, "rpushx", &stor::Lists::pushBackExist); }},
+
+    // List pop (generic)
+    {"LPOP",         [this](const Args& a) {
+      return handlePopWithOptionalCount(a, "lpop", [this](const std::string& k, uint64_t c) {
+        return theStorage.lists.popFront(k, c);
+      });
+    }},
+    {"RPOP",         [this](const Args& a) {
+      return handlePopWithOptionalCount(a, "rpop", [this](const std::string& k, uint64_t c) {
+        return theStorage.lists.popBack(k, c);
+      });
+    }},
+
+    // List commands (unique logic)
+    {"LLEN",         [this](const Args& a) { return handleLlen(a); }},
+    {"LINDEX",       [this](const Args& a) { return handleLindex(a); }},
+    {"LINSERT",      [this](const Args& a) { return handleLinsert(a); }},
+    {"LRANGE",       [this](const Args& a) { return handleLrange(a); }},
+    {"LREM",         [this](const Args& a) { return handleLrem(a); }},
+    {"LSET",         [this](const Args& a) { return handleLset(a); }},
+    {"LTRIM",        [this](const Args& a) { return handleLtrim(a); }},
+    {"LMOVE",        [this](const Args& a) { return handleLmove(a); }},
+    {"LPOS",         [this](const Args& a) { return handleLpos(a); }},
+    {"LMPOP",        [this](const Args& a) { return handleLmpop(a); }},
+
+    // Set commands (generic multi-key ops)
+    {"SDIFF",        [this](const Args& a) {
+      return handleSetOp(a, "sdiff", 1, [this](const std::vector<std::string_view>& k) {
+        return theStorage.sets.diff(k);
+      });
+    }},
+    {"SINTER",       [this](const Args& a) {
+      return handleSetOp(a, "sinter", 1, [this](const std::vector<std::string_view>& k) {
+        return theStorage.sets.inter(k);
+      });
+    }},
+    {"SUNION",       [this](const Args& a) {
+      return handleSetOp(a, "sunion", 1, [this](const std::vector<std::string_view>& k) {
+        return theStorage.sets.unionSets(k);
+      });
+    }},
+    {"SMEMBERS",     [this](const Args& a) {
+      return handleSetOp(a, "smembers", 1, [this](const std::vector<std::string_view>& k) {
+        return theStorage.sets.members(std::string(k[0]));
+      });
+    }},
+
+    // Set pop/random (generic)
+    {"SPOP",         [this](const Args& a) {
+      return handlePopWithOptionalCount(a, "spop", [this](const std::string& k, uint64_t c) {
+        return theStorage.sets.pop(k, static_cast<size_t>(c));
+      });
+    }},
+    {"SRANDMEMBER",  [this](const Args& a) {
+      return handlePopWithOptionalCount(a, "srandmember", [this](const std::string& k, uint64_t c) {
+        return theStorage.sets.randMember(k, static_cast<int64_t>(c));
+      });
+    }},
+
+    // Set commands (unique logic)
+    {"SADD",         [this](const Args& a) { return handleSadd(a); }},
+    {"SCARD",        [this](const Args& a) { return handleScard(a); }},
+    {"SDIFFSTORE",   [this](const Args& a) { return handleSdiffstore(a); }},
+    {"SINTERCARD",   [this](const Args& a) { return handleSintercard(a); }},
+    {"SINTERSTORE",  [this](const Args& a) { return handleSinterstore(a); }},
+    {"SISMEMBER",    [this](const Args& a) { return handleSismember(a); }},
+    {"SMISMEMBER",   [this](const Args& a) { return handleSmismember(a); }},
+    {"SMOVE",        [this](const Args& a) { return handleSmove(a); }},
+    {"SREM",         [this](const Args& a) { return handleSrem(a); }},
+    {"SUNIONSTORE",  [this](const Args& a) { return handleSunionstore(a); }},
+  };
+  // clang-format on
+
+  for (auto& myEntry : myEntries) {
+    theHandlers[myEntry.name] = std::move(myEntry.handler);
+  }
 }
 
-std::string RespHandler::handle(const std::vector<std::string>& aArgs) {
+std::string RespHandler::handle(const Args& aArgs) {
   if (aArgs.empty()) {
     return RespParser::formatError("ERR empty command");
   }
@@ -97,140 +233,48 @@ std::string RespHandler::handle(const std::vector<std::string>& aArgs) {
 
 // ---- General commands ----
 
-std::string RespHandler::handlePing(const std::vector<std::string>& aArgs) {
+std::string RespHandler::handlePing(const Args& aArgs) {
   if (aArgs.size() > 1) {
     return RespParser::formatBulkString(aArgs[1]);
   }
   return RespParser::formatSimpleString("PONG");
 }
 
-std::string RespHandler::handleQuit(const std::vector<std::string>&) {
+std::string RespHandler::handleQuit(const Args&) {
   return RespParser::formatSimpleString("OK");
 }
 
-std::string RespHandler::handleCommand(const std::vector<std::string>&) {
+std::string RespHandler::handleCommand(const Args&) {
   return RespParser::formatEmptyArray();
 }
 
-std::string RespHandler::handleClient(const std::vector<std::string>&) {
+std::string RespHandler::handleClient(const Args&) {
   return RespParser::formatSimpleString("OK");
 }
 
-std::string RespHandler::handleSelect(const std::vector<std::string>&) {
+std::string RespHandler::handleSelect(const Args&) {
   return RespParser::formatSimpleString("OK");
 }
 
-std::string RespHandler::handleInfo(const std::vector<std::string>&) {
+std::string RespHandler::handleInfo(const Args&) {
   return RespParser::formatBulkString(
       "# Server\r\noktoplus_version:0.1.0\r\n");
 }
 
 // ---- List commands ----
 
-std::string RespHandler::handleLpush(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'lpush' command");
-  }
-  const auto& myKey = aArgs[1];
-  std::vector<std::string_view> myValues;
-  myValues.reserve(aArgs.size() - 2);
-  for (size_t i = 2; i < aArgs.size(); ++i) {
-    myValues.emplace_back(aArgs[i]);
-  }
-  auto mySize = theStorage.lists.pushFront(myKey, myValues);
-  return RespParser::formatInteger(static_cast<int64_t>(mySize));
-}
+std::string RespHandler::handleLlen(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 2, "llen");
+  if (!myErr.empty()) return myErr;
 
-std::string RespHandler::handleRpush(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'rpush' command");
-  }
-  const auto& myKey = aArgs[1];
-  std::vector<std::string_view> myValues;
-  myValues.reserve(aArgs.size() - 2);
-  for (size_t i = 2; i < aArgs.size(); ++i) {
-    myValues.emplace_back(aArgs[i]);
-  }
-  auto mySize = theStorage.lists.pushBack(myKey, myValues);
-  return RespParser::formatInteger(static_cast<int64_t>(mySize));
-}
-
-std::string RespHandler::handleLpop(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 2) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'lpop' command");
-  }
-  const auto& myKey   = aArgs[1];
-  uint64_t    myCount = 1;
-  bool        myMulti = false;
-
-  if (aArgs.size() > 2) {
-    myCount = std::stoull(aArgs[2]);
-    myMulti = true;
-  }
-
-  auto myValues = theStorage.lists.popFront(myKey, myCount);
-
-  if (myMulti) {
-    std::vector<std::string> myFormatted;
-    for (const auto& myVal : myValues) {
-      myFormatted.push_back(RespParser::formatBulkString(myVal));
-    }
-    return RespParser::formatArray(myFormatted);
-  }
-
-  if (myValues.empty()) {
-    return RespParser::formatNullBulkString();
-  }
-  return RespParser::formatBulkString(myValues.front());
-}
-
-std::string RespHandler::handleRpop(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 2) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'rpop' command");
-  }
-  const auto& myKey   = aArgs[1];
-  uint64_t    myCount = 1;
-  bool        myMulti = false;
-
-  if (aArgs.size() > 2) {
-    myCount = std::stoull(aArgs[2]);
-    myMulti = true;
-  }
-
-  auto myValues = theStorage.lists.popBack(myKey, myCount);
-
-  if (myMulti) {
-    std::vector<std::string> myFormatted;
-    for (const auto& myVal : myValues) {
-      myFormatted.push_back(RespParser::formatBulkString(myVal));
-    }
-    return RespParser::formatArray(myFormatted);
-  }
-
-  if (myValues.empty()) {
-    return RespParser::formatNullBulkString();
-  }
-  return RespParser::formatBulkString(myValues.front());
-}
-
-std::string RespHandler::handleLlen(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 2) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'llen' command");
-  }
   auto mySize = theStorage.lists.size(aArgs[1]);
   return RespParser::formatInteger(static_cast<int64_t>(mySize));
 }
 
-std::string RespHandler::handleLindex(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'lindex' command");
-  }
+std::string RespHandler::handleLindex(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 3, "lindex");
+  if (!myErr.empty()) return myErr;
+
   auto myResult = theStorage.lists.index(aArgs[1], std::stoll(aArgs[2]));
   if (myResult) {
     return RespParser::formatBulkString(myResult.value());
@@ -238,11 +282,10 @@ std::string RespHandler::handleLindex(const std::vector<std::string>& aArgs) {
   return RespParser::formatNullBulkString();
 }
 
-std::string RespHandler::handleLinsert(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 5) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'linsert' command");
-  }
+std::string RespHandler::handleLinsert(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 5, "linsert");
+  if (!myErr.empty()) return myErr;
+
   auto myPosStr = toUpper(aArgs[2]);
 
   stor::Lists::Position myPosition;
@@ -262,37 +305,28 @@ std::string RespHandler::handleLinsert(const std::vector<std::string>& aArgs) {
   return RespParser::formatInteger(0);
 }
 
-std::string RespHandler::handleLrange(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 4) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'lrange' command");
-  }
+std::string RespHandler::handleLrange(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 4, "lrange");
+  if (!myErr.empty()) return myErr;
+
   auto myValues =
       theStorage.lists.range(aArgs[1], std::stoll(aArgs[2]), std::stoll(aArgs[3]));
-
-  std::vector<std::string> myFormatted;
-  myFormatted.reserve(myValues.size());
-  for (const auto& myVal : myValues) {
-    myFormatted.push_back(RespParser::formatBulkString(myVal));
-  }
-  return RespParser::formatArray(myFormatted);
+  return formatBulkStringArray(myValues);
 }
 
-std::string RespHandler::handleLrem(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 4) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'lrem' command");
-  }
+std::string RespHandler::handleLrem(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 4, "lrem");
+  if (!myErr.empty()) return myErr;
+
   auto myRemoved =
       theStorage.lists.remove(aArgs[1], std::stoll(aArgs[2]), aArgs[3]);
   return RespParser::formatInteger(static_cast<int64_t>(myRemoved));
 }
 
-std::string RespHandler::handleLset(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 4) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'lset' command");
-  }
+std::string RespHandler::handleLset(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 4, "lset");
+  if (!myErr.empty()) return myErr;
+
   auto myStatus =
       theStorage.lists.set(aArgs[1], std::stoll(aArgs[2]), aArgs[3]);
   switch (myStatus) {
@@ -306,50 +340,18 @@ std::string RespHandler::handleLset(const std::vector<std::string>& aArgs) {
   return RespParser::formatError("ERR internal error");
 }
 
-std::string RespHandler::handleLtrim(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 4) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'ltrim' command");
-  }
+std::string RespHandler::handleLtrim(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 4, "ltrim");
+  if (!myErr.empty()) return myErr;
+
   theStorage.lists.trim(aArgs[1], std::stoll(aArgs[2]), std::stoll(aArgs[3]));
   return RespParser::formatSimpleString("OK");
 }
 
-std::string RespHandler::handleLpushx(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'lpushx' command");
-  }
-  const auto& myKey = aArgs[1];
-  std::vector<std::string_view> myValues;
-  myValues.reserve(aArgs.size() - 2);
-  for (size_t i = 2; i < aArgs.size(); ++i) {
-    myValues.emplace_back(aArgs[i]);
-  }
-  auto mySize = theStorage.lists.pushFrontExist(myKey, myValues);
-  return RespParser::formatInteger(static_cast<int64_t>(mySize));
-}
+std::string RespHandler::handleLmove(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 5, "lmove");
+  if (!myErr.empty()) return myErr;
 
-std::string RespHandler::handleRpushx(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'rpushx' command");
-  }
-  const auto& myKey = aArgs[1];
-  std::vector<std::string_view> myValues;
-  myValues.reserve(aArgs.size() - 2);
-  for (size_t i = 2; i < aArgs.size(); ++i) {
-    myValues.emplace_back(aArgs[i]);
-  }
-  auto mySize = theStorage.lists.pushBackExist(myKey, myValues);
-  return RespParser::formatInteger(static_cast<int64_t>(mySize));
-}
-
-std::string RespHandler::handleLmove(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 5) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'lmove' command");
-  }
   auto mySrcDir  = parseDirection(aArgs[3]);
   auto myDestDir = parseDirection(aArgs[4]);
 
@@ -361,11 +363,10 @@ std::string RespHandler::handleLmove(const std::vector<std::string>& aArgs) {
   return RespParser::formatNullBulkString();
 }
 
-std::string RespHandler::handleLpos(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'lpos' command");
-  }
+std::string RespHandler::handleLpos(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 3, "lpos");
+  if (!myErr.empty()) return myErr;
+
   const auto& myKey   = aArgs[1];
   const auto& myValue = aArgs[2];
 
@@ -405,12 +406,9 @@ std::string RespHandler::handleLpos(const std::vector<std::string>& aArgs) {
       static_cast<int64_t>(myPositions.front()));
 }
 
-std::string RespHandler::handleLmpop(const std::vector<std::string>& aArgs) {
-  // LMPOP numkeys key [key ...] LEFT|RIGHT [COUNT count]
-  if (aArgs.size() < 4) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'lmpop' command");
-  }
+std::string RespHandler::handleLmpop(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 4, "lmpop");
+  if (!myErr.empty()) return myErr;
 
   const uint64_t myNumKeys = std::stoull(aArgs[1]);
   if (aArgs.size() < 2 + myNumKeys + 1) {
@@ -436,101 +434,40 @@ std::string RespHandler::handleLmpop(const std::vector<std::string>& aArgs) {
   if (myValues.empty()) {
     return RespParser::formatNullBulkString();
   }
-
-  std::vector<std::string> myFormatted;
-  for (const auto& myVal : myValues) {
-    myFormatted.push_back(RespParser::formatBulkString(myVal));
-  }
-  return RespParser::formatArray(myFormatted);
+  return formatBulkStringArray(myValues);
 }
 
 // ---- Set commands ----
 
-std::string RespHandler::handleSadd(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'sadd' command");
-  }
-  const auto& myKey = aArgs[1];
-  std::vector<std::string_view> myValues;
-  myValues.reserve(aArgs.size() - 2);
-  for (size_t i = 2; i < aArgs.size(); ++i) {
-    myValues.emplace_back(aArgs[i]);
-  }
-  auto mySize = theStorage.sets.add(myKey, myValues);
+std::string RespHandler::handleSadd(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 3, "sadd");
+  if (!myErr.empty()) return myErr;
+
+  auto myValues = extractValues(aArgs, 2);
+  auto mySize   = theStorage.sets.add(aArgs[1], myValues);
   return RespParser::formatInteger(static_cast<int64_t>(mySize));
 }
 
-std::string RespHandler::handleScard(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 2) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'scard' command");
-  }
+std::string RespHandler::handleScard(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 2, "scard");
+  if (!myErr.empty()) return myErr;
+
   auto mySize = theStorage.sets.cardinality(aArgs[1]);
   return RespParser::formatInteger(static_cast<int64_t>(mySize));
 }
 
-std::string RespHandler::handleSdiff(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 2) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'sdiff' command");
-  }
-  std::vector<std::string_view> myKeys;
-  myKeys.reserve(aArgs.size() - 1);
-  for (size_t i = 1; i < aArgs.size(); ++i) {
-    myKeys.emplace_back(aArgs[i]);
-  }
-  auto myResult = theStorage.sets.diff(myKeys);
+std::string RespHandler::handleSdiffstore(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 3, "sdiffstore");
+  if (!myErr.empty()) return myErr;
 
-  std::vector<std::string> myFormatted;
-  myFormatted.reserve(myResult.size());
-  for (const auto& myVal : myResult) {
-    myFormatted.push_back(RespParser::formatBulkString(myVal));
-  }
-  return RespParser::formatArray(myFormatted);
-}
-
-std::string RespHandler::handleSdiffstore(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'sdiffstore' command");
-  }
-  const auto& myDest = aArgs[1];
-  std::vector<std::string_view> myKeys;
-  myKeys.reserve(aArgs.size() - 2);
-  for (size_t i = 2; i < aArgs.size(); ++i) {
-    myKeys.emplace_back(aArgs[i]);
-  }
-  auto mySize = theStorage.sets.diffStore(myDest, myKeys);
+  auto myKeys = extractValues(aArgs, 2);
+  auto mySize = theStorage.sets.diffStore(aArgs[1], myKeys);
   return RespParser::formatInteger(static_cast<int64_t>(mySize));
 }
 
-std::string RespHandler::handleSinter(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 2) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'sinter' command");
-  }
-  std::vector<std::string_view> myKeys;
-  myKeys.reserve(aArgs.size() - 1);
-  for (size_t i = 1; i < aArgs.size(); ++i) {
-    myKeys.emplace_back(aArgs[i]);
-  }
-  auto myResult = theStorage.sets.inter(myKeys);
-
-  std::vector<std::string> myFormatted;
-  myFormatted.reserve(myResult.size());
-  for (const auto& myVal : myResult) {
-    myFormatted.push_back(RespParser::formatBulkString(myVal));
-  }
-  return RespParser::formatArray(myFormatted);
-}
-
-std::string RespHandler::handleSintercard(const std::vector<std::string>& aArgs) {
-  // SINTERCARD numkeys key [key ...] [LIMIT limit]
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'sintercard' command");
-  }
+std::string RespHandler::handleSintercard(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 3, "sintercard");
+  if (!myErr.empty()) return myErr;
 
   const uint64_t myNumKeys = std::stoull(aArgs[1]);
   if (aArgs.size() < 2 + myNumKeys) {
@@ -557,35 +494,27 @@ std::string RespHandler::handleSintercard(const std::vector<std::string>& aArgs)
   return RespParser::formatInteger(static_cast<int64_t>(myCard));
 }
 
-std::string RespHandler::handleSinterstore(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'sinterstore' command");
-  }
-  const auto& myDest = aArgs[1];
-  std::vector<std::string_view> myKeys;
-  myKeys.reserve(aArgs.size() - 2);
-  for (size_t i = 2; i < aArgs.size(); ++i) {
-    myKeys.emplace_back(aArgs[i]);
-  }
-  auto mySize = theStorage.sets.interStore(myDest, myKeys);
+std::string RespHandler::handleSinterstore(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 3, "sinterstore");
+  if (!myErr.empty()) return myErr;
+
+  auto myKeys = extractValues(aArgs, 2);
+  auto mySize = theStorage.sets.interStore(aArgs[1], myKeys);
   return RespParser::formatInteger(static_cast<int64_t>(mySize));
 }
 
-std::string RespHandler::handleSismember(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'sismember' command");
-  }
+std::string RespHandler::handleSismember(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 3, "sismember");
+  if (!myErr.empty()) return myErr;
+
   bool myResult = theStorage.sets.isMember(aArgs[1], aArgs[2]);
   return RespParser::formatInteger(myResult ? 1 : 0);
 }
 
-std::string RespHandler::handleSmismember(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'smismember' command");
-  }
+std::string RespHandler::handleSmismember(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 3, "smismember");
+  if (!myErr.empty()) return myErr;
+
   std::vector<std::string> myValues(aArgs.begin() + 2, aArgs.end());
   auto myResults = theStorage.sets.misMember(aArgs[1], myValues);
 
@@ -597,136 +526,29 @@ std::string RespHandler::handleSmismember(const std::vector<std::string>& aArgs)
   return RespParser::formatArray(myFormatted);
 }
 
-std::string RespHandler::handleSmembers(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 2) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'smembers' command");
-  }
-  auto myResult = theStorage.sets.members(aArgs[1]);
+std::string RespHandler::handleSmove(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 4, "smove");
+  if (!myErr.empty()) return myErr;
 
-  std::vector<std::string> myFormatted;
-  myFormatted.reserve(myResult.size());
-  for (const auto& myVal : myResult) {
-    myFormatted.push_back(RespParser::formatBulkString(myVal));
-  }
-  return RespParser::formatArray(myFormatted);
-}
-
-std::string RespHandler::handleSmove(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 4) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'smove' command");
-  }
   bool myMoved = theStorage.sets.moveMember(aArgs[1], aArgs[2], aArgs[3]);
   return RespParser::formatInteger(myMoved ? 1 : 0);
 }
 
-std::string RespHandler::handleSpop(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 2) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'spop' command");
-  }
-  size_t myCount = 1;
-  bool   myMulti = false;
+std::string RespHandler::handleSrem(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 3, "srem");
+  if (!myErr.empty()) return myErr;
 
-  if (aArgs.size() > 2) {
-    myCount = std::stoull(aArgs[2]);
-    myMulti = true;
-  }
-
-  auto myValues = theStorage.sets.pop(aArgs[1], myCount);
-
-  if (myMulti) {
-    std::vector<std::string> myFormatted;
-    myFormatted.reserve(myValues.size());
-    for (const auto& myVal : myValues) {
-      myFormatted.push_back(RespParser::formatBulkString(myVal));
-    }
-    return RespParser::formatArray(myFormatted);
-  }
-
-  if (myValues.empty()) {
-    return RespParser::formatNullBulkString();
-  }
-  return RespParser::formatBulkString(myValues.front());
-}
-
-std::string RespHandler::handleSrandmember(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 2) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'srandmember' command");
-  }
-  int64_t myCount = 1;
-  bool    myMulti = false;
-
-  if (aArgs.size() > 2) {
-    myCount = std::stoll(aArgs[2]);
-    myMulti = true;
-  }
-
-  auto myValues = theStorage.sets.randMember(aArgs[1], myCount);
-
-  if (myMulti) {
-    std::vector<std::string> myFormatted;
-    myFormatted.reserve(myValues.size());
-    for (const auto& myVal : myValues) {
-      myFormatted.push_back(RespParser::formatBulkString(myVal));
-    }
-    return RespParser::formatArray(myFormatted);
-  }
-
-  if (myValues.empty()) {
-    return RespParser::formatNullBulkString();
-  }
-  return RespParser::formatBulkString(myValues.front());
-}
-
-std::string RespHandler::handleSrem(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'srem' command");
-  }
-  std::vector<std::string_view> myValues;
-  myValues.reserve(aArgs.size() - 2);
-  for (size_t i = 2; i < aArgs.size(); ++i) {
-    myValues.emplace_back(aArgs[i]);
-  }
+  auto myValues  = extractValues(aArgs, 2);
   auto myRemoved = theStorage.sets.remove(aArgs[1], myValues);
   return RespParser::formatInteger(static_cast<int64_t>(myRemoved));
 }
 
-std::string RespHandler::handleSunion(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 2) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'sunion' command");
-  }
-  std::vector<std::string_view> myKeys;
-  myKeys.reserve(aArgs.size() - 1);
-  for (size_t i = 1; i < aArgs.size(); ++i) {
-    myKeys.emplace_back(aArgs[i]);
-  }
-  auto myResult = theStorage.sets.unionSets(myKeys);
+std::string RespHandler::handleSunionstore(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 3, "sunionstore");
+  if (!myErr.empty()) return myErr;
 
-  std::vector<std::string> myFormatted;
-  myFormatted.reserve(myResult.size());
-  for (const auto& myVal : myResult) {
-    myFormatted.push_back(RespParser::formatBulkString(myVal));
-  }
-  return RespParser::formatArray(myFormatted);
-}
-
-std::string RespHandler::handleSunionstore(const std::vector<std::string>& aArgs) {
-  if (aArgs.size() < 3) {
-    return RespParser::formatError(
-        "ERR wrong number of arguments for 'sunionstore' command");
-  }
-  const auto& myDest = aArgs[1];
-  std::vector<std::string_view> myKeys;
-  myKeys.reserve(aArgs.size() - 2);
-  for (size_t i = 2; i < aArgs.size(); ++i) {
-    myKeys.emplace_back(aArgs[i]);
-  }
-  auto mySize = theStorage.sets.unionStore(myDest, myKeys);
+  auto myKeys = extractValues(aArgs, 2);
+  auto mySize = theStorage.sets.unionStore(aArgs[1], myKeys);
   return RespParser::formatInteger(static_cast<int64_t>(mySize));
 }
 

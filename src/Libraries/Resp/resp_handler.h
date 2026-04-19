@@ -1,9 +1,11 @@
 #pragma once
 
 #include "Storage/storage_context.h"
+#include "Resp/resp_parser.h"
 
 #include <functional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -17,54 +19,78 @@ class RespHandler
   std::string handle(const std::vector<std::string>& aArgs);
 
  private:
-  using HandlerFunc =
-      std::function<std::string(const std::vector<std::string>&)>;
+  using Args        = std::vector<std::string>;
+  using HandlerFunc = std::function<std::string(const Args&)>;
+
+  // Helpers
+  static std::string validateMinArgs(const Args& aArgs,
+                                     size_t aMin,
+                                     std::string_view aCommand);
+  static std::vector<std::string_view> extractValues(const Args& aArgs,
+                                                     size_t aFrom);
+  template <typename Container>
+  static std::string formatBulkStringArray(const Container& aValues) {
+    std::vector<std::string> myFormatted;
+    myFormatted.reserve(aValues.size());
+    for (const auto& myVal : aValues) {
+      myFormatted.push_back(RespParser::formatBulkString(myVal));
+    }
+    return RespParser::formatArray(myFormatted);
+  }
+
+  // Generic push: parameterized by storage method
+  using PushMethod = size_t (stor::Lists::*)(
+      const std::string&, const std::vector<std::string_view>&);
+  std::string handlePush(const Args& aArgs,
+                         std::string_view aCommand,
+                         PushMethod aMethod);
+
+  // Generic pop with optional count arg (single vs multi return)
+  template <typename PopFunc>
+  std::string handlePopWithOptionalCount(const Args& aArgs,
+                                         std::string_view aCommand,
+                                         PopFunc&& aPopFunc);
+
+  // Generic multi-key set operation -> bulk string array
+  template <typename SetOpFunc>
+  std::string handleSetOp(const Args& aArgs,
+                          std::string_view aCommand,
+                          size_t aKeysFrom,
+                          SetOpFunc&& aFunc);
 
   // General
-  std::string handlePing(const std::vector<std::string>& aArgs);
-  std::string handleQuit(const std::vector<std::string>& aArgs);
-  std::string handleCommand(const std::vector<std::string>& aArgs);
-  std::string handleClient(const std::vector<std::string>& aArgs);
-  std::string handleSelect(const std::vector<std::string>& aArgs);
-  std::string handleInfo(const std::vector<std::string>& aArgs);
+  std::string handlePing(const Args& aArgs);
+  std::string handleQuit(const Args& aArgs);
+  std::string handleCommand(const Args& aArgs);
+  std::string handleClient(const Args& aArgs);
+  std::string handleSelect(const Args& aArgs);
+  std::string handleInfo(const Args& aArgs);
 
   // List commands
-  std::string handleLpush(const std::vector<std::string>& aArgs);
-  std::string handleRpush(const std::vector<std::string>& aArgs);
-  std::string handleLpop(const std::vector<std::string>& aArgs);
-  std::string handleRpop(const std::vector<std::string>& aArgs);
-  std::string handleLlen(const std::vector<std::string>& aArgs);
-  std::string handleLindex(const std::vector<std::string>& aArgs);
-  std::string handleLinsert(const std::vector<std::string>& aArgs);
-  std::string handleLrange(const std::vector<std::string>& aArgs);
-  std::string handleLrem(const std::vector<std::string>& aArgs);
-  std::string handleLset(const std::vector<std::string>& aArgs);
-  std::string handleLtrim(const std::vector<std::string>& aArgs);
-  std::string handleLpushx(const std::vector<std::string>& aArgs);
-  std::string handleRpushx(const std::vector<std::string>& aArgs);
-  std::string handleLmove(const std::vector<std::string>& aArgs);
-  std::string handleLpos(const std::vector<std::string>& aArgs);
-  std::string handleLmpop(const std::vector<std::string>& aArgs);
+  std::string handleLlen(const Args& aArgs);
+  std::string handleLindex(const Args& aArgs);
+  std::string handleLinsert(const Args& aArgs);
+  std::string handleLrange(const Args& aArgs);
+  std::string handleLrem(const Args& aArgs);
+  std::string handleLset(const Args& aArgs);
+  std::string handleLtrim(const Args& aArgs);
+  std::string handleLmove(const Args& aArgs);
+  std::string handleLpos(const Args& aArgs);
+  std::string handleLmpop(const Args& aArgs);
 
   // Set commands
-  std::string handleSadd(const std::vector<std::string>& aArgs);
-  std::string handleScard(const std::vector<std::string>& aArgs);
-  std::string handleSdiff(const std::vector<std::string>& aArgs);
-  std::string handleSdiffstore(const std::vector<std::string>& aArgs);
-  std::string handleSinter(const std::vector<std::string>& aArgs);
-  std::string handleSintercard(const std::vector<std::string>& aArgs);
-  std::string handleSinterstore(const std::vector<std::string>& aArgs);
-  std::string handleSismember(const std::vector<std::string>& aArgs);
-  std::string handleSmismember(const std::vector<std::string>& aArgs);
-  std::string handleSmembers(const std::vector<std::string>& aArgs);
-  std::string handleSmove(const std::vector<std::string>& aArgs);
-  std::string handleSpop(const std::vector<std::string>& aArgs);
-  std::string handleSrandmember(const std::vector<std::string>& aArgs);
-  std::string handleSrem(const std::vector<std::string>& aArgs);
-  std::string handleSunion(const std::vector<std::string>& aArgs);
-  std::string handleSunionstore(const std::vector<std::string>& aArgs);
+  std::string handleSadd(const Args& aArgs);
+  std::string handleScard(const Args& aArgs);
+  std::string handleSdiffstore(const Args& aArgs);
+  std::string handleSintercard(const Args& aArgs);
+  std::string handleSinterstore(const Args& aArgs);
+  std::string handleSismember(const Args& aArgs);
+  std::string handleSmismember(const Args& aArgs);
+  std::string handleSmove(const Args& aArgs);
+  std::string handleSrem(const Args& aArgs);
+  std::string handleSunionstore(const Args& aArgs);
 
-  stor::StorageContext&                      theStorage;
+  stor::StorageContext&                        theStorage;
   std::unordered_map<std::string, HandlerFunc> theHandlers;
 };
 

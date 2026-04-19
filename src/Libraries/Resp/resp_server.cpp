@@ -66,8 +66,20 @@ void RespServer::shutdown() {
     return;
   }
 
+  // Wake the accept thread by self-connecting before closing the acceptor:
+  // on Linux, closing the listening fd from another thread does not reliably
+  // unblock a thread blocked in accept().
   boost::system::error_code myEc;
-  theAcceptor.close(myEc);
+  if (theAcceptor.is_open()) {
+    auto myLocal = theAcceptor.local_endpoint(myEc);
+    if (!myEc) {
+      boost::asio::io_context       myIo;
+      boost::asio::ip::tcp::socket  myWaker(myIo);
+      myWaker.connect(myLocal, myEc);
+      myWaker.close(myEc);
+    }
+    theAcceptor.close(myEc);
+  }
 
   if (theAcceptThread.joinable()) {
     theAcceptThread.join();

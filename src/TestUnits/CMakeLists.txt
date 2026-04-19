@@ -1,5 +1,6 @@
 add_subdirectory(TestCommands)
 add_subdirectory(TestConfigurations)
+add_subdirectory(TestResp)
 add_subdirectory(TestStorage)
 
 add_executable (testunit
@@ -9,6 +10,7 @@ add_executable (testunit
 set(testunit_LIBS
   testunit_testcommands
   testunit_testconfigurations
+  testunit_testresp
   testunit_teststorage
 )
 
