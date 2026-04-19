@@ -89,7 +89,14 @@ class SequenceContainer : public GenericContainer<CONTAINER>
   MoveMutex theMoveMutex;
 };
 
-using Lists   = SequenceContainer<std::list<std::string>>;
+// Lists used to be backed by std::list (one heap-alloc per push for
+// the node). std::deque amortises allocations across page-sized
+// blocks and supports random-access iterators (LRANGE / LINDEX walk
+// becomes O(1) per element instead of pointer-chasing list nodes).
+// Trade-off: insert/erase in the middle (LINSERT, LREM) is O(n)
+// element-shifts instead of O(1) node-relink, but those commands are
+// less hot than push/pop/index.
+using Lists   = SequenceContainer<std::deque<std::string>>;
 using Deques  = SequenceContainer<std::deque<std::string>>;
 using Vectors = SequenceContainer<std::vector<std::string>>;
 
