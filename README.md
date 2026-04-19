@@ -94,7 +94,7 @@ The "parallelism" sweep keeps `-P 1` and varies `-c`. Both servers saturate arou
 |     100 |       68,306 |    85,543 |          80% |
 |     200 |       70,872 |    82,305 |          86% |
 
-##### Many clients, pipelined, **random keys** — where Oktoplus would scale (today, mostly doesn't)
+##### Many clients, pipelined, **random keys** — where Oktoplus actually scales
 
 The hot-key sweep above tells you almost nothing about the multithreaded design — every client serialises on the same per-key mutex. To measure what *should* parallelise (different threads → different keys → different inner mutexes), the bench has a separate phase that combines `-c N`, `-P 16`, and `__rand_int__` keys. RPUSH at varying concurrency:
 
@@ -104,19 +104,17 @@ A slice from `concurrent_random_*_p16.csv` at `-c 100`:
 
 | Test            | Oktoplus rps | Redis rps | Okto / Redis |
 |-----------------|-------------:|----------:|-------------:|
-| RPUSH (rand)    |      179,856 |   961,538 |          19% |
-| LPOP (rand)     |      225,225 |   961,538 |          23% |
-| RPOP (rand)     |      349,650 |  1,030,928 |         34% |
-| **LLEN (rand)** |      970,874 | 1,136,364 |     **85%** |
-| SADD (rand)     |      196,078 |   934,579 |          21% |
-| SCARD (rand)    |      495,050 | 1,041,667 |          48% |
+| RPUSH (rand)    |      284,091 |   862,069 |          33% |
+| LPOP (rand)     |      366,300 |   862,069 |          42% |
+| RPOP (rand)     |      632,911 |  1,063,830 |         59% |
+| **LLEN (rand)** |    1,041,667 | 1,123,596 |     **93%** |
+| SADD (rand)     |      273,973 |   877,193 |          31% |
+| **SCARD (rand)**|    1,020,408 | 1,250,000 |     **82%** |
 
-Two things stand out:
+Where the outer-map work was made cheaper (PERF_TODO items C/D/B), the multithreaded design pulls its weight:
 
-  - **Reads scale**. `LLEN` at -c 10 reaches **1.02M rps** (95% of Redis), and stays above 950K all the way to -c 200. The read path takes only the outer shared structure briefly per call — Oktoplus already keeps up under heavy concurrency.
-  - **Writes don't yet**. `RPUSH (rand)` flatlines at ~180K rps from -c 50 onwards while Redis sustains ~900K. The cap is the single global outer mutex in `ContainerFunctorApplier` — every insert/erase serialises through it. Sharding the outer (item D in `benchmark_results/PERF_TODO.md`) is the unlock.
-
-This is the chart that should change once we land items C/B/D from the perf backlog.
+  - **Reads scale to Redis levels.** `LLEN` and `SCARD` at -c 100 are at 93% / 82% of Redis (~1M rps each). Both servers are bound by single-stream processing on this path, but Oktoplus's per-key parallelism keeps it within striking distance.
+  - **Writes scale much better than before.** `RPUSH (rand)` at -c 100 was at 19% of Redis when this section first appeared; it's now at **33%** (and the c100 RPOP is at **59%**). The remaining gap is per-key allocation (each new key still pays a `unique_ptr<ProtectedContainer>` heap alloc + outer-map insertion cost) plus thread-per-connection overhead. PERF_TODO item J (async I/O server) is the next big lever.
 
 ##### Single client, pipelined (`-P 16`), 256-byte values
 

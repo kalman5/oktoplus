@@ -52,7 +52,7 @@ strings, NUL-terminated so existing C-string code still works).
 - **How to measure**: same bench, watch `LPUSH (hot)` and `SADD (hot)`
   on both small and 256-byte tables.
 
-## B. Embed per-key mutex inline (kill the `unique_ptr<mutex>` alloc)
+## B. [x] Embed per-key mutex inline (landed in 7edecbc)
 
 `ProtectedContainer` heap-allocates a `boost::recursive_mutex`. On
 random-key workloads we pay one alloc per *new* key. Embedding the
@@ -73,7 +73,7 @@ Two ways to make it work:
 - **Effort**: medium for B1, large for B2.
 - **Risk**: medium — semantics change visible via `hostedKeys()`.
 
-## C. Outer map: `flat_hash_map<string, unique_ptr<ProtectedContainer>>`
+## C. [x] Outer map: `flat_hash_map<string, unique_ptr<ProtectedContainer>>` (landed in 0857641)
 
 Already analysed in the conversation. `node_hash_map` was a wash; the
 conjecture is that flat-table key-comparison-in-slot beats the extra
@@ -86,7 +86,7 @@ stable across rehash.
 - **Note**: depends on item B's decision (if B1 lands, the value
   could be embedded directly without `unique_ptr`).
 
-## D. Sharded outer (re-attempt, with `shared_mutex`)
+## D. [x] Sharded outer (kShards=32, landed in 2ad1979)
 
 Last try with `boost::mutex` per shard regressed single-client
 hot-key by 5–19% due to cache locality (hash + 1/N chance of hitting
@@ -192,18 +192,13 @@ use-after-free-on-shutdown latent bug Paladin flagged.
 
 ## Suggested order
 
-(F and H done — jemalloc linked, multi-iteration harness in place.)
+(B, C, D, F, H done — flat_hash_map outer, sharding, embedded mutex,
+multi-iteration harness, jemalloc all landed. RPUSH-rand c=100
+climbed from 19% → 33% of Redis; reads scaled to 82-93%.)
 
 1. **E** (PGO) — likely cheap win, validates the harness.
-2. **C** (`flat_hash_map<string, unique_ptr<…>>`) — small change,
-   targets per-key-lookup cost.
-3. **B1** or **B2** (embed mutex / kill alloc) — tackles the real
-   cost on random-key writes.
-4. **A** (SDS) — substantial work, decide based on residual gap
-   after 1–4.
-5. **J** (async server) — only if we want concurrent-client
-   throughput beyond the current ceiling.
-6. **I** (quicklist) — only if A landed and tiny-value workloads
+2. **A** (SDS) — substantial work, decide based on residual gap.
+3. **J** (async server) — biggest remaining lever for the c=100
+   write-throughput gap.
+4. **I** (quicklist) — only if A landed and tiny-value workloads
    are a real target.
-7. **D** (sharded outer) — only if (J) lands and we have real
-   contention on the outer mutex with many connections.
