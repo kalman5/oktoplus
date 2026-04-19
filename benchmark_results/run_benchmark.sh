@@ -13,6 +13,7 @@ REDIS_PORT=6380
 OKTO_PORT=6379
 NUM_OPS=100000
 KEYSPACE=100000
+LARGE_VALUE_SIZE=256
 STARTED_REDIS=0
 STARTED_OKTO=0
 REDIS_PID=
@@ -167,6 +168,18 @@ run_builtin_bench() {
         -r "$KEYSPACE" -t "$tests" --csv 2>/dev/null | extract_data_rows
 }
 
+# Same as run_builtin_bench but with -d <size>, which tells redis-benchmark
+# to pad the built-in test value to <size> bytes.
+run_builtin_bench_d() {
+    local port=$1
+    local clients=$2
+    local pipeline=$3
+    local tests=$4
+    local datasize=$5
+    $BENCH -h 127.0.0.1 -p "$port" -n "$NUM_OPS" -c "$clients" -P "$pipeline" \
+        -r "$KEYSPACE" -d "$datasize" -t "$tests" --csv 2>/dev/null | extract_data_rows
+}
+
 CSV_HEADER='"test","rps","avg_latency_ms","min_latency_ms","p50_latency_ms","p95_latency_ms","p99_latency_ms","max_latency_ms"'
 
 # --- Bring up servers ---
@@ -243,6 +256,52 @@ CONCURRENCIES=(1 10 50 100 200)
 for c in "${CONCURRENCIES[@]}"; do
     run_parallel_test "redis" $REDIS_PORT "$c"
     run_parallel_test "oktoplus" $OKTO_PORT "$c"
+done
+
+# --- PART 3: SPEED TESTS WITH LARGE VALUES ---
+#
+# Same shape as PART 1 but the value is LARGE_VALUE_SIZE bytes
+# (default 256). This stresses memcpy, string allocation, and the
+# write path; with std::string SSO the previous run hid most of those
+# costs because "val" fit inline. Output goes to
+# raw/speed_*_p${P}_d${LARGE_VALUE_SIZE}.csv so the existing reports
+# don't get mixed up.
+
+run_speed_test_large() {
+    local server_name=$1
+    local port=$2
+    local pipeline=$3
+    local outfile="$RESULTS_DIR/raw/speed_${server_name}_p${pipeline}_d${LARGE_VALUE_SIZE}.csv"
+
+    log "Speed test (large $LARGE_VALUE_SIZE-byte values): $server_name pipeline=$pipeline"
+    echo "$CSV_HEADER" > "$outfile"
+
+    flush_server "$port"
+
+    # Built-in: -d makes the value LARGE_VALUE_SIZE bytes.
+    run_builtin_bench_d "$port" 1 "$pipeline" "lpush,sadd,lrange_100" "$LARGE_VALUE_SIZE" \
+        >> "$outfile"
+
+    # Seed list data for POP tests (also with large values).
+    $BENCH -h 127.0.0.1 -p "$port" -n "$NUM_OPS" -c 1 -P "$pipeline" \
+        -r "$KEYSPACE" -d "$LARGE_VALUE_SIZE" -t lpush 2>/dev/null > /dev/null || true
+
+    # Custom commands with a literal LARGE_VALUE_SIZE-byte value.
+    local large_value
+    large_value=$(printf 'a%.0s' $(seq 1 "$LARGE_VALUE_SIZE"))
+
+    run_bench "$port" 1 "$pipeline" RPUSH mylist__rand_int__ "$large_value" >> "$outfile"
+    run_bench "$port" 1 "$pipeline" LPOP mylist__rand_int__ >> "$outfile"
+    run_bench "$port" 1 "$pipeline" RPOP mylist__rand_int__ >> "$outfile"
+    run_bench "$port" 1 "$pipeline" LLEN mylist__rand_int__ >> "$outfile"
+    run_bench "$port" 1 "$pipeline" SCARD myset__rand_int__ >> "$outfile"
+
+    log "  -> saved to $outfile"
+}
+
+for pipeline in 1 16; do
+    run_speed_test_large "redis" $REDIS_PORT "$pipeline"
+    run_speed_test_large "oktoplus" $OKTO_PORT "$pipeline"
 done
 
 log "All benchmarks complete. Raw results in $RESULTS_DIR/raw/"

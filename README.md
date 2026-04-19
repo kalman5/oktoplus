@@ -40,9 +40,35 @@ A scripted comparison against Redis on the same machine lives at `benchmark_resu
 
 Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffast-math -fno-semantic-interposition -funroll-loops`. Workload: 100k ops, 100k key-space, single client unless stated otherwise.
 
-![Single client -P 16 throughput](benchmark_results/chart_p16.svg)
+![Single client -P 16 throughput, small values](benchmark_results/chart_p16.svg)
+
+![Single client -P 16 throughput, 256-byte values](benchmark_results/chart_p16_d256.svg)
 
 ![LPUSH on a hot key, varying clients](benchmark_results/chart_concurrency.svg)
+
+##### Single client, pipelined (`-P 16`), 256-byte values
+
+The above table uses the default `redis-benchmark` value (3 bytes,
+fits in `std::string` SSO). Repeat the same workload with `-d 256` /
+a 256-byte custom value to stress `std::string` allocation +
+memcpy + write paths:
+
+| Test          | Oktoplus rps | Redis rps | Okto / Redis |
+|---------------|-------------:|----------:|-------------:|
+| LPUSH         |      311,526 |   355,872 |          88% |
+| SADD          |      363,636 |   375,940 |          97% |
+| LPUSH (LRANGE seed) | 305,810 |   380,228 |          80% |
+| LRANGE_100    |       37,821 |    54,025 |          70% |
+| RPUSH (rand, 256B) | 116,414 |   326,797 |          36% |
+| LPOP (rand)   |      195,312 |   347,222 |          56% |
+| RPOP (rand)   |      238,663 |   383,142 |          62% |
+| **LLEN**      |      440,529 |   395,257 |     **111%** |
+| **SCARD**     |      454,545 |   387,597 |     **117%** |
+
+Two takeaways:
+
+  - Read-only commands that don't touch the value (`LLEN`, `SCARD`) still beat Redis at any value size — they pay no value-allocation cost.
+  - The random-key gap is essentially **unchanged** when value size grows (RPUSH-rand 38% small → 36% large), confirming the bottleneck is per-*key* overhead (outer-map insert + per-key mutex allocation), not per-value cost.
 
 > Charts are generated from `benchmark_results/raw/*.csv` by `benchmark_results/make_chart.py` (no dependencies — pure-stdlib Python emitting SVG + HTML).
 >

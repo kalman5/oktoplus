@@ -284,8 +284,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <h3>Single client, no pipelining (-P 1) — network-bound</h3>
   <div class="box full"><canvas id="c_p1"></canvas></div>
 
-  <h3>Single client, pipelined (-P 16) — CPU-bound</h3>
+  <h3>Single client, pipelined (-P 16) — CPU-bound (small values)</h3>
   <div class="box full"><canvas id="c_p16"></canvas></div>
+
+  <h3>Single client, pipelined (-P 16) — large 256-byte values</h3>
+  <div class="box full"><canvas id="c_p16_d256"></canvas></div>
 
   <h3>LPUSH on a hot key, varying clients</h3>
   <div class="box full"><canvas id="c_conc"></canvas></div>
@@ -346,6 +349,7 @@ function line(id, p) {{
 
 bar('c_p1',  data.p1);
 bar('c_p16', data.p16);
+bar('c_p16_d256', data.p16_d256);
 line('c_conc', data.conc);
 </script>
 </body>
@@ -357,10 +361,11 @@ def write_html_report(
     out_path: pathlib.Path,
     p1: dict,
     p16: dict,
+    p16_d256: dict,
     conc: dict,
     subtitle: str,
 ) -> None:
-    payload = {"p1": p1, "p16": p16, "conc": conc}
+    payload = {"p1": p1, "p16": p16, "p16_d256": p16_d256, "conc": conc}
     out_path.write_text(
         HTML_TEMPLATE.format(
             subtitle=subtitle, data_json=json.dumps(payload, indent=2)
@@ -421,6 +426,51 @@ def main() -> int:
         out_path=HERE / "chart_concurrency.svg",
     )
 
+    # Large-value (-d 256) speed test, same shape as p16 but the value
+    # is 256 bytes. The custom RPUSH row's name contains the value
+    # ("aaaa…"), so look it up by prefix.
+    okto_p16_d256 = read_rps(RAW / "speed_oktoplus_p16_d256.csv")
+    redis_p16_d256 = read_rps(RAW / "speed_redis_p16_d256.csv")
+
+    def lookup(d, prefix):
+        for k, v in d.items():
+            if k.startswith(prefix):
+                return v
+        raise KeyError(prefix)
+
+    okto_d256 = [
+        okto_p16_d256["LPUSH"],
+        okto_p16_d256["SADD"],
+        okto_p16_d256["LRANGE_100 (first 100 elements)"],
+        lookup(okto_p16_d256, "RPUSH "),
+        okto_p16_d256["LPOP mylist__rand_int__"],
+        okto_p16_d256["RPOP mylist__rand_int__"],
+        okto_p16_d256["LLEN mylist__rand_int__"],
+        okto_p16_d256["SCARD myset__rand_int__"],
+    ]
+    redis_d256 = [
+        redis_p16_d256["LPUSH"],
+        redis_p16_d256["SADD"],
+        redis_p16_d256["LRANGE_100 (first 100 elements)"],
+        lookup(redis_p16_d256, "RPUSH "),
+        redis_p16_d256["LPOP mylist__rand_int__"],
+        redis_p16_d256["RPOP mylist__rand_int__"],
+        redis_p16_d256["LLEN mylist__rand_int__"],
+        redis_p16_d256["SCARD myset__rand_int__"],
+    ]
+    y_max_d256 = max(max(okto_d256), max(redis_d256)) * 1.10
+
+    grouped_bar_chart(
+        title="Single client, -P 16, large 256-byte values — rps (higher is better)",
+        series=[
+            ("Oktoplus", okto_d256, "#3fb950"),
+            ("Redis", redis_d256, "#f85149"),
+        ],
+        categories=cats,
+        y_max=y_max_d256,
+        out_path=HERE / "chart_p16_d256.svg",
+    )
+
     # Interactive HTML report (Chart.js, viewable via htmlpreview.github.io).
     okto_p1 = read_rps(RAW / "speed_oktoplus_p1.csv")
     redis_p1 = read_rps(RAW / "speed_redis_p1.csv")
@@ -441,6 +491,11 @@ def main() -> int:
             "okto":  okto_vals,
             "redis": redis_vals,
         },
+        p16_d256={
+            "labels": cats,
+            "okto":  okto_d256,
+            "redis": redis_d256,
+        },
         conc={
             "labels": [str(c) for c in concurrencies],
             "okto":  okto_lpush,
@@ -448,7 +503,10 @@ def main() -> int:
         },
     )
 
-    print("wrote chart_p16.svg, chart_concurrency.svg, report.html")
+    print(
+        "wrote chart_p16.svg, chart_p16_d256.svg, chart_concurrency.svg, "
+        "report.html"
+    )
     return 0
 
 
