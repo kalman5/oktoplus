@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="880" height="380" viewBox="0 0 880 380" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12">
 <rect width="880" height="380" fill="#ffffff"/>
-<text x="440.0" y="22" text-anchor="middle" fill="#24292f" font-size="15" font-weight="600">LPUSH on a hot key, varying clients (-P 1) — rps (higher is better)</text>
+<text x="440.0" y="22" text-anchor="middle" fill="#24292f" font-size="15" font-weight="600">LPUSH (hot key, fixed name), varying clients (-P 1) — rps (higher is better)</text>
 <line x1="70" y1="320.0" x2="860" y2="320.0" stroke="#d0d7de" stroke-width="1"/>
 <text x="62" y="324.0" text-anchor="end" fill="#24292f">0</text>
 <line x1="70" y1="268.0" x2="860" y2="268.0" stroke="#d0d7de" stroke-width="1"/>

@@ -39,14 +39,23 @@ def read_rps(path: pathlib.Path) -> dict[str, float]:
 
 
 def short_name(test: str) -> str:
-    """Strip redis-benchmark's verbose annotations to a short label."""
+    """Strip redis-benchmark's verbose annotations to a short label.
+
+    redis-benchmark's built-in tests (LPUSH, SADD, LRANGE_100) use a
+    fixed key — the workload hammers a single hot container. Our
+    explicit per-command rows (RPUSH/LPOP/RPOP/LLEN/SCARD on
+    mylist__rand_int__) substitute __rand_int__ with a random integer,
+    spreading load across 100k distinct keys. Tag the random-key
+    variants explicitly so the chart doesn't silently compare apples
+    and oranges.
+    """
     if test.startswith("LPUSH (needed"):
         return "LPUSH (warmup)"
     if test.startswith("LRANGE_100"):
         return "LRANGE_100"
-    if " " in test:
-        # "RPUSH mylist__rand_int__ val" -> "RPUSH"
-        return test.split()[0]
+    if "__rand_int__" in test:
+        # "RPUSH mylist__rand_int__ val" -> "RPUSH (rand)"
+        return f"{test.split()[0]} (rand)"
     return test
 
 
@@ -401,7 +410,7 @@ def main() -> int:
         redis_lpush.append(read_rps(RAW / f"parallel_redis_c{c}.csv")["LPUSH"])
 
     line_chart(
-        title="LPUSH on a hot key, varying clients (-P 1) — rps (higher is better)",
+        title="LPUSH (hot key, fixed name), varying clients (-P 1) — rps (higher is better)",
         x_values=concurrencies,
         series=[
             ("Oktoplus", okto_lpush, "#3fb950"),
