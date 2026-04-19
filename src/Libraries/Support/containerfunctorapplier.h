@@ -1,7 +1,7 @@
 #pragma once
 
+#include <memory>
 #include <optional>
-#include <unordered_map>
 #include <utility>
 
 #include <boost/thread/lock_guard.hpp>
@@ -9,6 +9,7 @@
 #include <boost/thread/recursive_mutex.hpp>
 
 #include <absl/base/thread_annotations.h>
+#include <absl/container/flat_hash_map.h>
 
 #include <glog/logging.h>
 
@@ -80,11 +81,14 @@ class ContainerFunctorApplier
     }
   };
 
-  // Maps a name to the actual container.
-  using Storage = std::unordered_map<std::string,
-                                     ProtectedContainer,
-                                     string_hash,
-                                     std::equal_to<>>;
+  // Maps a name to the actual container, value held in a unique_ptr so
+  // raw pointers into the container survive rehash of the outer table
+  // (flat_hash_map relocates entries on rehash; the unique_ptr indirection
+  // keeps the ProtectedContainer at a stable heap address).
+  using Storage = absl::flat_hash_map<std::string,
+                                      std::unique_ptr<ProtectedContainer>,
+                                      string_hash,
+                                      std::equal_to<>>;
 
   // The following mutex protects the Storage container (each container
   // has his own ProtectedContainer).
@@ -106,8 +110,8 @@ void ContainerFunctorApplier<CONTAINER>::clear() {
   // holds it; if a per-key op is in flight we wait for the outer mutex
   // and then for the inner.
   for (auto& myEntry : theStorage) {
-    boost::lock_guard<ContainerMutex> myInner(*myEntry.second.mutex);
-    myEntry.second.storage.clear();
+    boost::lock_guard<ContainerMutex> myInner(*myEntry.second->mutex);
+    myEntry.second->storage.clear();
   }
   theStorage.clear();
 }
@@ -124,11 +128,12 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
   while (true) {
     boost::lock_guard myLock(theMutex);
 
-    auto [myIterator, myInserted] =
-        theStorage.emplace(std::pair(aName, ProtectedContainer()));
-    LOG_IF(INFO, myInserted)
-        << "Inserted new container at key \"" << aName << "\"";
-    myContainer = &myIterator->second;
+    auto [myIterator, myInserted] = theStorage.try_emplace(aName);
+    if (myInserted) {
+      myIterator->second = std::make_unique<ProtectedContainer>();
+      LOG(INFO) << "Inserted new container at key \"" << aName << "\"";
+    }
+    myContainer = myIterator->second.get();
     mySecondLevelLock.emplace(*myContainer->mutex, boost::try_to_lock_t());
     if (mySecondLevelLock->owns_lock()) {
       break;
@@ -181,7 +186,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
       if (myIt == theStorage.end()) {
         return;
       }
-      myContainer = &myIt->second;
+      myContainer = myIt->second.get();
       mySecondLevelLock.emplace(*myContainer->mutex, boost::try_to_lock_t());
       if (mySecondLevelLock->owns_lock()) {
         break;
@@ -202,21 +207,22 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
       return;
     }
 
-    // The following mutex needs to be declared *before* the following lock,
-    // indeed in case we do destroy a container we need to have the mutex
-    // surviving his lock.
-    std::unique_ptr<ContainerMutex>   myMutex;
-    boost::lock_guard<ContainerMutex> mySecondLevelLock(*myIt->second.mutex);
+    // Move the unique_ptr<ProtectedContainer> out of the map so the
+    // ProtectedContainer (and its embedded mutex) outlives the
+    // lock_guard that's about to lock it. Destruction of the
+    // unique_ptr happens at function scope exit, after the lock_guard
+    // destructor releases the inner mutex.
+    std::unique_ptr<ProtectedContainer> myEvicted = std::move(myIt->second);
+    boost::lock_guard<ContainerMutex>   mySecondLevelLock(*myEvicted->mutex);
 
     // If in the mean time the container has got new entries we can not destroy
     // it.
-    if (not myIt->second.storage.empty()) {
+    if (not myEvicted->storage.empty()) {
+      // Put it back. (Rare; race window is tiny.)
+      myIt->second = std::move(myEvicted);
       return;
     }
 
-    // We are destroying the container and the associated mutex, move the mutex
-    // and destroy the container.
-    myMutex = std::move(myIt->second.mutex);
     theStorage.erase(myIt);
     LOG(INFO) << "Removed container at key \"" << aName << "\"";
   }
@@ -238,7 +244,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
     if (myIt == theStorage.end()) {
       return;
     }
-    myContainer = &myIt->second;
+    myContainer = myIt->second.get();
     mySecondLevelLock.emplace(*myContainer->mutex, boost::try_to_lock_t());
     if (mySecondLevelLock->owns_lock()) {
       break;
