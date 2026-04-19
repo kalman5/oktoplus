@@ -330,4 +330,47 @@ for pipeline in 1 16; do
     run_speed_test_large "oktoplus" $OKTO_PORT "$pipeline"
 done
 
+# --- PART 4: PARALLEL + PIPELINED + RANDOM KEY ---
+#
+# The Part-2 sweep keeps -P 1 and uses fixed-key built-ins; the
+# random-key rows are tucked in alongside but the per-command TCP
+# overhead caps both servers below where their CPU could go. This
+# phase combines (i) many clients, (ii) -P 16 pipelining, and
+# (iii) random keys spread across the keyspace — i.e. the workload
+# where Oktoplus's multithreading should actually engage. Output
+# goes to raw/concurrent_random_${server}_c{N}_p16.csv so the
+# existing parallel CSVs aren't disturbed.
+
+run_concurrent_random_test() {
+    local server_name=$1
+    local port=$2
+    local clients=$3
+    local outfile="$RESULTS_DIR/raw/concurrent_random_${server_name}_c${clients}_p16.csv"
+
+    log "Concurrent random-key test: $server_name clients=$clients pipeline=16"
+    echo "$CSV_HEADER" > "$outfile"
+
+    flush_server "$port"
+
+    # Custom commands using __rand_int__ in the key — fan out across
+    # KEYSPACE distinct keys.
+    run_bench "$port" "$clients" 16 RPUSH mylist__rand_int__ val >> "$outfile"
+    # Seed list data for POP tests at this concurrency.
+    seed_list_data "$port" "$clients" 16
+    run_bench "$port" "$clients" 16 LPOP mylist__rand_int__ >> "$outfile"
+    run_bench "$port" "$clients" 16 RPOP mylist__rand_int__ >> "$outfile"
+    run_bench "$port" "$clients" 16 LLEN mylist__rand_int__ >> "$outfile"
+    run_bench "$port" "$clients" 16 SADD myset__rand_int__ val >> "$outfile"
+    run_bench "$port" "$clients" 16 SCARD myset__rand_int__ >> "$outfile"
+
+    log "  -> saved to $outfile"
+}
+
+CONCURRENT_RANDOM_C=(10 50 100 200)
+
+for c in "${CONCURRENT_RANDOM_C[@]}"; do
+    run_concurrent_random_test "redis" $REDIS_PORT "$c"
+    run_concurrent_random_test "oktoplus" $OKTO_PORT "$c"
+done
+
 log "All benchmarks complete. Raw results in $RESULTS_DIR/raw/"

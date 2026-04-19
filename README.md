@@ -94,6 +94,30 @@ The "parallelism" sweep keeps `-P 1` and varies `-c`. Both servers saturate arou
 |     100 |       68,306 |    85,543 |          80% |
 |     200 |       70,872 |    82,305 |          86% |
 
+##### Many clients, pipelined, **random keys** — where Oktoplus would scale (today, mostly doesn't)
+
+The hot-key sweep above tells you almost nothing about the multithreaded design — every client serialises on the same per-key mutex. To measure what *should* parallelise (different threads → different keys → different inner mutexes), the bench has a separate phase that combines `-c N`, `-P 16`, and `__rand_int__` keys. RPUSH at varying concurrency:
+
+![RPUSH random key, varying clients (-P 16)](benchmark_results/chart_concurrency_random.svg)
+
+A slice from `concurrent_random_*_p16.csv` at `-c 100`:
+
+| Test            | Oktoplus rps | Redis rps | Okto / Redis |
+|-----------------|-------------:|----------:|-------------:|
+| RPUSH (rand)    |      179,856 |   961,538 |          19% |
+| LPOP (rand)     |      225,225 |   961,538 |          23% |
+| RPOP (rand)     |      349,650 |  1,030,928 |         34% |
+| **LLEN (rand)** |      970,874 | 1,136,364 |     **85%** |
+| SADD (rand)     |      196,078 |   934,579 |          21% |
+| SCARD (rand)    |      495,050 | 1,041,667 |          48% |
+
+Two things stand out:
+
+  - **Reads scale**. `LLEN` at -c 10 reaches **1.02M rps** (95% of Redis), and stays above 950K all the way to -c 200. The read path takes only the outer shared structure briefly per call — Oktoplus already keeps up under heavy concurrency.
+  - **Writes don't yet**. `RPUSH (rand)` flatlines at ~180K rps from -c 50 onwards while Redis sustains ~900K. The cap is the single global outer mutex in `ContainerFunctorApplier` — every insert/erase serialises through it. Sharding the outer (item D in `benchmark_results/PERF_TODO.md`) is the unlock.
+
+This is the chart that should change once we land items C/B/D from the perf backlog.
+
 ##### Single client, pipelined (`-P 16`), 256-byte values
 
 Same workload as the small-value `-P 16` table above but the value is padded to 256 bytes (`-d 256` for built-ins, a 256-byte literal on the custom RPUSH). This stresses `std::string` allocation + memcpy + write paths.

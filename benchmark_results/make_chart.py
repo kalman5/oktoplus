@@ -407,6 +407,12 @@ def main() -> int:
         out_path=HERE / "chart_p16.svg",
     )
 
+    def lookup(d, prefix):
+        for k, v in d.items():
+            if k.startswith(prefix):
+                return v
+        raise KeyError(prefix)
+
     # Concurrency sweep on LPUSH (hot key).
     concurrencies = [1, 10, 50, 100, 200]
     okto_lpush, redis_lpush = [], []
@@ -426,17 +432,37 @@ def main() -> int:
         out_path=HERE / "chart_concurrency.svg",
     )
 
+    # Concurrent + pipelined + random key scaling chart, on RPUSH.
+    # Optional — only emit if the CSVs from PART 4 exist.
+    rand_concurrencies = [10, 50, 100, 200]
+    okto_rand_rpush, redis_rand_rpush = [], []
+    have_rand = True
+    for c in rand_concurrencies:
+        okto_path = RAW / f"concurrent_random_oktoplus_c{c}_p16.csv"
+        redis_path = RAW / f"concurrent_random_redis_c{c}_p16.csv"
+        if not okto_path.exists() or not redis_path.exists():
+            have_rand = False
+            break
+        okto_rand_rpush.append(lookup(read_rps(okto_path), "RPUSH "))
+        redis_rand_rpush.append(lookup(read_rps(redis_path), "RPUSH "))
+    if have_rand:
+        line_chart(
+            title="RPUSH (random key, -P 16), varying clients — rps (higher is better)",
+            x_values=rand_concurrencies,
+            series=[
+                ("Oktoplus", okto_rand_rpush, "#3fb950"),
+                ("Redis", redis_rand_rpush, "#f85149"),
+            ],
+            x_label="concurrent clients",
+            y_max=max(max(okto_rand_rpush), max(redis_rand_rpush)) * 1.10,
+            out_path=HERE / "chart_concurrency_random.svg",
+        )
+
     # Large-value (-d 256) speed test, same shape as p16 but the value
     # is 256 bytes. The custom RPUSH row's name contains the value
     # ("aaaa…"), so look it up by prefix.
     okto_p16_d256 = read_rps(RAW / "speed_oktoplus_p16_d256.csv")
     redis_p16_d256 = read_rps(RAW / "speed_redis_p16_d256.csv")
-
-    def lookup(d, prefix):
-        for k, v in d.items():
-            if k.startswith(prefix):
-                return v
-        raise KeyError(prefix)
 
     okto_d256 = [
         okto_p16_d256["LPUSH"],
