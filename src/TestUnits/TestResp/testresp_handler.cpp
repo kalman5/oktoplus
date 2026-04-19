@@ -81,3 +81,36 @@ TEST_F(TestRespHandler, sismember_present_and_absent) {
   EXPECT_EQ(":1\r\n", theHandler.handle({"SISMEMBER", "S", "x"}));
   EXPECT_EQ(":0\r\n", theHandler.handle({"SISMEMBER", "S", "z"}));
 }
+
+TEST_F(TestRespHandler, sadd_returns_newly_added_count) {
+  EXPECT_EQ(":3\r\n", theHandler.handle({"SADD", "S", "a", "b", "c"}));
+  EXPECT_EQ(":0\r\n", theHandler.handle({"SADD", "S", "a", "b", "c"}));
+  EXPECT_EQ(":1\r\n", theHandler.handle({"SADD", "S", "a", "d"}));
+  // Duplicate args on a new key: only one distinct insertion.
+  EXPECT_EQ(":1\r\n", theHandler.handle({"SADD", "K", "a", "a"}));
+}
+
+TEST_F(TestRespHandler, srandmember_negative_count_allowed) {
+  ASSERT_EQ(":2\r\n", theHandler.handle({"SADD", "S", "x", "y"}));
+  // SRANDMEMBER with negative count should return |count| items with
+  // possible repeats. Reply must be a 5-element array.
+  auto myReply = theHandler.handle({"SRANDMEMBER", "S", "-5"});
+  EXPECT_EQ(0u, myReply.find("*5\r\n")) << "reply was: " << myReply;
+}
+
+TEST_F(TestRespHandler, lmpop_returns_key_and_values_aggregate) {
+  ASSERT_EQ(":3\r\n", theHandler.handle({"RPUSH", "L1", "a", "b", "c"}));
+
+  // LMPOP 1 L1 LEFT COUNT 2 → [L1, [a, b]]
+  auto myReply =
+      theHandler.handle({"LMPOP", "1", "L1", "LEFT", "COUNT", "2"});
+  EXPECT_EQ(
+      "*2\r\n$2\r\nL1\r\n*2\r\n$1\r\na\r\n$1\r\nb\r\n",
+      myReply);
+}
+
+TEST_F(TestRespHandler, lmpop_no_keys_returns_null) {
+  auto myReply =
+      theHandler.handle({"LMPOP", "1", "missing", "LEFT", "COUNT", "2"});
+  EXPECT_EQ("$-1\r\n", myReply);
+}

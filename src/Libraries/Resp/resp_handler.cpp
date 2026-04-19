@@ -415,12 +415,6 @@ std::string RespHandler::handleLmpop(const Args& aArgs) {
     return RespParser::formatError("ERR syntax error");
   }
 
-  std::vector<std::string> myKeys;
-  myKeys.reserve(myNumKeys);
-  for (uint64_t i = 0; i < myNumKeys; ++i) {
-    myKeys.push_back(aArgs[2 + i]);
-  }
-
   auto myDirection = parseDirection(aArgs[2 + myNumKeys]);
 
   uint64_t myCount = 1;
@@ -429,12 +423,21 @@ std::string RespHandler::handleLmpop(const Args& aArgs) {
     myCount = std::stoull(aArgs[myIdx + 1]);
   }
 
-  auto myValues = theStorage.lists.multiplePop(myKeys, myDirection, myCount);
-
-  if (myValues.empty()) {
-    return RespParser::formatNullBulkString();
+  // LMPOP semantics: return the first key that yielded values, plus its
+  // popped values, as a 2-element array [key, [values]]. Null when none.
+  for (uint64_t i = 0; i < myNumKeys; ++i) {
+    const auto& myKey = aArgs[2 + i];
+    auto        myValues =
+        myDirection == stor::Lists::Direction::LEFT
+            ? theStorage.lists.popFront(myKey, myCount)
+            : theStorage.lists.popBack(myKey, myCount);
+    if (!myValues.empty()) {
+      return RespParser::formatArray(
+          {RespParser::formatBulkString(myKey),
+           formatBulkStringArray(myValues)});
+    }
   }
-  return formatBulkStringArray(myValues);
+  return RespParser::formatNullBulkString();
 }
 
 // ---- Set commands ----

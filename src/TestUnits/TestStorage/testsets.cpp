@@ -202,3 +202,49 @@ TEST_F(TestSets, randMember_negative) {
   ASSERT_EQ(5u, myResult.size());
   ASSERT_EQ(2u, mySets.cardinality("s1"));
 }
+
+TEST_F(TestSets, add_returns_newly_inserted_count) {
+  oktss::Sets mySets;
+
+  EXPECT_EQ(3u, mySets.add("s1", {"a", "b", "c"}));
+  EXPECT_EQ(0u, mySets.add("s1", {"a", "b", "c"}));
+  EXPECT_EQ(2u, mySets.add("s1", {"a", "d", "e"}));
+  EXPECT_EQ(0u, mySets.add("s2", {}));
+}
+
+TEST_F(TestSets, diffStore_overwrites_destination_when_empty) {
+  oktss::Sets mySets;
+
+  mySets.add("s1", {"a", "b"});
+  mySets.add("s2", {"a", "b"});
+  mySets.add("dest", {"stale"});
+
+  auto mySize = mySets.diffStore("dest", {"s1", "s2"});
+  EXPECT_EQ(0u, mySize);
+  EXPECT_EQ(0u, mySets.cardinality("dest"));
+  EXPECT_FALSE(mySets.isMember("dest", "stale"));
+}
+
+TEST_F(TestSets, interStore_overwrites_destination_when_empty) {
+  oktss::Sets mySets;
+
+  mySets.add("s1", {"a"});
+  mySets.add("s2", {"b"});
+  mySets.add("dest", {"stale"});
+
+  auto mySize = mySets.interStore("dest", {"s1", "s2"});
+  EXPECT_EQ(0u, mySize);
+  EXPECT_EQ(0u, mySets.cardinality("dest"));
+  EXPECT_FALSE(mySets.isMember("dest", "stale"));
+}
+
+TEST_F(TestSets, unionStore_overwrites_destination_when_empty) {
+  oktss::Sets mySets;
+
+  mySets.add("dest", {"stale"});
+
+  auto mySize = mySets.unionStore("dest", {"missing-a", "missing-b"});
+  EXPECT_EQ(0u, mySize);
+  EXPECT_EQ(0u, mySets.cardinality("dest"));
+  EXPECT_FALSE(mySets.isMember("dest", "stale"));
+}

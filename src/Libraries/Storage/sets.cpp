@@ -19,16 +19,17 @@ Sets::Sets()
 size_t Sets::add(const std::string&                   aName,
                  const std::vector<std::string_view>& aValues) {
 
-  size_t myRet;
+  size_t myAdded = 0;
 
-  theApplyer.performOnNew(aName, [&myRet, &aValues](Container& aContainer) {
+  theApplyer.performOnNew(aName, [&myAdded, &aValues](Container& aContainer) {
     for (const auto& myString : aValues) {
-      aContainer.insert(std::string(myString));
+      if (aContainer.insert(std::string(myString)).second) {
+        ++myAdded;
+      }
     }
-    myRet = aContainer.size();
   });
 
-  return myRet;
+  return myAdded;
 }
 
 size_t Sets::cardinality(const std::string& aName) const {
@@ -77,7 +78,10 @@ size_t Sets::diffStore(const std::string&                   aDestination,
   auto myResult = diff(aNames);
   auto mySize   = myResult.size();
 
-  if (!myResult.empty()) {
+  if (myResult.empty()) {
+    theApplyer.performOnExisting(
+        aDestination, [](Container& aContainer) { aContainer.clear(); });
+  } else {
     theApplyer.performOnNew(
         aDestination,
         [&myResult](Container& aContainer) { aContainer = std::move(myResult); });
@@ -118,7 +122,10 @@ size_t Sets::interStore(const std::string&                   aDestination,
   auto myResult = inter(aNames);
   auto mySize   = myResult.size();
 
-  if (!myResult.empty()) {
+  if (myResult.empty()) {
+    theApplyer.performOnExisting(
+        aDestination, [](Container& aContainer) { aContainer.clear(); });
+  } else {
     theApplyer.performOnNew(
         aDestination,
         [&myResult](Container& aContainer) { aContainer = std::move(myResult); });
@@ -266,7 +273,10 @@ size_t Sets::unionStore(const std::string&                   aDestination,
   auto myResult = unionSets(aNames);
   auto mySize   = myResult.size();
 
-  if (!myResult.empty()) {
+  if (myResult.empty()) {
+    theApplyer.performOnExisting(
+        aDestination, [](Container& aContainer) { aContainer.clear(); });
+  } else {
     theApplyer.performOnNew(
         aDestination,
         [&myResult](Container& aContainer) { aContainer = std::move(myResult); });
