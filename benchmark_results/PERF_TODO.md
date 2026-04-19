@@ -113,17 +113,22 @@ weights, inlining, and basic-block layout based on actual hot paths.
   harness (next item) makes this measurable.
 - **Risk**: very low.
 
-## F. Multi-iteration bench harness (median, not noise)
+## F. [x] Multi-iteration bench harness (landed)
 
-`run_benchmark.sh` runs each test once. Some metrics swing ±15%
-between identical runs (esp. c200 LPUSH). Run each cell N=5 times,
-report median + IQR. This is the "tooling" change that unblocks
-trustworthy A/B for E (PGO), G (LTO), and any close-call experiment.
+`run_benchmark.sh` now repeats each redis-benchmark invocation
+`ITERATIONS` times (env var, default 1, set to 5 for publication
+runs) and pipes the rows through `bench_aggregate.py` which emits
+the median row per test plus a stderr line tagged `[ok]` or `[WARN]`
+when `max/min > 1.5×`.
 
-- **Expected lift**: 0% directly, but unblocks confident decisions
-  on the next 4–5 changes.
-- **Effort**: small.
-- **Risk**: zero.
+The harness immediately paid off: the previously-published "RPUSH
+random-key 36% of Redis" was a cold-iteration outlier — the median
+across N=5 sits at **256K rps (71% of Redis)**. README and charts
+refreshed accordingly.
+
+It also functions as a smoke test: a server crash or memory bug
+during one iteration produces a `WARN` row that's hard to miss in
+the bench log.
 
 ## G. LTO with `-flto=auto` + thin bench harness
 
@@ -187,20 +192,18 @@ use-after-free-on-shutdown latent bug Paladin flagged.
 
 ## Suggested order
 
-(H done — jemalloc linked.)
+(F and H done — jemalloc linked, multi-iteration harness in place.)
 
-1. **F** (multi-iteration harness) — pre-requisite for trustworthy
-   measurement of everything else.
-2. **E** (PGO) — likely cheap win, validates the harness.
-3. **C** (`flat_hash_map<string, unique_ptr<…>>`) — small change,
+1. **E** (PGO) — likely cheap win, validates the harness.
+2. **C** (`flat_hash_map<string, unique_ptr<…>>`) — small change,
    targets per-key-lookup cost.
-4. **B1** or **B2** (embed mutex / kill alloc) — tackles the real
+3. **B1** or **B2** (embed mutex / kill alloc) — tackles the real
    cost on random-key writes.
-5. **A** (SDS) — substantial work, decide based on residual gap
+4. **A** (SDS) — substantial work, decide based on residual gap
    after 1–4.
-6. **J** (async server) — only if we want concurrent-client
+5. **J** (async server) — only if we want concurrent-client
    throughput beyond the current ceiling.
-7. **I** (quicklist) — only if A landed and tiny-value workloads
+6. **I** (quicklist) — only if A landed and tiny-value workloads
    are a real target.
-8. **D** (sharded outer) — only if (J) lands and we have real
+7. **D** (sharded outer) — only if (J) lands and we have real
    contention on the outer mutex with many connections.

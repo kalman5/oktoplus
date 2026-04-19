@@ -14,6 +14,11 @@ OKTO_PORT=6379
 NUM_OPS=100000
 KEYSPACE=100000
 LARGE_VALUE_SIZE=256
+# How many times to repeat each redis-benchmark invocation. The
+# aggregator emits the median row across iterations and warns on
+# wide spread. Default 1 keeps single-run behaviour for fast A/B;
+# set to 5+ for publication-quality numbers.
+ITERATIONS=${ITERATIONS:-1}
 STARTED_REDIS=0
 STARTED_OKTO=0
 REDIS_PID=
@@ -155,13 +160,21 @@ extract_data_rows() {
     grep -v '^"test"' || true
 }
 
+aggregate() {
+    python3 "$RESULTS_DIR/bench_aggregate.py"
+}
+
 run_bench() {
     local port=$1
     local clients=$2
     local pipeline=$3
     shift 3
-    $BENCH -h 127.0.0.1 -p "$port" -n "$NUM_OPS" -c "$clients" -P "$pipeline" \
-        -r "$KEYSPACE" --csv "$@" 2>/dev/null | extract_data_rows
+    {
+        for i in $(seq 1 "$ITERATIONS"); do
+            $BENCH -h 127.0.0.1 -p "$port" -n "$NUM_OPS" -c "$clients" -P "$pipeline" \
+                -r "$KEYSPACE" --csv "$@" 2>/dev/null | extract_data_rows
+        done
+    } | aggregate
 }
 
 run_builtin_bench() {
@@ -169,8 +182,12 @@ run_builtin_bench() {
     local clients=$2
     local pipeline=$3
     local tests=$4
-    $BENCH -h 127.0.0.1 -p "$port" -n "$NUM_OPS" -c "$clients" -P "$pipeline" \
-        -r "$KEYSPACE" -t "$tests" --csv 2>/dev/null | extract_data_rows
+    {
+        for i in $(seq 1 "$ITERATIONS"); do
+            $BENCH -h 127.0.0.1 -p "$port" -n "$NUM_OPS" -c "$clients" -P "$pipeline" \
+                -r "$KEYSPACE" -t "$tests" --csv 2>/dev/null | extract_data_rows
+        done
+    } | aggregate
 }
 
 # Same as run_builtin_bench but with -d <size>, which tells redis-benchmark
@@ -181,8 +198,12 @@ run_builtin_bench_d() {
     local pipeline=$3
     local tests=$4
     local datasize=$5
-    $BENCH -h 127.0.0.1 -p "$port" -n "$NUM_OPS" -c "$clients" -P "$pipeline" \
-        -r "$KEYSPACE" -d "$datasize" -t "$tests" --csv 2>/dev/null | extract_data_rows
+    {
+        for i in $(seq 1 "$ITERATIONS"); do
+            $BENCH -h 127.0.0.1 -p "$port" -n "$NUM_OPS" -c "$clients" -P "$pipeline" \
+                -r "$KEYSPACE" -d "$datasize" -t "$tests" --csv 2>/dev/null | extract_data_rows
+        done
+    } | aggregate
 }
 
 CSV_HEADER='"test","rps","avg_latency_ms","min_latency_ms","p50_latency_ms","p95_latency_ms","p99_latency_ms","max_latency_ms"'
