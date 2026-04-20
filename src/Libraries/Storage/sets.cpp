@@ -166,21 +166,59 @@ Sets::Container Sets::members(const std::string& aName) const {
 bool Sets::moveMember(const std::string& aSource,
                       const std::string& aDestination,
                       const std::string& aValue) {
-  bool myRemoved = false;
-
-  theApplyer.performOnExisting(
-      aSource, [&myRemoved, &aValue](Container& aContainer) {
-        myRemoved = aContainer.erase(aValue) > 0;
-      });
-
-  if (myRemoved) {
-    theApplyer.performOnNew(
-        aDestination, [&aValue](Container& aContainer) {
-          aContainer.insert(aValue);
+  // SMOVE must be atomic w.r.t. other clients: a third party must
+  // never see the value missing from both sets, nor present in both.
+  //
+  // Same-key special case: SMOVE k k v is a no-op that returns 1 if v
+  // is present, 0 otherwise. We can't nest performOnNew(k) inside
+  // performOnExisting(k) because the inner per-key mutex is non-
+  // recursive — re-acquiring it would deadlock. Probe under one lock.
+  if (aSource == aDestination) {
+    bool myPresent = false;
+    theApplyer.performOnExisting(
+        aSource, [&myPresent, &aValue](const Container& aContainer) {
+          myPresent = aContainer.count(aValue) > 0;
         });
+    return myPresent;
   }
 
-  return myRemoved;
+  // Cross-key path. The whole erase-from-source + insert-into-
+  // destination must run with BOTH per-key inner mutexes held
+  // simultaneously to be observable as a single step. We achieve that
+  // by nesting performOnNew(destination, ...) inside the
+  // performOnExisting(source, ...) lambda — once the inner lambda
+  // runs, both inner mutexes are held.
+  //
+  // theMoveMutex serialises every cross-key SMOVE so that two
+  // concurrent SMOVEs in opposite directions can't deadlock-spin
+  // (A holds src.inner waiting for dst.inner; B holds dst.inner
+  // waiting for src.inner). Same pattern as
+  // SequenceContainer::move's theMoveMutex; SMOVE isn't a hot
+  // command, so the global serialisation cost is acceptable.
+  const std::lock_guard<std::mutex> myLock(theMoveMutex);
+
+  bool myMoved = false;
+  theApplyer.performOnExisting(
+      aSource,
+      [this, &aDestination, &aValue, &myMoved](Container& aSourceContainer) {
+        // Source key existed (lambda only runs if so). Erase first;
+        // if the value wasn't there, no destination mutation either,
+        // so we leave myMoved=false and return 0 to the client.
+        if (aSourceContainer.erase(aValue) == 0) {
+          return;
+        }
+        myMoved = true;
+
+        // Insert into destination. Sets are idempotent, so a
+        // pre-existing value in destination is fine. performOnNew
+        // creates the destination key if it doesn't yet exist.
+        theApplyer.performOnNew(
+            aDestination, [&aValue](Container& aDestContainer) {
+              aDestContainer.insert(aValue);
+            });
+      });
+
+  return myMoved;
 }
 
 std::vector<std::string> Sets::pop(const std::string& aName, size_t aCount) {

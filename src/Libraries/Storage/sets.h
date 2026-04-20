@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -59,6 +60,15 @@ class Sets : public GenericContainer<absl::flat_hash_set<std::string>>
 
   size_t unionStore(const std::string&                   aDestination,
                     const std::vector<std::string_view>& aNames);
+
+ private:
+  // Serialises every cross-key SMOVE to avoid the L1<->L2 deadlock
+  // (analogous to SequenceContainer::theMoveMutex). moveMember holds
+  // the source's per-key inner mutex AND the destination's per-key
+  // inner mutex simultaneously (via a nested performOnNew inside the
+  // performOnExisting lambda); two SMOVEs in opposite directions
+  // would otherwise deadlock-spin under the try-lock-retry protocol.
+  std::mutex theMoveMutex;
 };
 
 } // namespace okts::stor
