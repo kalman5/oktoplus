@@ -9,4 +9,6 @@ target_link_libraries(oktoplus_resp
   oktoplus_storage
   ${GLOG}
   ${Boost_LIBRARIES}
+  absl::flat_hash_map
+  absl::hash
 )

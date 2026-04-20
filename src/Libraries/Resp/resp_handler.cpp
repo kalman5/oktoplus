@@ -1,10 +1,13 @@
 #include "Resp/resp_handler.h"
 #include "Resp/resp_parser.h"
 
+#include <absl/container/flat_hash_map.h>
+
 #include <glog/logging.h>
 
 #include <algorithm>
 #include <cctype>
+#include <string_view>
 
 namespace okts::resp {
 
@@ -234,18 +237,45 @@ std::string RespHandler::handle(const Args& aArgs) {
   };
   // clang-format on
 
-  char            myBuf[kMaxCmdLen];
-  std::string_view myCmd = toUpperStack(aArgs[0], myBuf);
-
-  if (!myCmd.empty()) {
+  // Index the dispatch table into a flat_hash_map once at first call.
+  // string_view + transparent hash means no allocations on lookup —
+  // the upper-cased stack-buffer view is matched directly. Cuts the
+  // O(N) linear scan over kHandlers to O(1) and stays cheap as the
+  // command set grows.
+  struct StringHash {
+    using is_transparent = void;
+    size_t operator()(std::string_view s) const {
+      return absl::Hash<std::string_view>{}(s);
+    }
+  };
+  static const auto kIndex = []() {
+    absl::flat_hash_map<std::string_view, HandlerFn, StringHash, std::equal_to<>>
+        myMap;
+    myMap.reserve(std::size(kHandlers));
     for (const auto& myEntry : kHandlers) {
-      if (myEntry.name == myCmd) {
-        try {
-          return myEntry.fn(*this, aArgs);
-        } catch (const std::exception& e) {
-          return RespParser::formatError(std::string("ERR ") + e.what());
-        }
-      }
+      myMap.emplace(myEntry.name, myEntry.fn);
+    }
+    return myMap;
+  }();
+
+  // Most RESP clients (redis-cli, redis-benchmark, production drivers)
+  // send commands already upper-cased. Try the raw view first; only
+  // pay the toUpperStack pass on a miss (handles lowercase / mixed
+  // case clients without slowing down the common path).
+  auto myIt = kIndex.find(std::string_view(aArgs[0]));
+  char myBuf[kMaxCmdLen];
+  if (myIt == kIndex.end()) {
+    std::string_view myUpper = toUpperStack(aArgs[0], myBuf);
+    if (!myUpper.empty()) {
+      myIt = kIndex.find(myUpper);
+    }
+  }
+
+  if (myIt != kIndex.end()) {
+    try {
+      return myIt->second(*this, aArgs);
+    } catch (const std::exception& e) {
+      return RespParser::formatError(std::string("ERR ") + e.what());
     }
   }
   return RespParser::formatError("ERR unknown command '" + aArgs[0] + "'");
