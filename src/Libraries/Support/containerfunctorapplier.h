@@ -3,7 +3,6 @@
 #include <array>
 #include <cstddef>
 #include <memory>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -155,8 +154,8 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
                                                       F&& aFunctor) {
   auto& myShard = shardFor(aName);
 
-  ProtectedContainer*                               myContainer = nullptr;
-  std::optional<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
+  ProtectedContainer*                myContainer = nullptr;
+  boost::unique_lock<ContainerMutex> mySecondLevelLock;
 
   while (true) {
     boost::lock_guard<boost::mutex> myLock(myShard.mutex);
@@ -166,14 +165,15 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
       myIterator->second = std::make_unique<ProtectedContainer>();
       LOG(INFO) << "Inserted new container at key \"" << aName << "\"";
     }
-    myContainer = myIterator->second.get();
-    mySecondLevelLock.emplace(myContainer->mutex, boost::try_to_lock_t());
-    if (mySecondLevelLock->owns_lock()) {
+    myContainer       = myIterator->second.get();
+    mySecondLevelLock = boost::unique_lock<ContainerMutex>(myContainer->mutex,
+                                                            boost::try_to_lock);
+    if (mySecondLevelLock.owns_lock()) {
       break;
     }
   }
 
-  assert(mySecondLevelLock->owns_lock());
+  assert(mySecondLevelLock.owns_lock());
   aFunctor(myContainer->storage);
 }
 
@@ -216,8 +216,8 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
   bool myHasBecomeEmpty = false;
 
   {
-    ProtectedContainer*                               myContainer = nullptr;
-    std::optional<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
+    ProtectedContainer*                myContainer = nullptr;
+    boost::unique_lock<ContainerMutex> mySecondLevelLock;
 
     while (true) {
       boost::lock_guard<boost::mutex> myLock(myShard.mutex);
@@ -226,14 +226,15 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
       if (myIt == myShard.storage.end()) {
         return;
       }
-      myContainer = myIt->second.get();
-      mySecondLevelLock.emplace(myContainer->mutex, boost::try_to_lock_t());
-      if (mySecondLevelLock->owns_lock()) {
+      myContainer       = myIt->second.get();
+      mySecondLevelLock = boost::unique_lock<ContainerMutex>(myContainer->mutex,
+                                                              boost::try_to_lock);
+      if (mySecondLevelLock.owns_lock()) {
         break;
       }
     }
 
-    assert(mySecondLevelLock->owns_lock());
+    assert(mySecondLevelLock.owns_lock());
     aFunctor(myContainer->storage);
     myHasBecomeEmpty = myContainer->storage.empty();
   }
@@ -270,8 +271,8 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
     const std::string& aName, F&& aFunctor) const {
   const auto& myShard = shardFor(aName);
 
-  const ProtectedContainer*                         myContainer = nullptr;
-  std::optional<boost::unique_lock<ContainerMutex>> mySecondLevelLock;
+  const ProtectedContainer*          myContainer = nullptr;
+  boost::unique_lock<ContainerMutex> mySecondLevelLock;
 
   while (true) {
     boost::lock_guard<boost::mutex> myLock(myShard.mutex);
@@ -280,14 +281,15 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
     if (myIt == myShard.storage.end()) {
       return;
     }
-    myContainer = myIt->second.get();
-    mySecondLevelLock.emplace(myContainer->mutex, boost::try_to_lock_t());
-    if (mySecondLevelLock->owns_lock()) {
+    myContainer       = myIt->second.get();
+    mySecondLevelLock = boost::unique_lock<ContainerMutex>(myContainer->mutex,
+                                                            boost::try_to_lock);
+    if (mySecondLevelLock.owns_lock()) {
       break;
     }
   }
 
-  assert(mySecondLevelLock->owns_lock());
+  assert(mySecondLevelLock.owns_lock());
   aFunctor(myContainer->storage);
 }
 
