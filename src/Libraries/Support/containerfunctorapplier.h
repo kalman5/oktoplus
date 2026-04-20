@@ -3,13 +3,10 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <utility>
-
-#include <boost/thread/lock_guard.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 
 #include <absl/base/thread_annotations.h>
 #include <absl/container/flat_hash_map.h>
@@ -68,7 +65,7 @@ class ContainerFunctorApplier
  private:
   // Recursive because some operations (LMOVE source==destination) take
   // the same per-key lock twice through different code paths.
-  using ContainerMutex = boost::recursive_mutex;
+  using ContainerMutex = std::recursive_mutex;
 
   struct ProtectedContainer {
     // Inline mutex — saves one heap allocation per new key on the
@@ -100,7 +97,7 @@ class ContainerFunctorApplier
                                       std::equal_to<>>;
 
   struct Shard {
-    mutable boost::mutex mutex;
+    mutable std::mutex mutex;
     Storage              storage ABSL_GUARDED_BY(mutex);
   };
 
@@ -130,7 +127,7 @@ template <class CONTAINER>
 size_t ContainerFunctorApplier<CONTAINER>::hostedKeys() const {
   size_t myCount = 0;
   for (const auto& myShard : theShards) {
-    boost::lock_guard<boost::mutex> myLock(myShard.mutex);
+    std::lock_guard<std::mutex> myLock(myShard.mutex);
     myCount += myShard.storage.size();
   }
   return myCount;
@@ -139,9 +136,9 @@ size_t ContainerFunctorApplier<CONTAINER>::hostedKeys() const {
 template <class CONTAINER>
 void ContainerFunctorApplier<CONTAINER>::clear() {
   for (auto& myShard : theShards) {
-    boost::lock_guard<boost::mutex> myLock(myShard.mutex);
+    std::lock_guard<std::mutex> myLock(myShard.mutex);
     for (auto& myEntry : myShard.storage) {
-      boost::lock_guard<ContainerMutex> myInner(myEntry.second->mutex);
+      std::lock_guard<ContainerMutex> myInner(myEntry.second->mutex);
       myEntry.second->storage.clear();
     }
     myShard.storage.clear();
@@ -155,10 +152,10 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
   auto& myShard = shardFor(aName);
 
   ProtectedContainer*                myContainer = nullptr;
-  boost::unique_lock<ContainerMutex> mySecondLevelLock;
+  std::unique_lock<ContainerMutex> mySecondLevelLock;
 
   while (true) {
-    boost::lock_guard<boost::mutex> myLock(myShard.mutex);
+    std::lock_guard<std::mutex> myLock(myShard.mutex);
 
     auto [myIterator, myInserted] = myShard.storage.try_emplace(aName);
     if (myInserted) {
@@ -166,8 +163,8 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
       LOG(INFO) << "Inserted new container at key \"" << aName << "\"";
     }
     myContainer       = myIterator->second.get();
-    mySecondLevelLock = boost::unique_lock<ContainerMutex>(myContainer->mutex,
-                                                            boost::try_to_lock);
+    mySecondLevelLock = std::unique_lock<ContainerMutex>(myContainer->mutex,
+                                                            std::try_to_lock);
     if (mySecondLevelLock.owns_lock()) {
       break;
     }
@@ -217,18 +214,18 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
 
   {
     ProtectedContainer*                myContainer = nullptr;
-    boost::unique_lock<ContainerMutex> mySecondLevelLock;
+    std::unique_lock<ContainerMutex> mySecondLevelLock;
 
     while (true) {
-      boost::lock_guard<boost::mutex> myLock(myShard.mutex);
+      std::lock_guard<std::mutex> myLock(myShard.mutex);
 
       auto myIt = myShard.storage.find(aName);
       if (myIt == myShard.storage.end()) {
         return;
       }
       myContainer       = myIt->second.get();
-      mySecondLevelLock = boost::unique_lock<ContainerMutex>(myContainer->mutex,
-                                                              boost::try_to_lock);
+      mySecondLevelLock = std::unique_lock<ContainerMutex>(myContainer->mutex,
+                                                              std::try_to_lock);
       if (mySecondLevelLock.owns_lock()) {
         break;
       }
@@ -240,7 +237,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
   }
 
   if (myHasBecomeEmpty) {
-    boost::lock_guard<boost::mutex> myLock(myShard.mutex);
+    std::lock_guard<std::mutex> myLock(myShard.mutex);
 
     auto myIt = myShard.storage.find(aName);
     if (myIt == myShard.storage.end()) {
@@ -253,7 +250,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
     // scope exit, after the lock_guard destructor releases the inner
     // mutex.
     std::unique_ptr<ProtectedContainer> myEvicted = std::move(myIt->second);
-    boost::lock_guard<ContainerMutex>   mySecondLevelLock(myEvicted->mutex);
+    std::lock_guard<ContainerMutex>   mySecondLevelLock(myEvicted->mutex);
 
     if (not myEvicted->storage.empty()) {
       myIt->second = std::move(myEvicted);
@@ -272,18 +269,18 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
   const auto& myShard = shardFor(aName);
 
   const ProtectedContainer*          myContainer = nullptr;
-  boost::unique_lock<ContainerMutex> mySecondLevelLock;
+  std::unique_lock<ContainerMutex> mySecondLevelLock;
 
   while (true) {
-    boost::lock_guard<boost::mutex> myLock(myShard.mutex);
+    std::lock_guard<std::mutex> myLock(myShard.mutex);
 
     auto myIt = myShard.storage.find(aName);
     if (myIt == myShard.storage.end()) {
       return;
     }
     myContainer       = myIt->second.get();
-    mySecondLevelLock = boost::unique_lock<ContainerMutex>(myContainer->mutex,
-                                                            boost::try_to_lock);
+    mySecondLevelLock = std::unique_lock<ContainerMutex>(myContainer->mutex,
+                                                            std::try_to_lock);
     if (mySecondLevelLock.owns_lock()) {
       break;
     }

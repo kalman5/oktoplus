@@ -3,8 +3,6 @@
 #include <atomic>
 #include <mutex>
 
-#include <boost/thread/lock_guard.hpp>
-
 #include "Support/noncopyable.h"
 
 namespace okts::sup {
@@ -12,7 +10,6 @@ namespace okts::sup {
 class SpinLock
 {
   friend class std::lock_guard<SpinLock>;
-  friend class boost::lock_guard<SpinLock>;
   DISABLE_EVIL_CONSTRUCTOR(SpinLock);
 
  public:

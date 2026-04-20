@@ -6,6 +6,7 @@
 
 #include <deque>
 #include <list>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -85,7 +86,7 @@ class SequenceContainer : public GenericContainer<CONTAINER>
                                      uint64_t                        aCount);
 
  private:
-  using MoveMutex = boost::mutex;
+  using MoveMutex = std::mutex;
   MoveMutex theMoveMutex;
 };
 
@@ -279,7 +280,7 @@ SequenceContainer<CONTAINER>::move(const std::string& aSourceName,
   //       containers
   // clang-format on
 
-  const boost::lock_guard myLock(theMoveMutex);
+  const std::lock_guard myLock(theMoveMutex);
 
   Base::theApplyer.performOnExisting(
       aSourceName,
