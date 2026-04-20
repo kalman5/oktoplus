@@ -8,7 +8,6 @@
 #include <string_view>
 #include <utility>
 
-#include <absl/base/thread_annotations.h>
 #include <absl/container/flat_hash_map.h>
 
 #include <glog/logging.h>
@@ -100,7 +99,7 @@ class ContainerFunctorApplier
 
   struct Shard {
     mutable std::mutex mutex;
-    Storage              storage ABSL_GUARDED_BY(mutex);
+    Storage            storage;
   };
 
   // Power of two so we can use bitmask routing.

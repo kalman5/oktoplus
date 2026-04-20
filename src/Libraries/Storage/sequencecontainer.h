@@ -89,6 +89,9 @@ class SequenceContainer : public GenericContainer<CONTAINER>
 
  private:
   using MoveMutex = std::mutex;
+  // Serialises every cross-key move() to avoid the L1<->L2 deadlock
+  // (see comment in move()'s cross-key branch). Held only by move();
+  // no other code path acquires it.
   MoveMutex theMoveMutex;
 };
 

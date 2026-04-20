@@ -48,21 +48,10 @@ find_package(Protobuf REQUIRED)
 include_directories(${PROTOBUF_INCLUDE_DIRS})
 find_package(GRPC REQUIRED)
 
-# Compiler flags
-if(${CMAKE_CXX_COMPILER} MATCHES "(.*)clang(.*)")
-  message("\nSPECIFIC WARNINGS FOR CLANG")
-  SET(CLANG_SPECIFIC_WARNINGS "-Wthread-safety")
-else()
-  message("\nSPECIFIC WARNINGS FOR GCC")
-endif()
-
 # c++20
 set (CMAKE_CXX_STANDARD 20)
 
-set(PRJ_COMMONS "-Wall -Wextra -Wpedantic -Werror -pthread -fPIC -fno-strict-aliasing ${CLANG_SPECIFIC_WARNINGS} -Wcast-qual")
-
-#enable thread safety analysis
-add_compile_definitions(BOOST_THREAD_ENABLE_THREAD_SAFETY_ANALYSIS)
+set(PRJ_COMMONS "-Wall -Wextra -Wpedantic -Werror -pthread -fPIC -fno-strict-aliasing -Wcast-qual")
 
 set(CMAKE_CXX_FLAGS_DEBUG     "-O0 -g3 ${PRJ_COMMONS}"                                    )
 set(CMAKE_CXX_FLAGS_CLANG     "${CMAKE_CXX_FLAGS_DEBUG}"                                  )
