@@ -187,6 +187,37 @@ use-after-free-on-shutdown latent bug Paladin flagged.
 - **Effort**: medium-to-large (~300 LOC) but well-scoped.
 - **Risk**: medium — async lifetime correctness.
 - **Bonus**: closes the UAF-on-shutdown bug as a byproduct.
+- **Also fixes** the pipeline-drain correctness gap below (Q): an
+  async per-connection state machine naturally bounds drain to
+  what's already buffered without giving up cross-segment batching,
+  so we don't have to choose between correctness and throughput.
+
+## Q. Pipeline drain currently re-enters blocking read
+
+`RespServer::handleConnection`'s drain loop calls the *blocking*
+`RespParser::readCommand` after handling each command, so a
+slow / dribbling client that sends one full command plus a partial
+next frame stalls the reply to the first command until the rest of
+the next frame arrives. (Codex finding C2.)
+
+A previous attempt to fix this (using a buffer-only
+`tryReadCommandFromBuffer`) was reverted because it gave up the
+accidental cross-TCP-segment batching the blocking drain provides
+— d256 LPUSH/RPUSH single-client `-P 16` regressed ~37% because each
+~285-byte command means the 16-deep pipeline batch is ~4.5 KB, well
+over the 1500-byte MTU, so multiple network reads per batch became
+multiple writes per batch.
+
+The structurally correct fix lives in J: an async per-connection
+state machine processes commands as they arrive, batches replies
+when the kernel says "more is buffered" (via `read_some` with no
+deadline), and never blocks waiting for a frame to complete. Defer
+this until J.
+
+- **Effort**: subsumed by J.
+- **Risk**: addressed alongside async lifetime correctness in J.
+- **Why it matters**: real slow-client correctness today; not a
+  benchmark concern (redis-benchmark sends complete frames).
 
 ---
 
@@ -243,6 +274,76 @@ stand-alone `httplib`-style header) that exposes:
   invisible. A dashboard makes them actionable without recompiles.
 - **Pre-work**: pick the HTTP layer (likely `boost::beast` to avoid
   pulling in another dep), settle on auth model (none / loopback only).
+
+---
+
+## Correctness follow-ups from code review
+
+Items called out by code review that need real architectural work,
+deferred here so they're tracked rather than silently skipped.
+
+## N. Ordered two-key locking for cross-key LMOVE / RPOPLPUSH
+
+`SequenceContainer::move()` cross-key path serialises every LMOVE
+through the global `theMoveMutex` to avoid the L1<->L2 deadlock.
+Acceptable today — LMOVE isn't a hot command — but defeats sharding
+once it becomes one.
+
+Replace with ordered two-key locking: at function entry, sort the
+two keys (or their hashes) and acquire the inner mutexes in
+deterministic order so two concurrent moves can't deadlock. Drop
+`theMoveMutex` entirely.
+
+- **Effort**: medium. Need a "lock two keys atomically" helper on
+  `ContainerFunctorApplier` that takes inner mutexes in hash-sorted
+  order. Same-key case already special-cased.
+- **Risk**: medium — new locking protocol; needs a stress test for
+  the deadlock case.
+- **Why**: lets non-overlapping LMOVEs run in parallel; matches
+  Redis-equivalent atomicity without a global serialisation point.
+
+## O. Cross-shard snapshot semantics for Sets multi-key ops
+
+`Sets::diff` / `Sets::inter` / `Sets::unionSets` walk the input keys
+one by one, taking and releasing the per-key inner mutex
+independently for each. A concurrent `SADD`/`SREM` on a later input
+can therefore produce a result that was never simultaneously consistent
+across all inputs. Real Redis is single-threaded and so doesn't have
+this race.
+
+Same root cause for `*STORE` variants (`SDIFFSTORE`,
+`SINTERSTORE`, `SUNIONSTORE`): the snapshot is computed first, locks
+released, then the destination is written. If the destination overlaps
+the source set, or another writer races, the result is stale.
+
+Two reasonable fixes:
+  - Multi-shard ordered locking: pre-sort the involved (shard, key)
+    pairs and lock all of them before reading. Atomic but coarse.
+  - Optimistic snapshot + version check: compute, then re-verify
+    each input wasn't mutated. Cheaper but more code.
+
+- **Effort**: medium-large.
+- **Risk**: medium — locking new code paths.
+- **Why**: matches Redis's atomicity guarantees.
+
+## P. Drop `std::list<std::string>` return type from list ops
+
+`SequenceContainer::popFront` / `popBack` / `range` / `multiplePop`
+return `std::list<std::string>` — one heap-alloc per element.
+Inconsistent with the rest of the perf push to remove per-element
+allocations (devector backing, transparent hashers). On the read
+hot path (LRANGE etc.) this is load-bearing.
+
+Switch to `std::vector<std::string>`. Touches every storage method,
+the `RespHandler` callers (transparent — formatBulkStringArray is
+already templated), `commands_*.cpp` consumers, and
+`CommandsClient`'s public API.
+
+- **Effort**: medium (~200 LOC across many files).
+- **Risk**: low — drop-in iteration semantics, but public client API
+  changes.
+- **Why**: removes N node allocs per pop/range result, log(N)
+  reallocations vs N node allocs.
 
 ---
 
