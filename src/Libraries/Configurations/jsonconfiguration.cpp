@@ -75,6 +75,7 @@ void JsonConfiguration::dump() {
   if (theConfigurationFile.empty()) {
     throw std::runtime_error("Can not json dump without a file");
   }
+  dump(theConfigurationFile);
 }
 
 void JsonConfiguration::dump(const std::string& aConfigurationFile) {
