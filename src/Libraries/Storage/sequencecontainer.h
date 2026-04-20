@@ -6,13 +6,30 @@
 
 #include <boost/container/devector.hpp>
 
+#include <cstdint>
 #include <deque>
+#include <limits>
 #include <list>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
+
+namespace okts::stor::detail {
+// Safe absolute value of an int64_t into uint64_t. std::abs(INT64_MIN)
+// is undefined behaviour because the positive value isn't
+// representable in int64_t; this helper returns the correct
+// 9223372036854775808 in the unsigned domain.
+inline uint64_t safeAbs(int64_t aValue) {
+  if (aValue >= 0) {
+    return static_cast<uint64_t>(aValue);
+  }
+  // -INT64_MIN as int64_t is UB; do the negation in unsigned where
+  // wrap-around is well-defined and gives the correct magnitude.
+  return static_cast<uint64_t>(0) - static_cast<uint64_t>(aValue);
+}
+} // namespace okts::stor::detail
 
 namespace okts::stor {
 
@@ -394,7 +411,7 @@ SequenceContainer<CONTAINER>::position(const std::string& aName,
         uint64_t myIndex = 0;
         uint64_t myFound = 0;
 
-        const uint64_t myURank = aRank > 0 ? aRank : std::abs(aRank);
+        const uint64_t myURank = detail::safeAbs(aRank);
 
         auto mySearchFunction = [&](const auto aBegin,
                                     const auto aEnd,
@@ -517,7 +534,8 @@ size_t SequenceContainer<CONTAINER>::remove(const std::string& aName,
           myRet = myRemoved;
         } else {
 
-          auto myToRemove = std::abs(aCount);
+          uint64_t myToRemove = detail::safeAbs(aCount);
+          const uint64_t myInitialToRemove = myToRemove;
 
           if (aCount > 0) {
             for (auto myIt = aContainer.begin();
@@ -542,8 +560,8 @@ size_t SequenceContainer<CONTAINER>::remove(const std::string& aName,
             }
           }
 
-          assert(std::abs(aCount) >= myToRemove);
-          myRet = std::abs(aCount) - myToRemove;
+          assert(myInitialToRemove >= myToRemove);
+          myRet = static_cast<size_t>(myInitialToRemove - myToRemove);
         }
       });
 
