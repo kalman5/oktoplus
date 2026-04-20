@@ -42,17 +42,13 @@ Each `redis-benchmark` invocation runs **N iterations** (env var `ITERATIONS`, d
 
 Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffast-math -fno-semantic-interposition -funroll-loops`, linked against `jemalloc` (see `OKTOPLUS_WITH_JEMALLOC` in CMake). Workload: 100k ops/iteration, 100k key-space, single client unless stated otherwise.
 
-![Single client -P 16 throughput, small values](benchmark_results/chart_p16.svg)
-
-![Single client -P 16 throughput, 256-byte values](benchmark_results/chart_p16_d256.svg)
-
-![LPUSH on a hot key, varying clients](benchmark_results/chart_concurrency.svg)
-
 > Charts are generated from `benchmark_results/raw/*.csv` by `benchmark_results/make_chart.py` (no dependencies — pure-stdlib Python emitting SVG + HTML).
 >
 > An interactive Chart.js dashboard with the same data lives at [`benchmark_results/report.html`](benchmark_results/report.html) — view it rendered through [htmlpreview.github.io](https://htmlpreview.github.io/?https://github.com/kalman5/oktoplus/blob/master/benchmark_results/report.html).
 
 ##### Single client, no pipelining (`-P 1`)
+
+![Single client -P 1 throughput](benchmark_results/chart_p1.svg)
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
@@ -65,6 +61,8 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 | SCARD (rand)  |       32,862 |    30,978 |     **106%** |
 
 ##### Single client, pipelined (`-P 16`)
+
+![Single client -P 16 throughput, small values](benchmark_results/chart_p16.svg)
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
@@ -81,6 +79,8 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 ##### Many clients, no pipelining — LPUSH on a hot key
 
 `-P 1` with varying `-c`.
+
+![LPUSH on a hot key, varying clients](benchmark_results/chart_concurrency.svg)
 
 | Clients | Oktoplus rps | Redis rps | Okto / Redis |
 |--------:|-------------:|----------:|-------------:|
@@ -110,6 +110,8 @@ A slice from `concurrent_random_*_p16.csv` at `-c 100`:
 ##### Single client, pipelined (`-P 16`), 256-byte values
 
 Same workload as the small-value `-P 16` table above but with a 256-byte payload (`-d 256` for built-ins, a 256-byte literal on the custom RPUSH).
+
+![Single client -P 16 throughput, 256-byte values](benchmark_results/chart_p16_d256.svg)
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|

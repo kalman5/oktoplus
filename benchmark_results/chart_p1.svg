@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="420" viewBox="0 0 880 420" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12">
+<rect width="880" height="420" fill="#ffffff"/>
+<text x="440.0" y="22" text-anchor="middle" fill="#24292f" font-size="15" font-weight="600">Single client, no pipelining (-P 1) — rps (higher is better)</text>
+<line x1="70" y1="350.0" x2="860" y2="350.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="354.0" text-anchor="end" fill="#24292f">0</text>
+<line x1="70" y1="292.0" x2="860" y2="292.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="296.0" text-anchor="end" fill="#24292f">7,367</text>
+<line x1="70" y1="234.0" x2="860" y2="234.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="238.0" text-anchor="end" fill="#24292f">14,735</text>
+<line x1="70" y1="175.99999999999997" x2="860" y2="175.99999999999997" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="179.99999999999997" text-anchor="end" fill="#24292f">22,103</text>
+<line x1="70" y1="118.0" x2="860" y2="118.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="122.0" text-anchor="end" fill="#24292f">29,470</text>
+<line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="64.0" text-anchor="end" fill="#24292f">36,838</text>
+<line x1="70" y1="60" x2="70" y2="350" stroke="#57606a" stroke-width="1"/>
+<line x1="70" y1="350" x2="860" y2="350" stroke="#57606a" stroke-width="1"/>
+<text x="126.42857142857143" y="368" text-anchor="middle" fill="#24292f">LPUSH</text>
+<rect x="83.0" y="89.8" width="40.6" height="260.2" fill="#3fb950"/>
+<rect x="129.2" y="100.2" width="40.6" height="249.8" fill="#f85149"/>
+<text x="239.28571428571428" y="368" text-anchor="middle" fill="#24292f">SADD</text>
+<rect x="195.8" y="95.7" width="40.6" height="254.3" fill="#3fb950"/>
+<rect x="242.1" y="112.2" width="40.6" height="237.8" fill="#f85149"/>
+<text x="352.14285714285717" y="368" text-anchor="middle" fill="#24292f">LRANGE_100</text>
+<rect x="308.7" y="141.0" width="40.6" height="209.0" fill="#3fb950"/>
+<rect x="355.0" y="151.4" width="40.6" height="198.6" fill="#f85149"/>
+<text x="465.0" y="368" text-anchor="middle" fill="#24292f">LPOP (rand)</text>
+<rect x="421.6" y="113.7" width="40.6" height="236.3" fill="#3fb950"/>
+<rect x="467.8" y="113.0" width="40.6" height="237.0" fill="#f85149"/>
+<text x="577.8571428571429" y="368" text-anchor="middle" fill="#24292f">RPOP (rand)</text>
+<rect x="534.4" y="99.0" width="40.6" height="251.0" fill="#3fb950"/>
+<rect x="580.7" y="106.1" width="40.6" height="243.9" fill="#f85149"/>
+<text x="690.7142857142858" y="368" text-anchor="middle" fill="#24292f">LLEN (rand)</text>
+<rect x="647.3" y="86.4" width="40.6" height="263.6" fill="#3fb950"/>
+<rect x="693.5" y="114.0" width="40.6" height="236.0" fill="#f85149"/>
+<text x="803.5714285714286" y="368" text-anchor="middle" fill="#24292f">SCARD (rand)</text>
+<rect x="760.1" y="91.3" width="40.6" height="258.7" fill="#3fb950"/>
+<rect x="806.4" y="106.1" width="40.6" height="243.9" fill="#f85149"/>
+<rect x="70" y="391" width="14" height="14" fill="#3fb950"/>
+<text x="90" y="402" fill="#24292f">Oktoplus</text>
+<rect x="230" y="391" width="14" height="14" fill="#f85149"/>
+<text x="250" y="402" fill="#24292f">Redis</text>
+</svg>

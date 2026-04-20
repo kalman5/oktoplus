@@ -497,9 +497,34 @@ def main() -> int:
         out_path=HERE / "chart_p16_d256.svg",
     )
 
-    # Interactive HTML report (Chart.js, viewable via htmlpreview.github.io).
+    # -P 1 single-client SVG chart. Matches the rows in the README's
+    # -P 1 table exactly (RPUSH-rand and the LRANGE-seed LPUSH are
+    # omitted there, so they're omitted here too).
     okto_p1 = read_rps(RAW / "speed_oktoplus_p1.csv")
     redis_p1 = read_rps(RAW / "speed_redis_p1.csv")
+
+    p1_tests = [
+        "LPUSH",
+        "SADD",
+        "LRANGE_100 (first 100 elements)",
+        "LPOP mylist__rand_int__",
+        "RPOP mylist__rand_int__",
+        "LLEN mylist__rand_int__",
+        "SCARD myset__rand_int__",
+    ]
+    p1_cats = [short_name(t) for t in p1_tests]
+    okto_p1_vals = [okto_p1[t] for t in p1_tests]
+    redis_p1_vals = [redis_p1[t] for t in p1_tests]
+    grouped_bar_chart(
+        title="Single client, no pipelining (-P 1) — rps (higher is better)",
+        series=[
+            ("Oktoplus", okto_p1_vals, "#3fb950"),
+            ("Redis", redis_p1_vals, "#f85149"),
+        ],
+        categories=p1_cats,
+        y_max=max(max(okto_p1_vals), max(redis_p1_vals)) * 1.10,
+        out_path=HERE / "chart_p1.svg",
+    )
 
     write_html_report(
         out_path=HERE / "report.html",
@@ -530,8 +555,8 @@ def main() -> int:
     )
 
     print(
-        "wrote chart_p16.svg, chart_p16_d256.svg, chart_concurrency.svg, "
-        "report.html"
+        "wrote chart_p1.svg, chart_p16.svg, chart_p16_d256.svg, "
+        "chart_concurrency.svg, chart_concurrency_random.svg, report.html"
     )
     return 0
 
