@@ -15,11 +15,11 @@ class CommandsAdmin : virtual public Interface::Service
  private:
   grpc::Status flushAll(grpc::ServerContext*,
                         const Void*,
-                        Void*) final override;
+                        Void*) final;
 
   grpc::Status flushDb(grpc::ServerContext*,
                        const Void*,
-                       Void*) final override;
+                       Void*) final;
 
   stor::StorageContext& theStorage;
 };
