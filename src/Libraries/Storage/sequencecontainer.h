@@ -572,12 +572,7 @@ void SequenceContainer<CONTAINER>::trim(const std::string& aName,
 
         auto myStart = aStart;
         auto myStop  = aStop;
-        /*
-                if (myStart > myStop) {
-                  aContainer.clear();
-                  return;
-                }
-        */
+
         if (aStart > 0 and size_t(aStart) >= aContainer.size()) {
           aContainer.clear();
           return;
