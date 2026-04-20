@@ -31,7 +31,7 @@ class CommandsDeque : virtual public Interface::Service
   dequeLength(grpc::ServerContext*, const LengthRequest*, LengthReply*) final;
 
   grpc::Status
-  dequeMove(grpc::ServerContext*, const MoveRequest*, GetValueReply*);
+  dequeMove(grpc::ServerContext*, const MoveRequest*, GetValueReply*) final;
 
   grpc::Status dequeMultiplePop(grpc::ServerContext*,
                                 const MultiplePopRequest*,
