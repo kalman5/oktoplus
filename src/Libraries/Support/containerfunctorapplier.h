@@ -158,14 +158,24 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
   while (true) {
     std::lock_guard<std::mutex> myLock(myShard.mutex);
 
-    auto [myIterator, myInserted] = myShard.storage.try_emplace(aName);
-    if (myInserted) {
-      myIterator->second = std::make_unique<ProtectedContainer>();
-      LOG(INFO) << "Inserted new container at key \"" << aName << "\"";
-    }
+    // Single-hash find-or-insert via absl's lazy_emplace: the
+    // transparent hasher hashes the string_view once; the lambda is
+    // invoked only on miss to actually construct the slot. The hit
+    // path costs one hash + one slot probe; the miss path adds one
+    // slot construction. No temporary std::string is built either way.
+    //
+    // Compare with the previous shape (find then try_emplace on
+    // miss) which hashed twice on the miss path because the
+    // standard try_emplace doesn't expose the find result.
+    auto myIterator = myShard.storage.lazy_emplace(
+        std::string_view(aName),
+        [&aName](const auto& aCtor) {
+          aCtor(aName, std::make_unique<ProtectedContainer>());
+          LOG(INFO) << "Inserted new container at key \"" << aName << "\"";
+        });
     myContainer       = myIterator->second.get();
     mySecondLevelLock = std::unique_lock<ContainerMutex>(myContainer->mutex,
-                                                            std::try_to_lock);
+                                                          std::try_to_lock);
     if (mySecondLevelLock.owns_lock()) {
       break;
     }
