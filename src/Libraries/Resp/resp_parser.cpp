@@ -50,9 +50,19 @@ std::string RespParser::readLine(boost::asio::ip::tcp::socket& aSocket,
   return readLineFromBuffer(aSocket, aBuffer);
 }
 
+// Per-element bulk-string cap (matches Redis's
+// proto-max-bulk-len default of 512 MiB). Anything larger is almost
+// certainly a malformed or hostile frame; honouring the wire-supplied
+// length without a cap lets a remote client request an 8-EiB
+// allocation by sending '$9223372036854775806\r\n'.
+constexpr int64_t kMaxBulkStringLen = 512LL * 1024 * 1024;
+
 std::string RespParser::readBulkString(boost::asio::ip::tcp::socket& aSocket,
                                        boost::asio::streambuf&       aBuffer,
                                        int64_t                       aLength) {
+  if (aLength < 0 || aLength > kMaxBulkStringLen) {
+    throw std::runtime_error("RESP bulk-string length out of range");
+  }
   const size_t myNeeded = static_cast<size_t>(aLength) + 2; // data + \r\n
   if (aBuffer.size() < myNeeded) {
     boost::asio::read(
@@ -80,6 +90,14 @@ RespParser::readCommand(boost::asio::ip::tcp::socket& aSocket,
       int64_t myCount = 0;
       if (!parseInt(myLine.data() + 1, myLine.size() - 1, myCount) ||
           myCount < 0) {
+        return std::nullopt;
+      }
+      // Cap array element count to match the bulk-string cap above —
+      // a 512Ki-arg multi-bulk would already require 512MB of args
+      // alone. An attacker-supplied huge myCount would otherwise
+      // reserve an oversized vector before we ever read the elements.
+      constexpr int64_t kMaxArrayElements = 512 * 1024;
+      if (myCount > kMaxArrayElements) {
         return std::nullopt;
       }
 

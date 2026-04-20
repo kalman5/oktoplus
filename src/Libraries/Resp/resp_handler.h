@@ -57,11 +57,14 @@ class RespHandler
                          std::string_view aCommand,
                          PushMethod aMethod);
 
-  // Generic pop with optional count arg (single vs multi return)
+  // Generic pop with optional count arg (single vs multi return).
+  // aAllowNegativeCount: SRANDMEMBER accepts a negative count to mean
+  // "selection with replacement"; LPOP/RPOP/SPOP must reject negatives.
   template <typename PopFunc>
   std::string handlePopWithOptionalCount(const Args& aArgs,
                                          std::string_view aCommand,
-                                         PopFunc&& aPopFunc);
+                                         bool             aAllowNegativeCount,
+                                         PopFunc&&        aPopFunc);
 
   // Generic multi-key set operation -> bulk string array
   template <typename SetOpFunc>

@@ -7,6 +7,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include <charconv>
+#include <cstdint>
 #include <optional>
 #include <string_view>
 
@@ -57,6 +59,44 @@ bool iequalsToUpper(std::string_view aIn, std::string_view aUpperLiteral) {
     }
   }
   return true;
+}
+
+// std::from_chars-based integer parsing. std::stoll/stoull throw on
+// malformed input with cryptic what() messages ("stoll", "stoull")
+// that bubble up to the client; std::stoull also accepts a leading
+// minus sign and silently wraps "-5" to 18446744073709551611.
+//
+// These helpers reject leading whitespace, trailing garbage, and (for
+// the unsigned variant) leading '+'/'-'. They produce Redis-style
+// error strings on miss so the caller can return a typed reply.
+constexpr std::string_view kErrNotInt =
+    "ERR value is not an integer or out of range";
+
+std::optional<int64_t> parseSignedInt(std::string_view aStr) {
+  if (aStr.empty()) return std::nullopt;
+  int64_t myValue = 0;
+  auto    myRes   = std::from_chars(aStr.data(), aStr.data() + aStr.size(),
+                                    myValue);
+  if (myRes.ec != std::errc{} || myRes.ptr != aStr.data() + aStr.size()) {
+    return std::nullopt;
+  }
+  return myValue;
+}
+
+// Strictly unsigned: rejects '-' and '+' prefixes (std::from_chars on
+// uint64_t accepts neither, but we double-check by failing the
+// negative case explicitly to avoid future-proofing surprises).
+std::optional<uint64_t> parseUnsignedInt(std::string_view aStr) {
+  if (aStr.empty() || aStr.front() == '-' || aStr.front() == '+') {
+    return std::nullopt;
+  }
+  uint64_t myValue = 0;
+  auto     myRes   = std::from_chars(aStr.data(), aStr.data() + aStr.size(),
+                                     myValue);
+  if (myRes.ec != std::errc{} || myRes.ptr != aStr.data() + aStr.size()) {
+    return std::nullopt;
+  }
+  return myValue;
 }
 
 // Strict direction parse — only LEFT and RIGHT (case-insensitive)
@@ -113,18 +153,31 @@ std::string RespHandler::handlePush(const Args& aArgs,
 // ---- Generic pop with optional count (lpop/rpop/spop/srandmember) ----
 
 template <typename PopFunc>
-std::string RespHandler::handlePopWithOptionalCount(const Args& aArgs,
+std::string RespHandler::handlePopWithOptionalCount(const Args&      aArgs,
                                                     std::string_view aCommand,
-                                                    PopFunc&& aPopFunc) {
+                                                    bool aAllowNegativeCount,
+                                                    PopFunc&&        aPopFunc) {
   auto myErr = validateMinArgs(aArgs, 2, aCommand);
   if (!myErr.empty()) return myErr;
 
-  uint64_t myCount = 1;
-  bool     myMulti = false;
+  int64_t myCount = 1;
+  bool    myMulti = false;
 
   if (aArgs.size() > 2) {
-    myCount = std::stoull(aArgs[2]);
+    auto myParsed = parseSignedInt(aArgs[2]);
+    if (!myParsed) {
+      return RespParser::formatError(std::string(kErrNotInt));
+    }
+    myCount = *myParsed;
     myMulti = true;
+
+    // Only SRANDMEMBER accepts a negative count (selection with
+    // replacement). LPOP / RPOP / SPOP set aAllowNegativeCount=false
+    // and reject anything < 0.
+    if (!aAllowNegativeCount && myCount < 0) {
+      return RespParser::formatError(
+          "ERR value is out of range, must be positive");
+    }
   }
 
   auto myValues = aPopFunc(aArgs[1], myCount);
@@ -187,15 +240,18 @@ std::string RespHandler::handle(const Args& aArgs) {
     {"LPUSHX",       [](RespHandler& h, const Args& a) { return h.handlePush(a, "lpushx", &stor::Lists::pushFrontExist); }},
     {"RPUSHX",       [](RespHandler& h, const Args& a) { return h.handlePush(a, "rpushx", &stor::Lists::pushBackExist); }},
 
-    // List pop (generic)
+    // List pop (generic). Counts come in as int64_t; the dispatcher
+    // already rejects negative for LPOP/RPOP/SPOP (allowNegative=false)
+    // and only allows negative for SRANDMEMBER (selection with
+    // replacement, allowNegative=true).
     {"LPOP",         [](RespHandler& h, const Args& a) {
-      return h.handlePopWithOptionalCount(a, "lpop", [&h](const std::string& k, uint64_t c) {
-        return h.theStorage.lists.popFront(k, c);
+      return h.handlePopWithOptionalCount(a, "lpop", false, [&h](const std::string& k, int64_t c) {
+        return h.theStorage.lists.popFront(k, static_cast<uint64_t>(c));
       });
     }},
     {"RPOP",         [](RespHandler& h, const Args& a) {
-      return h.handlePopWithOptionalCount(a, "rpop", [&h](const std::string& k, uint64_t c) {
-        return h.theStorage.lists.popBack(k, c);
+      return h.handlePopWithOptionalCount(a, "rpop", false, [&h](const std::string& k, int64_t c) {
+        return h.theStorage.lists.popBack(k, static_cast<uint64_t>(c));
       });
     }},
 
@@ -235,13 +291,13 @@ std::string RespHandler::handle(const Args& aArgs) {
 
     // Set pop/random (generic)
     {"SPOP",         [](RespHandler& h, const Args& a) {
-      return h.handlePopWithOptionalCount(a, "spop", [&h](const std::string& k, uint64_t c) {
+      return h.handlePopWithOptionalCount(a, "spop", false, [&h](const std::string& k, int64_t c) {
         return h.theStorage.sets.pop(k, static_cast<size_t>(c));
       });
     }},
     {"SRANDMEMBER",  [](RespHandler& h, const Args& a) {
-      return h.handlePopWithOptionalCount(a, "srandmember", [&h](const std::string& k, uint64_t c) {
-        return h.theStorage.sets.randMember(k, static_cast<int64_t>(c));
+      return h.handlePopWithOptionalCount(a, "srandmember", true, [&h](const std::string& k, int64_t c) {
+        return h.theStorage.sets.randMember(k, c);
       });
     }},
 
@@ -370,7 +426,11 @@ std::string RespHandler::handleLindex(const Args& aArgs) {
   auto myErr = validateMinArgs(aArgs, 3, "lindex");
   if (!myErr.empty()) return myErr;
 
-  auto myResult = theStorage.lists.index(aArgs[1], std::stoll(aArgs[2]));
+  auto myIndex = parseSignedInt(aArgs[2]);
+  if (!myIndex) {
+    return RespParser::formatError(std::string(kErrNotInt));
+  }
+  auto myResult = theStorage.lists.index(aArgs[1], *myIndex);
   if (myResult) {
     return RespParser::formatBulkString(myResult.value());
   }
@@ -402,8 +462,12 @@ std::string RespHandler::handleLrange(const Args& aArgs) {
   auto myErr = validateMinArgs(aArgs, 4, "lrange");
   if (!myErr.empty()) return myErr;
 
-  auto myValues =
-      theStorage.lists.range(aArgs[1], std::stoll(aArgs[2]), std::stoll(aArgs[3]));
+  auto myStart = parseSignedInt(aArgs[2]);
+  auto myStop  = parseSignedInt(aArgs[3]);
+  if (!myStart || !myStop) {
+    return RespParser::formatError(std::string(kErrNotInt));
+  }
+  auto myValues = theStorage.lists.range(aArgs[1], *myStart, *myStop);
   return formatBulkStringArray(myValues);
 }
 
@@ -411,8 +475,11 @@ std::string RespHandler::handleLrem(const Args& aArgs) {
   auto myErr = validateMinArgs(aArgs, 4, "lrem");
   if (!myErr.empty()) return myErr;
 
-  auto myRemoved =
-      theStorage.lists.remove(aArgs[1], std::stoll(aArgs[2]), aArgs[3]);
+  auto myCount = parseSignedInt(aArgs[2]);
+  if (!myCount) {
+    return RespParser::formatError(std::string(kErrNotInt));
+  }
+  auto myRemoved = theStorage.lists.remove(aArgs[1], *myCount, aArgs[3]);
   return RespParser::formatInteger(static_cast<int64_t>(myRemoved));
 }
 
@@ -420,8 +487,11 @@ std::string RespHandler::handleLset(const Args& aArgs) {
   auto myErr = validateMinArgs(aArgs, 4, "lset");
   if (!myErr.empty()) return myErr;
 
-  auto myStatus =
-      theStorage.lists.set(aArgs[1], std::stoll(aArgs[2]), aArgs[3]);
+  auto myIndex = parseSignedInt(aArgs[2]);
+  if (!myIndex) {
+    return RespParser::formatError(std::string(kErrNotInt));
+  }
+  auto myStatus = theStorage.lists.set(aArgs[1], *myIndex, aArgs[3]);
   switch (myStatus) {
     case stor::Lists::Status::OK:
       return RespParser::formatSimpleString("OK");
@@ -437,7 +507,12 @@ std::string RespHandler::handleLtrim(const Args& aArgs) {
   auto myErr = validateMinArgs(aArgs, 4, "ltrim");
   if (!myErr.empty()) return myErr;
 
-  theStorage.lists.trim(aArgs[1], std::stoll(aArgs[2]), std::stoll(aArgs[3]));
+  auto myStart = parseSignedInt(aArgs[2]);
+  auto myStop  = parseSignedInt(aArgs[3]);
+  if (!myStart || !myStop) {
+    return RespParser::formatError(std::string(kErrNotInt));
+  }
+  theStorage.lists.trim(aArgs[1], *myStart, *myStop);
   return RespParser::formatSimpleString("OK");
 }
 
@@ -473,12 +548,31 @@ std::string RespHandler::handleLpos(const Args& aArgs) {
 
   for (size_t i = 3; i + 1 < aArgs.size(); i += 2) {
     if (iequalsToUpper(aArgs[i], "RANK")) {
-      myRank = std::stoll(aArgs[i + 1]);
+      auto myParsed = parseSignedInt(aArgs[i + 1]);
+      if (!myParsed) {
+        return RespParser::formatError(std::string(kErrNotInt));
+      }
+      // Redis: RANK 0 is rejected with a typed error.
+      if (*myParsed == 0) {
+        return RespParser::formatError("ERR RANK can't be zero: use 1 to "
+                                       "start from the first match going "
+                                       "forward, or -1 from the last match "
+                                       "going backward.");
+      }
+      myRank = *myParsed;
     } else if (iequalsToUpper(aArgs[i], "COUNT")) {
-      myCount = std::stoull(aArgs[i + 1]);
+      auto myParsed = parseUnsignedInt(aArgs[i + 1]);
+      if (!myParsed) {
+        return RespParser::formatError(std::string(kErrNotInt));
+      }
+      myCount = *myParsed;
       myMulti = true;
     } else if (iequalsToUpper(aArgs[i], "MAXLEN")) {
-      myMaxLen = std::stoull(aArgs[i + 1]);
+      auto myParsed = parseUnsignedInt(aArgs[i + 1]);
+      if (!myParsed) {
+        return RespParser::formatError(std::string(kErrNotInt));
+      }
+      myMaxLen = *myParsed;
     }
   }
 
@@ -505,10 +599,19 @@ std::string RespHandler::handleLmpop(const Args& aArgs) {
   auto myErr = validateMinArgs(aArgs, 4, "lmpop");
   if (!myErr.empty()) return myErr;
 
-  const uint64_t myNumKeys = std::stoull(aArgs[1]);
-  if (aArgs.size() < 2 + myNumKeys + 1) {
+  auto myNumKeysOpt = parseUnsignedInt(aArgs[1]);
+  if (!myNumKeysOpt) {
+    return RespParser::formatError(std::string(kErrNotInt));
+  }
+  // Bound numKeys to what the rest of the request can plausibly hold.
+  // Without this an attacker-supplied uint64 wraps the
+  // `2 + myNumKeys + 1` size_t arithmetic below and the subsequent
+  // `aArgs[2 + myNumKeys]` indexing reads OOB.
+  if (*myNumKeysOpt == 0 || *myNumKeysOpt > aArgs.size() ||
+      *myNumKeysOpt > aArgs.size() - 3) {
     return RespParser::formatError("ERR syntax error");
   }
+  const uint64_t myNumKeys = *myNumKeysOpt;
 
   auto myDirection = parseDirection(aArgs[2 + myNumKeys]);
   if (!myDirection) {
@@ -518,7 +621,11 @@ std::string RespHandler::handleLmpop(const Args& aArgs) {
   uint64_t myCount = 1;
   size_t   myIdx   = 3 + myNumKeys;
   if (myIdx + 1 < aArgs.size() && iequalsToUpper(aArgs[myIdx], "COUNT")) {
-    myCount = std::stoull(aArgs[myIdx + 1]);
+    auto myParsed = parseUnsignedInt(aArgs[myIdx + 1]);
+    if (!myParsed) {
+      return RespParser::formatError(std::string(kErrNotInt));
+    }
+    myCount = *myParsed;
   }
 
   // LMPOP semantics: return the first key that yielded values, plus its
@@ -570,10 +677,16 @@ std::string RespHandler::handleSintercard(const Args& aArgs) {
   auto myErr = validateMinArgs(aArgs, 3, "sintercard");
   if (!myErr.empty()) return myErr;
 
-  const uint64_t myNumKeys = std::stoull(aArgs[1]);
-  if (aArgs.size() < 2 + myNumKeys) {
+  auto myNumKeysOpt = parseUnsignedInt(aArgs[1]);
+  if (!myNumKeysOpt) {
+    return RespParser::formatError(std::string(kErrNotInt));
+  }
+  // Bound numKeys to the request size to prevent the OOB index read
+  // and the oversized myKeys.reserve() call below.
+  if (*myNumKeysOpt == 0 || *myNumKeysOpt > aArgs.size() - 2) {
     return RespParser::formatError("ERR syntax error");
   }
+  const uint64_t myNumKeys = *myNumKeysOpt;
 
   std::vector<std::string_view> myKeys;
   myKeys.reserve(myNumKeys);
@@ -584,7 +697,11 @@ std::string RespHandler::handleSintercard(const Args& aArgs) {
   uint64_t myLimit = 0;
   size_t   myIdx   = 2 + myNumKeys;
   if (myIdx + 1 < aArgs.size() && iequalsToUpper(aArgs[myIdx], "LIMIT")) {
-    myLimit = std::stoull(aArgs[myIdx + 1]);
+    auto myParsed = parseUnsignedInt(aArgs[myIdx + 1]);
+    if (!myParsed) {
+      return RespParser::formatError(std::string(kErrNotInt));
+    }
+    myLimit = *myParsed;
   }
 
   auto myResult = theStorage.sets.inter(myKeys);
