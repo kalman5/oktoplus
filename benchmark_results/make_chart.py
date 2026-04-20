@@ -554,9 +554,42 @@ def main() -> int:
         },
     )
 
+    # Memory footprint chart (only emit if run_memory.sh has produced
+    # raw/memory.csv). One line per server; we average over key-count
+    # for each value-size since per-key cost is independent of N.
+    mem_csv = RAW / "memory.csv"
+    extra_lines = []
+    if mem_csv.exists():
+        import csv as _csv
+        from collections import defaultdict
+        per_server = defaultdict(lambda: defaultdict(list))
+        with mem_csv.open() as fh:
+            for row in _csv.DictReader(fh):
+                vs = int(row["value_size_b"])
+                per_server[row["server"]][vs].append(float(row["bytes_per_key"]))
+        sizes = sorted({vs for d in per_server.values() for vs in d})
+        if sizes and "oktoplus" in per_server and "redis" in per_server:
+            okto_bpk = [sum(per_server["oktoplus"][s]) / len(per_server["oktoplus"][s])
+                        for s in sizes]
+            redis_bpk = [sum(per_server["redis"][s]) / len(per_server["redis"][s])
+                         for s in sizes]
+            line_chart(
+                title="Memory footprint — bytes per key (lower is better)",
+                x_values=sizes,
+                series=[
+                    ("Oktoplus", okto_bpk, "#3fb950"),
+                    ("Redis",    redis_bpk, "#f85149"),
+                ],
+                x_label="value size (bytes)",
+                y_max=max(max(okto_bpk), max(redis_bpk)) * 1.10,
+                out_path=HERE / "chart_memory.svg",
+            )
+            extra_lines.append("chart_memory.svg")
+
     print(
         "wrote chart_p1.svg, chart_p16.svg, chart_p16_d256.svg, "
         "chart_concurrency.svg, chart_concurrency_random.svg, report.html"
+        + (", " + ", ".join(extra_lines) if extra_lines else "")
     )
     return 0
 

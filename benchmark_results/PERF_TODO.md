@@ -190,15 +190,77 @@ use-after-free-on-shutdown latent bug Paladin flagged.
 
 ---
 
+## Memory observability (not pure perf — needed to *measure* perf)
+
+Today we have no first-class way to answer "how much memory does
+Oktoplus use vs Redis for the same dataset?". Three concrete asks:
+
+## K. `INFO memory` command
+
+Redis returns a section with `used_memory` (allocator-tracked),
+`used_memory_rss` (kernel RSS), `used_memory_peak`, fragmentation
+ratio, allocator name. Implement the subset we can produce cheaply
+on the RESP and gRPC sides:
+
+  - `used_memory`: `je_mallctl("stats.allocated", ...)` (jemalloc) or
+    `mallinfo2().uordblks` fallback.
+  - `used_memory_rss`: read VmRSS from `/proc/self/status`.
+  - `mem_allocator`: hard-coded "jemalloc-<version>" / "libc".
+
+- **Effort**: small (~100 LOC + INFO command dispatch).
+- **Risk**: low.
+- **Why**: lets the bench harness compare memory parity vs Redis
+  without scraping `/proc/<pid>` from outside.
+
+## L. `MEMORY USAGE <key>` command
+
+Redis returns the per-key byte cost (object header + value heap +
+per-element overhead). For us the natural shape is:
+`sizeof(ProtectedContainer)` + container's own overhead +
+sum(element string capacity) + outer-map slot cost.
+
+- **Effort**: medium — need a `byteSize()` method on each storage
+  type and the dispatch to call it under the per-key lock.
+- **Risk**: low; read-only by design.
+- **Why**: enables debugging "which key is huge?" patterns and
+  validates SDS / quicklist work (items A / I) by showing the
+  per-key drop directly.
+
+## M. jemalloc stats web dashboard
+
+We don't have a web interface yet. Wire a tiny HTTP server (could
+be `boost::beast` reusing the existing asio dependency, or a
+stand-alone `httplib`-style header) that exposes:
+
+  - `/stats/jemalloc` — `je_malloc_stats_print()` HTML or JSON.
+  - `/stats/info` — same payload as the future INFO command.
+  - `/stats/keys?prefix=...` — sampled MEMORY USAGE results.
+
+- **Effort**: medium (~400 LOC with templates + server lifetime).
+- **Risk**: low; admin-only port, off by default.
+- **Why**: jemalloc's stats are rich (per-arena dirty pages,
+  fragmentation, large/small allocation breakdowns) and currently
+  invisible. A dashboard makes them actionable without recompiles.
+- **Pre-work**: pick the HTTP layer (likely `boost::beast` to avoid
+  pulling in another dep), settle on auth model (none / loopback only).
+
+---
+
 ## Suggested order
 
 (B, C, D, F, H done — flat_hash_map outer, sharding, embedded mutex,
 multi-iteration harness, jemalloc all landed. RPUSH-rand c=100
 climbed from 19% → 33% of Redis; reads scaled to 82-93%.)
 
-1. **E** (PGO) — likely cheap win, validates the harness.
-2. **A** (SDS) — substantial work, decide based on residual gap.
+1. **K** (`INFO memory`) — unblocks honest memory comparison vs
+   Redis in the bench harness.
+2. **E** (PGO) — likely cheap win, validates the harness.
 3. **J** (async server) — biggest remaining lever for the c=100
    write-throughput gap.
-4. **I** (quicklist) — only if A landed and tiny-value workloads
+4. **A** (SDS) — substantial work, decide based on residual gap.
+5. **L** (`MEMORY USAGE <key>`) — pairs with A to *show* the
+   per-key drop.
+6. **M** (jemalloc web dashboard) — admin/observability sugar; do
+   after K so the data plumbing already exists.
+7. **I** (quicklist) — only if A landed and tiny-value workloads
    are a real target.
