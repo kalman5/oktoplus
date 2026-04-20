@@ -394,7 +394,7 @@ SequenceContainer<CONTAINER>::position(const std::string& aName,
 
             /// Interrupt the traverse if I have visited already the max
             /// allowed values.
-            /// If specified lenght is 0 then we do not have limits.
+            /// If specified length is 0 then we do not have limits.
             if (aMaxLength > 0 && myIndex >= aMaxLength) {
               break;
             }
