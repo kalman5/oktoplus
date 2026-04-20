@@ -63,9 +63,15 @@ class ContainerFunctorApplier
 
  private:
   // Plain non-recursive mutex. The only command that used to re-enter
-  // the per-key lock was LMOVE / RPOPLPUSH with source == destination,
-  // and that case is now handled directly inside SequenceContainer::move
-  // under a single lock acquisition.
+  // the SAME per-key lock was LMOVE / RPOPLPUSH with source ==
+  // destination, and that case is now handled directly inside
+  // SequenceContainer::move under a single lock acquisition.
+  //
+  // Note: cross-key LMOVE still acquires *two* per-key inner mutexes
+  // (one per key) inside its outer functor, but those are different
+  // ProtectedContainer instances, so they don't re-enter the same
+  // mutex — non-recursive is fine. theMoveMutex serializes such moves
+  // to prevent the L1<->L2 deadlock; see SequenceContainer::move.
   using ContainerMutex = std::mutex;
 
   struct ProtectedContainer {
