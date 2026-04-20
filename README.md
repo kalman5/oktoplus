@@ -58,29 +58,29 @@ At pipeline depth 1 the workload is dominated by the kernel network round-trip, 
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |       33,760 |    31,705 |     **107%** |
-| SADD          |       34,153 |    31,172 |     **110%** |
-| LRANGE_100    |       26,497 |    25,588 |     **104%** |
-| LPOP (rand)   |       30,184 |    30,395 |          99% |
-| RPOP (rand)   |       30,902 |    30,459 |     **101%** |
-| LLEN (rand)   |       33,534 |    30,864 |     **109%** |
-| SCARD (rand)  |       32,615 |    30,432 |     **107%** |
+| LPUSH         |       33,046 |    31,735 |     **104%** |
+| SADD          |       32,299 |    30,211 |     **107%** |
+| LRANGE_100    |       26,546 |    25,227 |     **105%** |
+| LPOP (rand)   |       30,021 |    30,111 |         100% |
+| RPOP (rand)   |       31,887 |    30,978 |     **103%** |
+| LLEN (rand)   |       33,489 |    29,985 |     **112%** |
+| SCARD (rand)  |       32,862 |    30,978 |     **106%** |
 
-##### Single client, pipelined (`-P 16`) — Oktoplus ahead on hot key + reads, ~72-86% on random-key writes
+##### Single client, pipelined (`-P 16`) — Oktoplus ahead on hot key + reads, ~80-84% on random-key writes
 
-Pipelining lets each server stretch its legs. With the RESP parser no longer going through `std::istream`/`std::stoll`, the dispatch table static, the reply path append-into-buffer, `Lists` storage backed by `std::deque` instead of `std::list`, the outer keyspace sharded into 32 (mutex, `flat_hash_map`) pairs with embedded inner mutex, the inner-lock holder simplified from `std::optional<unique_lock>` to a plain `unique_lock`, the lock primitives swapped from `boost::mutex`/`recursive_mutex` to their `std::` equivalents, and the binary linked against jemalloc, Oktoplus now **beats Redis** on every hot-key write path and on `LLEN`/`SCARD`. Random-key writes still trail because each new key pays an outer-map insert + `ProtectedContainer` allocation (next milestone).
+Pipelining lets each server stretch its legs. With the RESP parser no longer going through `std::istream`/`std::stoll`, the dispatch table static, the reply path append-into-buffer, `Lists` storage backed by `std::deque` instead of `std::list`, the outer keyspace sharded into 32 (mutex, `flat_hash_map`) pairs with embedded inner mutex, the inner-lock holder simplified from `std::optional<unique_lock>` to a plain `unique_lock`, the lock primitives swapped from `boost::mutex`/`recursive_mutex` to plain `std::mutex` (LMOVE same-key rotation now handled in a single critical section so the inner lock no longer needs to be recursive), and the binary linked against jemalloc, Oktoplus now **beats Redis** on every hot-key write path and on `LLEN`/`SCARD`. Random-key writes still trail because each new key pays an outer-map insert + `ProtectedContainer` allocation (next milestone).
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |      403,225 |   387,596 |     **104%** |
-| SADD          |      369,003 |   342,465 |     **108%** |
-| LPUSH (LRANGE seed) | 429,184 |   392,156 |     **109%** |
-| LRANGE_100    |      106,269 |   108,695 |          98% |
-| RPUSH (rand)  |      283,286 |   337,837 |          84% |
-| LPOP (rand)   |      253,164 |   350,877 |          72% |
-| RPOP (rand)   |      313,479 |   366,300 |          86% |
-| LLEN          |      458,715 |   406,504 |     **113%** |
-| SCARD         |      469,483 |   398,406 |     **118%** |
+| LPUSH         |      427,350 |   390,624 |     **109%** |
+| SADD          |      398,406 |   349,650 |     **114%** |
+| LPUSH (LRANGE seed) | 408,163 |   390,624 |     **104%** |
+| LRANGE_100    |      109,409 |   108,813 |     **101%** |
+| RPUSH (rand)  |      298,507 |   357,142 |          84% |
+| LPOP (rand)   |      280,112 |   349,650 |          80% |
+| RPOP (rand)   |      334,448 |   395,256 |          85% |
+| LLEN          |      434,782 |   411,522 |     **106%** |
+| SCARD         |      446,428 |   392,156 |     **114%** |
 
 ##### Many clients, no pipelining — LPUSH on a hot key
 
@@ -88,11 +88,11 @@ The "parallelism" sweep keeps `-P 1` and varies `-c`. Both servers saturate arou
 
 | Clients | Oktoplus rps | Redis rps | Okto / Redis |
 |--------:|-------------:|----------:|-------------:|
-|       1 |       32,959 |    31,094 |     **106%** |
-|      10 |       73,691 |    81,699 |          90% |
-|      50 |       68,917 |    87,260 |          79% |
-|     100 |       72,780 |    92,936 |          78% |
-|     200 |       75,075 |    81,168 |          92% |
+|       1 |       32,289 |    31,545 |     **102%** |
+|      10 |       72,568 |    82,918 |          88% |
+|      50 |       70,028 |    90,744 |          77% |
+|     100 |       68,352 |    83,892 |          81% |
+|     200 |       71,736 |    89,445 |          80% |
 
 ##### Many clients, pipelined, **random keys** — where Oktoplus actually scales
 
@@ -104,17 +104,17 @@ A slice from `concurrent_random_*_p16.csv` at `-c 100`:
 
 | Test            | Oktoplus rps | Redis rps | Okto / Redis |
 |-----------------|-------------:|----------:|-------------:|
-| RPUSH (rand)    |      694,444 |   892,857 |          78% |
-| LPOP (rand)     |      487,804 |   934,579 |          52% |
-| RPOP (rand)     |      806,451 | 1,052,631 |          77% |
-| **LLEN (rand)** |    1,041,666 | 1,149,425 |     **91%** |
-| SADD (rand)     |      671,140 |   970,873 |          69% |
-| **SCARD (rand)**|    1,052,631 | 1,063,829 |     **99%** |
+| RPUSH (rand)    |      714,285 |   900,900 |          79% |
+| LPOP (rand)     |      490,196 |   952,381 |          51% |
+| RPOP (rand)     |      869,565 | 1,111,111 |          78% |
+| **LLEN (rand)** |    1,052,631 | 1,176,470 |     **89%** |
+| SADD (rand)     |      675,675 |   980,392 |          69% |
+| **SCARD (rand)**|    1,030,927 | 1,250,000 |     **82%** |
 
-Where the outer-map work was made cheaper (PERF_TODO items C/D/B + the `optional<unique_lock>` cleanup + boost→std mutex swap), the multithreaded design pulls its weight:
+Where the outer-map work was made cheaper (PERF_TODO items C/D/B + the `optional<unique_lock>` cleanup + boost→std mutex swap + dropping `recursive_mutex` for plain `std::mutex`), the multithreaded design pulls its weight:
 
-  - **Reads scale to Redis levels.** `SCARD` at -c 100 is at **99%** of Redis (essentially tied at ~1.05M rps each); `LLEN` at 91%. Both servers are bound by single-stream processing on this path, but Oktoplus's per-key parallelism keeps it within striking distance.
-  - **Writes scale dramatically better than before.** `RPUSH (rand)` at -c 100 was at 19% of Redis when this section first appeared; it's now at **78%**. `RPOP (rand)` jumped from 34% to **77%**. `SADD (rand)` from 31% to **69%**. Most of that lift came from the per-call cost — fewer allocations, no `optional<>` indirection on the inner-lock retry, slimmer mutex types — rather than from making the per-key alloc cheaper. The remaining gap is per-key allocation (each new key still pays a `unique_ptr<ProtectedContainer>` heap alloc + outer-map insertion cost) plus thread-per-connection overhead. PERF_TODO item J (async I/O server) is the next big lever.
+  - **Reads scale to Redis levels.** `SCARD` and `LLEN` at -c 100 are at ~82-89% of Redis (~1M rps each). Both servers are bound by single-stream processing on this path, but Oktoplus's per-key parallelism keeps it within striking distance.
+  - **Writes scale dramatically better than before.** `RPUSH (rand)` at -c 100 was at 19% of Redis when this section first appeared; it's now at **79%**. `RPOP (rand)` jumped from 34% to **78%**. `SADD (rand)` from 31% to **69%**. Most of that lift came from the per-call cost — fewer allocations, no `optional<>` indirection on the inner-lock retry, slimmer (and now non-recursive) mutex types — rather than from making the per-key alloc cheaper. The remaining gap is per-key allocation (each new key still pays a `unique_ptr<ProtectedContainer>` heap alloc + outer-map insertion cost) plus thread-per-connection overhead. PERF_TODO item J (async I/O server) is the next big lever.
 
 ##### Single client, pipelined (`-P 16`), 256-byte values
 
@@ -122,15 +122,15 @@ Same workload as the small-value `-P 16` table above but the value is padded to 
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |      344,827 |   359,712 |          96% |
-| SADD          |      406,504 |   358,422 |     **113%** |
-| LPUSH (LRANGE seed) | 369,003 |   358,422 |     **103%** |
-| LRANGE_100    |       53,078 |    54,259 |          98% |
-| RPUSH (rand, 256B) | 236,966 |   322,580 |          73% |
-| LPOP (rand)   |      243,309 |   323,624 |          75% |
-| RPOP (rand)   |      312,500 |   371,747 |          84% |
-| LLEN          |      420,168 |   409,836 |     **103%** |
-| SCARD         |      400,000 |   393,700 |     **102%** |
+| LPUSH         |      362,318 |   358,422 |     **101%** |
+| SADD          |      400,000 |   350,877 |     **114%** |
+| LPUSH (LRANGE seed) | 378,787 |   364,963 |     **104%** |
+| LRANGE_100    |       53,333 |    55,187 |          97% |
+| RPUSH (rand, 256B) | 240,384 |   298,507 |          80% |
+| LPOP (rand)   |      255,754 |   332,225 |          77% |
+| RPOP (rand)   |      316,455 |   364,963 |          87% |
+| LLEN          |      431,034 |   408,163 |     **106%** |
+| SCARD         |      454,545 |   390,624 |     **116%** |
 
 Two takeaways:
 

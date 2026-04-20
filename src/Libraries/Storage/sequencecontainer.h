@@ -270,16 +270,46 @@ SequenceContainer<CONTAINER>::move(const std::string& aSourceName,
 
   std::optional<std::string> myRet;
 
-  // clang-format off
-  // The following mutex is required to avoid a dead lock in case two different
-  // operations are running concurrently:
-  //     move(L1 -> L2)
-  //     move(L2 -> L1)
-  // TODO: this has to be improved indeed it avoid the concurrency
-  //       of every other move operations on different
-  //       containers
-  // clang-format on
+  // Same-key rotation (LMOVE k k LEFT RIGHT, RPOPLPUSH k k): handle
+  // entirely under a single inner-lock acquisition to avoid re-entering
+  // the same per-key mutex through the nested performOnNew below. This
+  // is the only structural reason the per-key mutex used to be
+  // recursive; with this special case it can be a plain std::mutex.
+  if (aSourceName == aDestinationName) {
+    Base::theApplyer.performOnExisting(
+        aSourceName,
+        [&aSourceDirection, &aDestinationDirection, &myRet](
+            Container& aContainer) {
+          if (aContainer.empty()) {
+            return;
+          }
+          std::string myValue;
 
+          if (aSourceDirection == Direction::LEFT) {
+            myValue = aContainer.front();
+            aContainer.pop_front();
+          } else {
+            myValue = aContainer.back();
+            aContainer.pop_back();
+          }
+
+          if (aDestinationDirection == Direction::LEFT) {
+            aContainer.push_front(myValue);
+          } else {
+            aContainer.push_back(myValue);
+          }
+
+          myRet = std::move(myValue);
+        });
+    return myRet;
+  }
+
+  // Cross-key move. theMoveMutex serialises all such moves to avoid
+  // the classic deadlock between concurrent move(L1 -> L2) and
+  // move(L2 -> L1) — both would hold one inner lock and spin waiting
+  // for the other under the try-lock-retry protocol.
+  // TODO: replace with ordered two-key locking so non-overlapping
+  //       moves can proceed in parallel.
   const std::lock_guard myLock(theMoveMutex);
 
   Base::theApplyer.performOnExisting(

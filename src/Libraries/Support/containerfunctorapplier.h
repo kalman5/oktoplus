@@ -63,9 +63,11 @@ class ContainerFunctorApplier
   void performOnExisting(const std::string& aName, F&& aFunctor) const;
 
  private:
-  // Recursive because some operations (LMOVE source==destination) take
-  // the same per-key lock twice through different code paths.
-  using ContainerMutex = std::recursive_mutex;
+  // Plain non-recursive mutex. The only command that used to re-enter
+  // the per-key lock was LMOVE / RPOPLPUSH with source == destination,
+  // and that case is now handled directly inside SequenceContainer::move
+  // under a single lock acquisition.
+  using ContainerMutex = std::mutex;
 
   struct ProtectedContainer {
     // Inline mutex — saves one heap allocation per new key on the
