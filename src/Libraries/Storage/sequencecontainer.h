@@ -100,6 +100,14 @@ class SequenceContainer : public GenericContainer<CONTAINER>
 // supports O(1) push_front/push_back, and starts with zero capacity
 // (allocation only on first push), so a 1-element list pays for
 // exactly one std::string slot.
+//
+// NOTE: `Lists` and `Deques` resolve to the same C++ type today (both
+// are SequenceContainer<devector<string>>). They are kept as separate
+// using-aliases because StorageContext stores them in distinct
+// instances — they do NOT share a keyspace. A `LPUSH foo v` populates
+// `theStorage.lists`, a `DequePushBack foo v` populates
+// `theStorage.deques`. The names denote the *namespace*, not a
+// distinct backing implementation.
 using Lists   = SequenceContainer<boost::container::devector<std::string>>;
 using Deques  = SequenceContainer<boost::container::devector<std::string>>;
 using Vectors = SequenceContainer<std::vector<std::string>>;
@@ -311,6 +319,21 @@ SequenceContainer<CONTAINER>::move(const std::string& aSourceName,
   // the classic deadlock between concurrent move(L1 -> L2) and
   // move(L2 -> L1) — both would hold one inner lock and spin waiting
   // for the other under the try-lock-retry protocol.
+  //
+  // The nested performOnNew(aDestinationName, ...) below runs INSIDE
+  // the source's per-key lambda, so:
+  //   - the source's per-key inner mutex is held throughout, AND
+  //   - the destination's shard outer mutex is reacquired (different
+  //     shard or same — either way it's a fresh acquisition, not
+  //     re-entry of an already-held lock), AND
+  //   - the destination's per-key inner mutex is acquired via the
+  //     try-lock-retry loop. Safe because src and dst are guaranteed
+  //     distinct keys here (the same-key case branched above), so the
+  //     two inner mutexes are different ProtectedContainer instances.
+  // theMoveMutex is therefore not the *only* serialisation in play —
+  // the destination shard outer mutex is also taken — but it is what
+  // guarantees no two cross-key moves can interleave their inner-lock
+  // acquisitions and deadlock.
   // TODO: replace with ordered two-key locking so non-overlapping
   //       moves can proceed in parallel.
   const std::lock_guard myLock(theMoveMutex);
