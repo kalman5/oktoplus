@@ -52,13 +52,13 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |       33,046 |    31,735 |     **104%** |
-| SADD          |       32,299 |    30,211 |     **107%** |
-| LRANGE_100    |       26,546 |    25,227 |     **105%** |
-| LPOP (rand)   |       30,021 |    30,111 |         100% |
-| RPOP (rand)   |       31,887 |    30,978 |     **103%** |
-| LLEN (rand)   |       33,489 |    29,985 |     **112%** |
-| SCARD (rand)  |       32,862 |    30,978 |     **106%** |
+| LPUSH         |       32,626 |    31,948 |     **102%** |
+| SADD          |       32,679 |    31,123 |     **105%** |
+| LRANGE_100    |       26,638 |    25,980 |     **103%** |
+| LPOP (rand)   |       31,867 |    29,779 |     **107%** |
+| RPOP (rand)   |       30,515 |    31,026 |          98% |
+| LLEN (rand)   |       33,760 |    31,269 |     **108%** |
+| SCARD (rand)  |       32,164 |    32,341 |          99% |
 
 ##### Single client, pipelined (`-P 16`)
 
@@ -66,15 +66,15 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |      427,350 |   390,624 |     **109%** |
-| SADD          |      398,406 |   349,650 |     **114%** |
-| LPUSH (LRANGE seed) | 408,163 |   390,624 |     **104%** |
-| LRANGE_100    |      109,409 |   108,813 |     **101%** |
-| RPUSH (rand)  |      298,507 |   357,142 |          84% |
-| LPOP (rand)   |      280,112 |   349,650 |          80% |
-| RPOP (rand)   |      334,448 |   395,256 |          85% |
-| LLEN          |      434,782 |   411,522 |     **106%** |
-| SCARD         |      446,428 |   392,156 |     **114%** |
+| LPUSH         |      411,522 |   393,700 |     **105%** |
+| SADD          |      378,787 |   369,003 |     **103%** |
+| LPUSH (LRANGE seed) | 423,728 |   408,163 |     **104%** |
+| LRANGE_100    |      107,758 |   109,649 |          98% |
+| RPUSH (rand)  |      259,067 |   355,871 |          73% |
+| LPOP (rand)   |      277,008 |   361,010 |          77% |
+| RPOP (rand)   |      325,732 |   431,034 |          76% |
+| LLEN          |      446,428 |   387,596 |     **115%** |
+| SCARD         |      478,468 |   413,223 |     **116%** |
 
 ##### Many clients, no pipelining — LPUSH on a hot key
 
@@ -84,11 +84,11 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 
 | Clients | Oktoplus rps | Redis rps | Okto / Redis |
 |--------:|-------------:|----------:|-------------:|
-|       1 |       32,289 |    31,545 |     **102%** |
-|      10 |       72,568 |    82,918 |          88% |
-|      50 |       70,028 |    90,744 |          77% |
-|     100 |       68,352 |    83,892 |          81% |
-|     200 |       71,736 |    89,445 |          80% |
+|       1 |       33,079 |    30,303 |     **109%** |
+|      10 |       73,313 |    80,321 |          91% |
+|      50 |       70,472 |    87,412 |          81% |
+|     100 |       69,204 |    83,263 |          83% |
+|     200 |       62,383 |    80,645 |          77% |
 
 ##### Many clients, pipelined, random keys
 
@@ -100,12 +100,12 @@ A slice from `concurrent_random_*_p16.csv` at `-c 100`:
 
 | Test            | Oktoplus rps | Redis rps | Okto / Redis |
 |-----------------|-------------:|----------:|-------------:|
-| RPUSH (rand)    |      714,285 |   900,900 |          79% |
-| LPOP (rand)     |      490,196 |   952,381 |          51% |
-| RPOP (rand)     |      869,565 | 1,111,111 |          78% |
-| **LLEN (rand)** |    1,052,631 | 1,176,470 |     **89%** |
-| SADD (rand)     |      675,675 |   980,392 |          69% |
-| **SCARD (rand)**|    1,030,927 | 1,250,000 |     **82%** |
+| RPUSH (rand)    |      680,272 |   869,565 |          78% |
+| LPOP (rand)     |      458,715 |   892,857 |          51% |
+| RPOP (rand)     |      833,333 | 1,086,956 |          77% |
+| **LLEN (rand)** |    1,020,408 | 1,098,901 |     **93%** |
+| SADD (rand)     |      657,894 |   980,392 |          67% |
+| **SCARD (rand)**|    1,041,666 | 1,136,363 |     **92%** |
 
 ##### Single client, pipelined (`-P 16`), 256-byte values
 
@@ -115,15 +115,15 @@ Same workload as the small-value `-P 16` table above but with a 256-byte payload
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |      362,318 |   358,422 |     **101%** |
-| SADD          |      400,000 |   350,877 |     **114%** |
-| LPUSH (LRANGE seed) | 378,787 |   364,963 |     **104%** |
-| LRANGE_100    |       53,333 |    55,187 |          97% |
-| RPUSH (rand, 256B) | 240,384 |   298,507 |          80% |
-| LPOP (rand)   |      255,754 |   332,225 |          77% |
-| RPOP (rand)   |      316,455 |   364,963 |          87% |
-| LLEN          |      431,034 |   408,163 |     **106%** |
-| SCARD         |      454,545 |   390,624 |     **116%** |
+| LPUSH         |      338,983 |   353,356 |          96% |
+| SADD          |      390,624 |   363,636 |     **107%** |
+| LPUSH (LRANGE seed) | 334,448 |   350,877 |          95% |
+| LRANGE_100    |       51,921 |    53,850 |          96% |
+| RPUSH (rand, 256B) | 214,132 |   298,507 |          72% |
+| LPOP (rand)   |      243,309 |   323,624 |          75% |
+| RPOP (rand)   |      313,479 |   363,636 |          86% |
+| LLEN          |      418,410 |   401,606 |     **104%** |
+| SCARD         |      450,450 |   387,596 |     **116%** |
 
 Full per-test CSVs and the raw-results history are under `benchmark_results/raw/`.
 
@@ -135,16 +135,16 @@ Generated by `benchmark_results/run_memory.sh` — for each cell, start a fresh 
 
 | N keys     | value | Oktoplus bytes/key | Redis bytes/key | Okto / Redis |
 |-----------:|------:|-------------------:|----------------:|-------------:|
-|   100,000  |    3B |                783 |              71 |       11.1×  |
-|   100,000  |   64B |                863 |             135 |        6.4×  |
-|   100,000  |  256B |              1,105 |             378 |        2.9×  |
-|   100,000  | 1024B |              2,074 |           1,342 |        1.5×  |
-| 1,000,000  |    3B |                814 |              72 |       11.4×  |
-| 1,000,000  |   64B |                895 |             133 |        6.7×  |
-| 1,000,000  |  256B |              1,137 |             375 |        3.0×  |
-| 1,000,000  | 1024B |              2,105 |           1,345 |        1.6×  |
+|   100,000  |    3B |                171 |              71 |        2.4×  |
+|   100,000  |   64B |                252 |             135 |        1.9×  |
+|   100,000  |  256B |                493 |             372 |        1.3×  |
+|   100,000  | 1024B |              1,460 |           1,342 |        1.1×  |
+| 1,000,000  |    3B |                202 |              72 |        2.8×  |
+| 1,000,000  |   64B |                283 |             133 |        2.1×  |
+| 1,000,000  |  256B |                526 |             375 |        1.4×  |
+| 1,000,000  | 1024B |              1,492 |           1,345 |        1.1×  |
 
-Per-key fixed overhead (extrapolated from the 3-byte rows where the value cost is negligible) is **~70 B** for Redis and **~780 B** for Oktoplus. The gap shrinks as the value grows (1.5× at 1 KB) because the payload starts to dominate. Full per-trial CSVs at `benchmark_results/raw/memory.csv`, full table at `benchmark_results/memory_results.md`.
+Per-key fixed overhead (extrapolated from the 3-byte rows where the value cost is negligible) is **~70 B** for Redis and **~170-200 B** for Oktoplus. The gap shrinks as the value grows: 2.4× at 3B, 1.9× at 64B, 1.3× at 256B, essentially **at parity** (1.1×) at 1 KB. Full per-trial CSVs at `benchmark_results/raw/memory.csv`, full table at `benchmark_results/memory_results.md`.
 
 #### Where Oktoplus wins
 
@@ -159,7 +159,7 @@ Per-key fixed overhead (extrapolated from the 3-byte rows where the value cost i
   - No pub/sub, streams, scripting, or transactions.
   - Command coverage: lists 76%, sets 94% on RESP / 18% on gRPC, strings 0% — see the per-family compatibility tables linked at the top.
   - Random-key writes at high concurrency reach ~80% of Redis, not parity.
-  - **Per-key memory overhead is ~10× Redis at small values** (780 B vs 70 B), narrowing to ~1.5× at 1 KB. Sources: `std::string` keys, per-key `unique_ptr<ProtectedContainer>`, `std::mutex`, `std::deque` first-block allocation. Future SDS-style packing (PERF_TODO item A) would close most of this.
+  - **Per-key memory overhead is ~2-3× Redis at small values** (~170 B vs 70 B), reaching parity at 1 KB. SDS-style packed keys/values (PERF_TODO item A) would close the residual gap.
   - Single-node, no production deployments.
 
 #### Release plan

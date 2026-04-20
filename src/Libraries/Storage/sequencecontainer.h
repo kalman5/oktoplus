@@ -4,6 +4,8 @@
 
 #include "Support/noncopyable.h"
 
+#include <boost/container/devector.hpp>
+
 #include <deque>
 #include <list>
 #include <mutex>
@@ -90,15 +92,16 @@ class SequenceContainer : public GenericContainer<CONTAINER>
   MoveMutex theMoveMutex;
 };
 
-// Lists used to be backed by std::list (one heap-alloc per push for
-// the node). std::deque amortises allocations across page-sized
-// blocks and supports random-access iterators (LRANGE / LINDEX walk
-// becomes O(1) per element instead of pointer-chasing list nodes).
-// Trade-off: insert/erase in the middle (LINSERT, LREM) is O(n)
-// element-shifts instead of O(1) node-relink, but those commands are
-// less hot than push/pop/index.
-using Lists   = SequenceContainer<std::deque<std::string>>;
-using Deques  = SequenceContainer<std::deque<std::string>>;
+// Lists were originally backed by std::list (one heap-alloc per push
+// for the node), then std::deque (amortises allocs across blocks and
+// has random-access iterators for LRANGE/LINDEX). The deque variant
+// pays a 512-byte per-block pre-allocation in libstdc++ even for a
+// single-element list; boost::container::devector is contiguous,
+// supports O(1) push_front/push_back, and starts with zero capacity
+// (allocation only on first push), so a 1-element list pays for
+// exactly one std::string slot.
+using Lists   = SequenceContainer<boost::container::devector<std::string>>;
+using Deques  = SequenceContainer<boost::container::devector<std::string>>;
 using Vectors = SequenceContainer<std::vector<std::string>>;
 
 //// INLINE DEFINITIONS
