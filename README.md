@@ -52,13 +52,13 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |       32,637 |    30,826 |     **106%** |
-| SADD          |       31,318 |    30,441 |     **103%** |
-| LRANGE_100    |       26,295 |    25,006 |     **105%** |
-| LPOP (rand)   |       31,786 |    31,426 |     **101%** |
-| RPOP (rand)   |       32,573 |    30,684 |     **106%** |
-| LLEN (rand)   |       32,992 |    31,338 |     **105%** |
-| SCARD (rand)  |       32,216 |    31,715 |     **102%** |
+| LPUSH         |       33,211 |    31,036 |     **107%** |
+| SADD          |       32,786 |    30,450 |     **108%** |
+| LRANGE_100    |       26,860 |    24,820 |     **108%** |
+| LPOP (rand)   |       31,113 |    30,665 |     **101%** |
+| RPOP (rand)   |       32,175 |    30,202 |     **107%** |
+| LLEN (rand)   |       33,478 |    30,385 |     **110%** |
+| SCARD (rand)  |       33,266 |    31,133 |     **107%** |
 
 ##### Single client, pipelined (`-P 16`)
 
@@ -66,15 +66,15 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |      403,225 |   383,141 |     **105%** |
-| SADD          |      390,624 |   343,642 |     **114%** |
-| LPUSH (LRANGE seed) | 411,522 |   386,100 |     **107%** |
-| LRANGE_100    |      109,529 |   108,342 |     **101%** |
-| RPUSH (rand)  |      265,957 |   335,570 |          79% |
-| LPOP (rand)   |      262,467 |   350,877 |          75% |
-| RPOP (rand)   |      307,692 |   375,939 |          82% |
-| LLEN          |      469,483 |   416,666 |     **113%** |
-| SCARD         |      438,596 |   400,000 |     **110%** |
+| LPUSH         |      446,428 |   383,141 |     **117%** |
+| SADD          |      395,256 |   347,222 |     **114%** |
+| LPUSH (LRANGE seed) | 413,223 |   393,700 |     **105%** |
+| LRANGE_100    |      108,459 |   107,526 |     **101%** |
+| RPUSH (rand)  |      271,739 |   362,318 |          75% |
+| LPOP (rand)   |      267,379 |   359,712 |          74% |
+| RPOP (rand)   |      340,136 |   429,184 |          79% |
+| LLEN          |      480,769 |   438,596 |     **110%** |
+| SCARD         |      460,829 |   444,444 |     **104%** |
 
 ##### Many clients, no pipelining — LPUSH on a hot key
 
@@ -84,11 +84,11 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 
 | Clients | Oktoplus rps | Redis rps | Okto / Redis |
 |--------:|-------------:|----------:|-------------:|
-|       1 |       33,233 |    31,026 |     **107%** |
-|      10 |       73,421 |    82,034 |          90% |
-|      50 |       69,881 |    85,836 |          81% |
-|     100 |       68,681 |    97,847 |          70% |
-|     200 |       68,917 |    80,385 |          86% |
+|       1 |       32,938 |    30,543 |     **108%** |
+|      10 |       75,757 |    91,240 |          83% |
+|      50 |       67,069 |    85,397 |          79% |
+|     100 |       71,377 |    93,984 |          76% |
+|     200 |       64,892 |    82,169 |          79% |
 
 ##### Many clients, pipelined, random keys
 
@@ -100,12 +100,12 @@ A slice from `concurrent_random_*_p16.csv` at `-c 100`:
 
 | Test            | Oktoplus rps | Redis rps | Okto / Redis |
 |-----------------|-------------:|----------:|-------------:|
-| RPUSH (rand)    |      657,894 |   862,069 |          76% |
-| LPOP (rand)     |      448,430 |   980,392 |          46% |
-| RPOP (rand)     |      813,008 | 1,075,268 |          76% |
-| **LLEN (rand)** |    1,041,666 | 1,176,470 |     **88%** |
-| SADD (rand)     |      662,251 |   980,392 |          68% |
-| **SCARD (rand)**|    1,052,631 | 1,075,268 |     **98%** |
+| RPUSH (rand)    |      680,272 |   952,381 |          71% |
+| LPOP (rand)     |      469,483 |   909,090 |          52% |
+| RPOP (rand)     |      854,700 | 1,111,111 |          77% |
+| **LLEN (rand)** |      990,099 | 1,162,790 |     **85%** |
+| SADD (rand)     |      699,300 | 1,000,000 |          70% |
+| **SCARD (rand)**|    1,041,666 | 1,075,268 |     **97%** |
 
 ##### Single client, pipelined (`-P 16`), 256-byte values
 
@@ -115,15 +115,15 @@ Same workload as the small-value `-P 16` table above but with a 256-byte payload
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |      334,448 |   316,455 |     **106%** |
-| SADD          |      413,223 |   336,700 |     **123%** |
-| LPUSH (LRANGE seed) | 342,465 |   334,448 |     **102%** |
-| LRANGE_100    |       52,465 |    51,361 |     **102%** |
-| RPUSH (rand, 256B) | 228,310 |   316,455 |          72% |
-| LPOP (rand)   |      240,963 |   320,512 |          75% |
-| RPOP (rand)   |      324,675 |   369,003 |          88% |
-| LLEN          |      421,940 |   366,300 |     **115%** |
-| SCARD         |      469,483 |   403,225 |     **116%** |
+| LPUSH         |      347,222 |   350,877 |          99% |
+| SADD          |      378,787 |   370,370 |     **102%** |
+| LPUSH (LRANGE seed) | 346,020 |   371,747 |          93% |
+| LRANGE_100    |       53,333 |    53,475 |         100% |
+| RPUSH (rand, 256B) | 261,780 |   295,858 |          88% |
+| LPOP (rand)   |      263,852 |   331,125 |          80% |
+| RPOP (rand)   |      299,401 |   357,142 |          84% |
+| LLEN          |      483,091 |   395,256 |     **122%** |
+| SCARD         |      471,698 |   418,410 |     **113%** |
 
 Full per-test CSVs and the raw-results history are under `benchmark_results/raw/`.
 

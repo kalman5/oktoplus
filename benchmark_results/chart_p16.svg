@@ -4,41 +4,41 @@
 <line x1="70" y1="350.0" x2="860" y2="350.0" stroke="#d0d7de" stroke-width="1"/>
 <text x="62" y="354.0" text-anchor="end" fill="#24292f">0</text>
 <line x1="70" y1="292.0" x2="860" y2="292.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="296.0" text-anchor="end" fill="#24292f">103,286</text>
+<text x="62" y="296.0" text-anchor="end" fill="#24292f">105,769</text>
 <line x1="70" y1="234.0" x2="860" y2="234.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="238.0" text-anchor="end" fill="#24292f">206,572</text>
+<text x="62" y="238.0" text-anchor="end" fill="#24292f">211,538</text>
 <line x1="70" y1="176.0" x2="860" y2="176.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="180.0" text-anchor="end" fill="#24292f">309,859</text>
-<line x1="70" y1="118.0" x2="860" y2="118.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="122.0" text-anchor="end" fill="#24292f">413,145</text>
+<text x="62" y="180.0" text-anchor="end" fill="#24292f">317,307</text>
+<line x1="70" y1="118.00000000000003" x2="860" y2="118.00000000000003" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="122.00000000000003" text-anchor="end" fill="#24292f">423,076</text>
 <line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="64.0" text-anchor="end" fill="#24292f">516,431</text>
+<text x="62" y="64.0" text-anchor="end" fill="#24292f">528,846</text>
 <line x1="70" y1="60" x2="70" y2="350" stroke="#57606a" stroke-width="1"/>
 <line x1="70" y1="350" x2="860" y2="350" stroke="#57606a" stroke-width="1"/>
 <text x="119.375" y="368" text-anchor="middle" fill="#24292f">LPUSH</text>
-<rect x="81.4" y="123.6" width="35.5" height="226.4" fill="#3fb950"/>
-<rect x="121.8" y="134.8" width="35.5" height="215.2" fill="#f85149"/>
+<rect x="81.4" y="105.2" width="35.5" height="244.8" fill="#3fb950"/>
+<rect x="121.8" y="139.9" width="35.5" height="210.1" fill="#f85149"/>
 <text x="218.125" y="368" text-anchor="middle" fill="#24292f">SADD</text>
-<rect x="180.1" y="130.6" width="35.5" height="219.4" fill="#3fb950"/>
-<rect x="220.6" y="157.0" width="35.5" height="193.0" fill="#f85149"/>
+<rect x="180.1" y="133.3" width="35.5" height="216.7" fill="#3fb950"/>
+<rect x="220.6" y="159.6" width="35.5" height="190.4" fill="#f85149"/>
 <text x="316.875" y="368" text-anchor="middle" fill="#24292f">LRANGE_100</text>
-<rect x="278.9" y="288.5" width="35.5" height="61.5" fill="#3fb950"/>
-<rect x="319.3" y="289.2" width="35.5" height="60.8" fill="#f85149"/>
+<rect x="278.9" y="290.5" width="35.5" height="59.5" fill="#3fb950"/>
+<rect x="319.3" y="291.0" width="35.5" height="59.0" fill="#f85149"/>
 <text x="415.625" y="368" text-anchor="middle" fill="#24292f">RPUSH (rand)</text>
-<rect x="377.6" y="200.7" width="35.5" height="149.3" fill="#3fb950"/>
-<rect x="418.1" y="161.6" width="35.5" height="188.4" fill="#f85149"/>
+<rect x="377.6" y="201.0" width="35.5" height="149.0" fill="#3fb950"/>
+<rect x="418.1" y="151.3" width="35.5" height="198.7" fill="#f85149"/>
 <text x="514.375" y="368" text-anchor="middle" fill="#24292f">LPOP (rand)</text>
-<rect x="476.4" y="202.6" width="35.5" height="147.4" fill="#3fb950"/>
-<rect x="516.8" y="153.0" width="35.5" height="197.0" fill="#f85149"/>
+<rect x="476.4" y="203.4" width="35.5" height="146.6" fill="#3fb950"/>
+<rect x="516.8" y="152.7" width="35.5" height="197.3" fill="#f85149"/>
 <text x="613.125" y="368" text-anchor="middle" fill="#24292f">RPOP (rand)</text>
-<rect x="575.1" y="177.2" width="35.5" height="172.8" fill="#3fb950"/>
-<rect x="615.6" y="138.9" width="35.5" height="211.1" fill="#f85149"/>
+<rect x="575.1" y="163.5" width="35.5" height="186.5" fill="#3fb950"/>
+<rect x="615.6" y="114.7" width="35.5" height="235.3" fill="#f85149"/>
 <text x="711.875" y="368" text-anchor="middle" fill="#24292f">LLEN (rand)</text>
 <rect x="673.9" y="86.4" width="35.5" height="263.6" fill="#3fb950"/>
-<rect x="714.3" y="116.0" width="35.5" height="234.0" fill="#f85149"/>
+<rect x="714.3" y="109.5" width="35.5" height="240.5" fill="#f85149"/>
 <text x="810.625" y="368" text-anchor="middle" fill="#24292f">SCARD (rand)</text>
-<rect x="772.6" y="103.7" width="35.5" height="246.3" fill="#3fb950"/>
-<rect x="813.1" y="125.4" width="35.5" height="224.6" fill="#f85149"/>
+<rect x="772.6" y="97.3" width="35.5" height="252.7" fill="#3fb950"/>
+<rect x="813.1" y="106.3" width="35.5" height="243.7" fill="#f85149"/>
 <rect x="70" y="391" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="402" fill="#24292f">Oktoplus</text>
 <rect x="230" y="391" width="14" height="14" fill="#f85149"/>
