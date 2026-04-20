@@ -572,20 +572,20 @@ template <class CONTAINER>
 typename SequenceContainer<CONTAINER>::Status SequenceContainer<CONTAINER>::set(
     const std::string& aName, int64_t aIndex, const std::string& aValue) {
 
-  Status myRet = Status::OK;
-
-  bool myFound = false;
+  // Default to NOT_FOUND; the lambda below promotes to OK or
+  // OUT_OF_RANGE only if the key actually exists. This is clearer than
+  // the previous initial=OK + sentinel-bool pattern (where the only
+  // signal that the lambda ran was a separate myFound flag).
+  Status myRet = Status::NOT_FOUND;
 
   Base::theApplyer.performOnExisting(
-      aName, [&myRet, &myFound, &aValue, aIndex](Container& aContainer) {
-        // If this lambda is called then the list was found
-        myFound = true;
-
+      aName, [&myRet, &aValue, aIndex](Container& aContainer) {
         if (aIndex >= 0) {
           if (size_t(aIndex) < aContainer.size()) {
             auto myIt = aContainer.begin();
             std::advance(myIt, aIndex);
-            *myIt = aValue;
+            *myIt  = aValue;
+            myRet  = Status::OK;
           } else {
             myRet = Status::OUT_OF_RANGE;
           }
@@ -594,14 +594,15 @@ typename SequenceContainer<CONTAINER>::Status SequenceContainer<CONTAINER>::set(
           if (myReverseIndex < aContainer.size()) {
             auto myIt = aContainer.rbegin();
             std::advance(myIt, myReverseIndex);
-            *myIt = aValue;
+            *myIt  = aValue;
+            myRet  = Status::OK;
           } else {
             myRet = Status::OUT_OF_RANGE;
           }
         }
       });
 
-  return myFound ? myRet : Status::NOT_FOUND;
+  return myRet;
 }
 
 template <class CONTAINER>
