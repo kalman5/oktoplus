@@ -104,6 +104,30 @@ void RespServer::shutdown() {
   if (theAcceptThread.joinable()) {
     theAcceptThread.join();
   }
+
+  // Close every active client socket (forces any blocked read to
+  // return an error so the worker exits its loop), then join each
+  // worker thread. After this point no worker can dereference theStorage,
+  // so the destructor of the owning object is safe.
+  std::list<Connection> myToJoin;
+  {
+    std::lock_guard<std::mutex> myLock(theConnectionsMutex);
+    for (auto& myConn : theConnections) {
+      boost::system::error_code myCloseEc;
+      myConn.socket->shutdown(boost::asio::ip::tcp::socket::shutdown_both,
+                               myCloseEc);
+      myConn.socket->close(myCloseEc);
+    }
+    // Move out so we can join without holding the mutex.
+    myToJoin = std::move(theConnections);
+    theConnections.clear();
+  }
+  for (auto& myConn : myToJoin) {
+    if (myConn.worker.joinable()) {
+      myConn.worker.join();
+    }
+  }
+
   LOG(INFO) << "RESP server stopped.";
 }
 
@@ -123,9 +147,21 @@ void RespServer::acceptLoop() {
       boost::system::error_code myNoDelayEc;
       mySocket.set_option(boost::asio::ip::tcp::no_delay(true), myNoDelayEc);
 
-      std::thread([this, s = std::move(mySocket)]() mutable {
-        handleConnection(std::move(s));
-      }).detach();
+      // Track the connection so shutdown() can close its socket and
+      // join its worker. The shared_ptr<socket> lets the worker thread
+      // hold a stable reference while shutdown() also keeps one to
+      // call close() on it from outside.
+      auto mySocketPtr = std::make_shared<boost::asio::ip::tcp::socket>(
+          std::move(mySocket));
+
+      std::lock_guard<std::mutex> myLock(theConnectionsMutex);
+      pruneFinishedConnectionsLocked();
+      theConnections.emplace_back();
+      auto& myConn  = theConnections.back();
+      myConn.socket = mySocketPtr;
+      myConn.worker = std::thread([this, mySocketPtr]() mutable {
+        handleConnection(std::move(mySocketPtr));
+      });
 
     } catch (const boost::system::system_error& e) {
       if (theRunning) {
@@ -135,15 +171,35 @@ void RespServer::acceptLoop() {
   }
 }
 
+void RespServer::pruneFinishedConnectionsLocked() {
+  // Caller holds theConnectionsMutex. We can't tell if a worker has
+  // finished without joining it; use the heuristic that a still-open
+  // socket implies a still-running worker (handleConnection only
+  // returns once the socket has hit EOF / error). Prune entries whose
+  // socket has been closed by the worker itself on disconnect.
+  for (auto myIt = theConnections.begin(); myIt != theConnections.end();) {
+    if (!myIt->socket->is_open()) {
+      if (myIt->worker.joinable()) {
+        myIt->worker.join();
+      }
+      myIt = theConnections.erase(myIt);
+    } else {
+      ++myIt;
+    }
+  }
+}
+
 void RespServer::handleConnection(
-    boost::asio::ip::tcp::socket aSocket) {
-  // Top-level catch-all: this thread is detached, so any exception
-  // that escapes terminates the whole process. RespHandler::handle()
+    std::shared_ptr<boost::asio::ip::tcp::socket> aSocketPtr) {
+  // Top-level catch-all: any exception that escapes would propagate
+  // to the thread root and terminate the process. RespHandler::handle()
   // already wraps command logic in its own try/catch and returns an
   // ERR reply on std::exception, but allocations (std::string growth
   // in myBatchedReply, RespParser frame parsing) and unforeseen
-  // boost::system errors can still throw. Log, close the socket, and
-  // let the worker exit cleanly.
+  // boost::system errors can still throw. Log and let the worker exit
+  // cleanly; the shared socket is closed on the way out so the
+  // accept loop can prune our entry from theConnections.
+  auto& aSocket = *aSocketPtr;
   try {
     RespHandler            myHandler(theStorage);
     boost::asio::streambuf myBuffer;
@@ -193,6 +249,11 @@ void RespServer::handleConnection(
   } catch (...) {
     LOG(ERROR) << "RESP connection handler threw: unknown exception";
   }
+
+  // Close the socket so the next pruneFinishedConnectionsLocked() can
+  // remove this connection from theConnections.
+  boost::system::error_code myEc;
+  aSocket.close(myEc);
 
   LOG(INFO) << "RESP client disconnected.";
 }
