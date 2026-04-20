@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <optional>
 #include <string_view>
 
 namespace okts::resp {
@@ -58,11 +59,17 @@ bool iequalsToUpper(std::string_view aIn, std::string_view aUpperLiteral) {
   return true;
 }
 
-stor::Lists::Direction parseDirection(const std::string& aDir) {
+// Strict direction parse — only LEFT and RIGHT (case-insensitive)
+// are accepted. Returns std::nullopt on anything else; callers must
+// surface an "ERR syntax error" for the client.
+std::optional<stor::Lists::Direction> parseDirection(const std::string& aDir) {
   if (iequalsToUpper(aDir, "LEFT")) {
     return stor::Lists::Direction::LEFT;
   }
-  return stor::Lists::Direction::RIGHT;
+  if (iequalsToUpper(aDir, "RIGHT")) {
+    return stor::Lists::Direction::RIGHT;
+  }
+  return std::nullopt;
 }
 
 } // namespace
@@ -440,9 +447,12 @@ std::string RespHandler::handleLmove(const Args& aArgs) {
 
   auto mySrcDir  = parseDirection(aArgs[3]);
   auto myDestDir = parseDirection(aArgs[4]);
+  if (!mySrcDir || !myDestDir) {
+    return RespParser::formatError("ERR syntax error");
+  }
 
   auto myResult =
-      theStorage.lists.move(aArgs[1], aArgs[2], mySrcDir, myDestDir);
+      theStorage.lists.move(aArgs[1], aArgs[2], *mySrcDir, *myDestDir);
   if (myResult) {
     return RespParser::formatBulkString(myResult.value());
   }
@@ -501,6 +511,9 @@ std::string RespHandler::handleLmpop(const Args& aArgs) {
   }
 
   auto myDirection = parseDirection(aArgs[2 + myNumKeys]);
+  if (!myDirection) {
+    return RespParser::formatError("ERR syntax error");
+  }
 
   uint64_t myCount = 1;
   size_t   myIdx   = 3 + myNumKeys;
@@ -513,7 +526,7 @@ std::string RespHandler::handleLmpop(const Args& aArgs) {
   for (uint64_t i = 0; i < myNumKeys; ++i) {
     const auto& myKey = aArgs[2 + i];
     auto        myValues =
-        myDirection == stor::Lists::Direction::LEFT
+        *myDirection == stor::Lists::Direction::LEFT
             ? theStorage.lists.popFront(myKey, myCount)
             : theStorage.lists.popBack(myKey, myCount);
     if (!myValues.empty()) {
