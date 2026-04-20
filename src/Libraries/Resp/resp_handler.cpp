@@ -13,17 +13,53 @@ namespace okts::resp {
 
 namespace {
 
-std::string toUpper(std::string aStr) {
-  std::transform(
-      aStr.begin(), aStr.end(), aStr.begin(), [](unsigned char c) {
-        return std::toupper(c);
-      });
-  return aStr;
+// Maximum keyword length we accept for stack-buffer upper-casing.
+// Covers every RESP command (longest is SUNIONSTORE = 11) and every
+// option keyword passed through this helper (LEFT/RIGHT, BEFORE/AFTER,
+// COUNT, LIMIT, RANK, MAXLEN). 16 leaves headroom.
+constexpr size_t kMaxCmdLen = 16;
+
+// Upper-case `aIn` into `aBuf` and return a string_view over it.
+// Returns std::string_view{} on overflow (caller treats as unknown).
+// Allocation-free — caller owns the storage. Used by the dispatch
+// fallback when an unknown raw-case command needs a second lookup.
+std::string_view toUpperStack(std::string_view aIn,
+                              char (&aBuf)[kMaxCmdLen]) {
+  if (aIn.size() > kMaxCmdLen) {
+    return {};
+  }
+  for (size_t i = 0; i < aIn.size(); ++i) {
+    aBuf[i] = static_cast<char>(
+        std::toupper(static_cast<unsigned char>(aIn[i])));
+  }
+  return std::string_view(aBuf, aIn.size());
+}
+
+// True iff `aIn` matches `aUpperLiteral` case-insensitively. The
+// literal MUST already be uppercase ASCII (compile-time constant).
+//
+// Fast path: a direct memcmp covers the common case where the client
+// already sent the keyword uppercased (redis-cli, redis-benchmark,
+// most production drivers). Only a mixed-case input pays the
+// per-byte upper-case loop. No allocation either way.
+bool iequalsToUpper(std::string_view aIn, std::string_view aUpperLiteral) {
+  if (aIn.size() != aUpperLiteral.size()) {
+    return false;
+  }
+  if (aIn == aUpperLiteral) {
+    return true;
+  }
+  for (size_t i = 0; i < aIn.size(); ++i) {
+    if (static_cast<char>(std::toupper(static_cast<unsigned char>(aIn[i]))) !=
+        aUpperLiteral[i]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 stor::Lists::Direction parseDirection(const std::string& aDir) {
-  auto myUpper = toUpper(aDir);
-  if (myUpper == "LEFT") {
+  if (iequalsToUpper(aDir, "LEFT")) {
     return stor::Lists::Direction::LEFT;
   }
   return stor::Lists::Direction::RIGHT;
@@ -116,27 +152,6 @@ RespHandler::RespHandler(stor::StorageContext& aStorage)
     : theStorage(aStorage) {
 }
 
-namespace {
-
-// Maximum command-name length we accept for stack-buffer upper-casing.
-// All implemented RESP commands fit (longest is SUNIONSTORE = 11).
-constexpr size_t kMaxCmdLen = 16;
-
-// Upper-case `aIn` into `aBuf` and return a string_view over it.
-// Returns std::string_view{} on overflow (caller treats as unknown).
-std::string_view toUpperStack(std::string_view aIn,
-                              char (&aBuf)[kMaxCmdLen]) {
-  if (aIn.size() > kMaxCmdLen) {
-    return {};
-  }
-  for (size_t i = 0; i < aIn.size(); ++i) {
-    aBuf[i] = static_cast<char>(
-        std::toupper(static_cast<unsigned char>(aIn[i])));
-  }
-  return std::string_view(aBuf, aIn.size());
-}
-
-} // namespace
 
 std::string RespHandler::handle(const Args& aArgs) {
   if (aArgs.empty()) {
@@ -359,12 +374,10 @@ std::string RespHandler::handleLinsert(const Args& aArgs) {
   auto myErr = validateMinArgs(aArgs, 5, "linsert");
   if (!myErr.empty()) return myErr;
 
-  auto myPosStr = toUpper(aArgs[2]);
-
   stor::Lists::Position myPosition;
-  if (myPosStr == "BEFORE") {
+  if (iequalsToUpper(aArgs[2], "BEFORE")) {
     myPosition = stor::Lists::Position::BEFORE;
-  } else if (myPosStr == "AFTER") {
+  } else if (iequalsToUpper(aArgs[2], "AFTER")) {
     myPosition = stor::Lists::Position::AFTER;
   } else {
     return RespParser::formatError("ERR syntax error");
@@ -449,13 +462,12 @@ std::string RespHandler::handleLpos(const Args& aArgs) {
   bool     myMulti  = false;
 
   for (size_t i = 3; i + 1 < aArgs.size(); i += 2) {
-    auto myOpt = toUpper(aArgs[i]);
-    if (myOpt == "RANK") {
+    if (iequalsToUpper(aArgs[i], "RANK")) {
       myRank = std::stoll(aArgs[i + 1]);
-    } else if (myOpt == "COUNT") {
+    } else if (iequalsToUpper(aArgs[i], "COUNT")) {
       myCount = std::stoull(aArgs[i + 1]);
       myMulti = true;
-    } else if (myOpt == "MAXLEN") {
+    } else if (iequalsToUpper(aArgs[i], "MAXLEN")) {
       myMaxLen = std::stoull(aArgs[i + 1]);
     }
   }
@@ -492,7 +504,7 @@ std::string RespHandler::handleLmpop(const Args& aArgs) {
 
   uint64_t myCount = 1;
   size_t   myIdx   = 3 + myNumKeys;
-  if (myIdx + 1 < aArgs.size() && toUpper(aArgs[myIdx]) == "COUNT") {
+  if (myIdx + 1 < aArgs.size() && iequalsToUpper(aArgs[myIdx], "COUNT")) {
     myCount = std::stoull(aArgs[myIdx + 1]);
   }
 
@@ -558,7 +570,7 @@ std::string RespHandler::handleSintercard(const Args& aArgs) {
 
   uint64_t myLimit = 0;
   size_t   myIdx   = 2 + myNumKeys;
-  if (myIdx + 1 < aArgs.size() && toUpper(aArgs[myIdx]) == "LIMIT") {
+  if (myIdx + 1 < aArgs.size() && iequalsToUpper(aArgs[myIdx], "LIMIT")) {
     myLimit = std::stoull(aArgs[myIdx + 1]);
   }
 
