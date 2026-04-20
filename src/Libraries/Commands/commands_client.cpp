@@ -209,7 +209,7 @@ std::list<std::string> CommandsClient::popFront(
   }
 
   std::list<std::string> myRet;
-  for (auto myValue : myReply.value()) {
+  for (auto& myValue : *myReply.mutable_value()) {
     myRet.emplace_back(std::move(myValue));
   }
 
