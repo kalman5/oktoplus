@@ -117,48 +117,61 @@ void RespServer::acceptLoop() {
 
 void RespServer::handleConnection(
     boost::asio::ip::tcp::socket aSocket) {
-  RespHandler            myHandler(theStorage);
-  boost::asio::streambuf myBuffer;
-  std::string            myBatchedReply;
-  myBatchedReply.reserve(1024);
+  // Top-level catch-all: this thread is detached, so any exception
+  // that escapes terminates the whole process. RespHandler::handle()
+  // already wraps command logic in its own try/catch and returns an
+  // ERR reply on std::exception, but allocations (std::string growth
+  // in myBatchedReply, RespParser frame parsing) and unforeseen
+  // boost::system errors can still throw. Log, close the socket, and
+  // let the worker exit cleanly.
+  try {
+    RespHandler            myHandler(theStorage);
+    boost::asio::streambuf myBuffer;
+    std::string            myBatchedReply;
+    myBatchedReply.reserve(1024);
 
-  auto myProcess = [&](const std::vector<std::string>& aCmd) {
-    myBatchedReply.append(myHandler.handle(aCmd));
-    return toUpper(aCmd[0]) == "QUIT";
-  };
+    auto myProcess = [&](const std::vector<std::string>& aCmd) {
+      myBatchedReply.append(myHandler.handle(aCmd));
+      return toUpper(aCmd[0]) == "QUIT";
+    };
 
-  while (theRunning) {
-    // Block for at least one command.
-    auto myCmd = RespParser::readCommand(aSocket, myBuffer);
-    if (!myCmd || myCmd->empty()) {
-      break;
-    }
-
-    bool myQuit = myProcess(*myCmd);
-
-    // Drain any further already-buffered pipelined commands so we can
-    // coalesce their responses into a single socket write. With Nagle off
-    // (set in acceptLoop) plus batched writes, -P N benchmarks scale
-    // properly instead of stalling one reply per delayed-ACK.
-    while (!myQuit && theRunning && myBuffer.size() > 0) {
-      auto myMore = RespParser::readCommand(aSocket, myBuffer);
-      if (!myMore || myMore->empty()) {
-        myQuit = true;
+    while (theRunning) {
+      // Block for at least one command.
+      auto myCmd = RespParser::readCommand(aSocket, myBuffer);
+      if (!myCmd || myCmd->empty()) {
         break;
       }
-      myQuit = myProcess(*myMore);
-    }
 
-    try {
-      boost::asio::write(aSocket, boost::asio::buffer(myBatchedReply));
-    } catch (const boost::system::system_error&) {
-      break;
-    }
-    myBatchedReply.clear();
+      bool myQuit = myProcess(*myCmd);
 
-    if (myQuit) {
-      break;
+      // Drain any further already-buffered pipelined commands so we can
+      // coalesce their responses into a single socket write. With Nagle
+      // off (set in acceptLoop) plus batched writes, -P N benchmarks
+      // scale properly instead of stalling one reply per delayed-ACK.
+      while (!myQuit && theRunning && myBuffer.size() > 0) {
+        auto myMore = RespParser::readCommand(aSocket, myBuffer);
+        if (!myMore || myMore->empty()) {
+          myQuit = true;
+          break;
+        }
+        myQuit = myProcess(*myMore);
+      }
+
+      try {
+        boost::asio::write(aSocket, boost::asio::buffer(myBatchedReply));
+      } catch (const boost::system::system_error&) {
+        break;
+      }
+      myBatchedReply.clear();
+
+      if (myQuit) {
+        break;
+      }
     }
+  } catch (const std::exception& e) {
+    LOG(ERROR) << "RESP connection handler threw: " << e.what();
+  } catch (...) {
+    LOG(ERROR) << "RESP connection handler threw: unknown exception";
   }
 
   LOG(INFO) << "RESP client disconnected.";
