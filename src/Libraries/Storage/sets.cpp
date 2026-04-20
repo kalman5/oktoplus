@@ -229,13 +229,17 @@ std::vector<std::string> Sets::pop(const std::string& aName, size_t aCount) {
         size_t myToPop = std::min(aCount, aContainer.size());
         myRet.reserve(myToPop);
 
-        for (size_t i = 0; i < myToPop; ++i) {
-          auto myDist = std::uniform_int_distribution<size_t>(
-              0, aContainer.size() - 1);
-          auto myIt = aContainer.begin();
-          std::advance(myIt, myDist(rng()));
-          myRet.push_back(std::move(*myIt));
-          aContainer.erase(myIt);
+        // std::sample picks myToPop items without replacement in a
+        // single forward-iterator pass — O(N), N space. The previous
+        // approach was O(K*N): each iteration constructed a new
+        // distribution and std::advance'd from begin (O(N) on
+        // flat_hash_set's forward iterators) → unusable on large sets.
+        std::sample(aContainer.begin(), aContainer.end(),
+                    std::back_inserter(myRet), myToPop, rng());
+
+        // Erase the sampled values by hash lookup (O(K) average).
+        for (const auto& myVal : myRet) {
+          aContainer.erase(myVal);
         }
       });
 
@@ -253,15 +257,24 @@ Sets::randMember(const std::string& aName, int64_t aCount) const {
         }
 
         if (aCount >= 0) {
+          // Without replacement: std::sample is single-pass, K-bounded
+          // working set. The previous shuffle copied the whole set
+          // even when K << N.
           auto myN = std::min(static_cast<size_t>(aCount), aContainer.size());
-          std::vector<std::string> myAll(aContainer.begin(), aContainer.end());
-          std::shuffle(myAll.begin(), myAll.end(), rng());
-          myRet.assign(myAll.begin(), myAll.begin() + myN);
-        } else {
-          auto myN = static_cast<size_t>(-aCount);
-          std::vector<std::string> myAll(aContainer.begin(), aContainer.end());
           myRet.reserve(myN);
-          auto myDist = std::uniform_int_distribution<size_t>(0, myAll.size() - 1);
+          std::sample(aContainer.begin(), aContainer.end(),
+                      std::back_inserter(myRet), myN, rng());
+        } else {
+          // With replacement: we genuinely need an indexable view to
+          // pick K times. Materialise once (O(N)) then K random picks
+          // (O(K)) — total O(N + K), better than O(K*N) of advancing
+          // a forward iterator per pick on flat_hash_set.
+          auto                     myN = static_cast<size_t>(-aCount);
+          std::vector<std::string> myAll(aContainer.begin(),
+                                         aContainer.end());
+          myRet.reserve(myN);
+          auto myDist =
+              std::uniform_int_distribution<size_t>(0, myAll.size() - 1);
           for (size_t i = 0; i < myN; ++i) {
             myRet.push_back(myAll[myDist(rng())]);
           }
