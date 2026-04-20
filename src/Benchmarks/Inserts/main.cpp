@@ -45,9 +45,11 @@ int main(int /*argc*/, char** argv) {
 
   } catch (const std::exception& e) {
     LOG(ERROR) << "Error: " << e.what();
+    return EXIT_FAILURE;
   } catch (...) {
     LOG(ERROR) << "Error: unknown";
+    return EXIT_FAILURE;
   }
 
-  return EXIT_FAILURE;
+  return EXIT_SUCCESS;
 }
