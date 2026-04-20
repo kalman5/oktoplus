@@ -52,9 +52,7 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 >
 > An interactive Chart.js dashboard with the same data lives at [`benchmark_results/report.html`](benchmark_results/report.html) — view it rendered through [htmlpreview.github.io](https://htmlpreview.github.io/?https://github.com/kalman5/oktoplus/blob/master/benchmark_results/report.html).
 
-##### Single client, no pipelining (`-P 1`) — Oktoplus a hair ahead
-
-At pipeline depth 1 the workload is dominated by the kernel network round-trip, not the server. Both servers land in the same band; Oktoplus edges Redis on the write/scan paths thanks to jemalloc.
+##### Single client, no pipelining (`-P 1`)
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
@@ -66,9 +64,7 @@ At pipeline depth 1 the workload is dominated by the kernel network round-trip, 
 | LLEN (rand)   |       33,489 |    29,985 |     **112%** |
 | SCARD (rand)  |       32,862 |    30,978 |     **106%** |
 
-##### Single client, pipelined (`-P 16`) — Oktoplus ahead on hot key + reads, ~80-84% on random-key writes
-
-Pipelining lets each server stretch its legs. With the RESP parser no longer going through `std::istream`/`std::stoll`, the dispatch table static, the reply path append-into-buffer, `Lists` storage backed by `std::deque` instead of `std::list`, the outer keyspace sharded into 32 (mutex, `flat_hash_map`) pairs with embedded inner mutex, the inner-lock holder simplified from `std::optional<unique_lock>` to a plain `unique_lock`, the lock primitives swapped from `boost::mutex`/`recursive_mutex` to plain `std::mutex` (LMOVE same-key rotation now handled in a single critical section so the inner lock no longer needs to be recursive), and the binary linked against jemalloc, Oktoplus now **beats Redis** on every hot-key write path and on `LLEN`/`SCARD`. Random-key writes still trail because each new key pays an outer-map insert + `ProtectedContainer` allocation (next milestone).
+##### Single client, pipelined (`-P 16`)
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
@@ -84,7 +80,7 @@ Pipelining lets each server stretch its legs. With the RESP parser no longer goi
 
 ##### Many clients, no pipelining — LPUSH on a hot key
 
-The "parallelism" sweep keeps `-P 1` and varies `-c`. Both servers saturate around 10 clients on a hot key (one TCP connection per client; everything serializes on the inner mutex / single-thread loop respectively).
+`-P 1` with varying `-c`.
 
 | Clients | Oktoplus rps | Redis rps | Okto / Redis |
 |--------:|-------------:|----------:|-------------:|
@@ -94,9 +90,9 @@ The "parallelism" sweep keeps `-P 1` and varies `-c`. Both servers saturate arou
 |     100 |       68,352 |    83,892 |          81% |
 |     200 |       71,736 |    89,445 |          80% |
 
-##### Many clients, pipelined, **random keys** — where Oktoplus actually scales
+##### Many clients, pipelined, random keys
 
-The hot-key sweep above tells you almost nothing about the multithreaded design — every client serialises on the same per-key mutex. To measure what *should* parallelise (different threads → different keys → different inner mutexes), the bench has a separate phase that combines `-c N`, `-P 16`, and `__rand_int__` keys. RPUSH at varying concurrency:
+`-c N` with `-P 16` and `__rand_int__` keys (different clients → different keys → different per-key mutexes). RPUSH at varying concurrency:
 
 ![RPUSH random key, varying clients (-P 16)](benchmark_results/chart_concurrency_random.svg)
 
@@ -111,14 +107,9 @@ A slice from `concurrent_random_*_p16.csv` at `-c 100`:
 | SADD (rand)     |      675,675 |   980,392 |          69% |
 | **SCARD (rand)**|    1,030,927 | 1,250,000 |     **82%** |
 
-Where the outer-map work was made cheaper (PERF_TODO items C/D/B + the `optional<unique_lock>` cleanup + boost→std mutex swap + dropping `recursive_mutex` for plain `std::mutex`), the multithreaded design pulls its weight:
-
-  - **Reads scale to Redis levels.** `SCARD` and `LLEN` at -c 100 are at ~82-89% of Redis (~1M rps each). Both servers are bound by single-stream processing on this path, but Oktoplus's per-key parallelism keeps it within striking distance.
-  - **Writes scale dramatically better than before.** `RPUSH (rand)` at -c 100 was at 19% of Redis when this section first appeared; it's now at **79%**. `RPOP (rand)` jumped from 34% to **78%**. `SADD (rand)` from 31% to **69%**. Most of that lift came from the per-call cost — fewer allocations, no `optional<>` indirection on the inner-lock retry, slimmer (and now non-recursive) mutex types — rather than from making the per-key alloc cheaper. The remaining gap is per-key allocation (each new key still pays a `unique_ptr<ProtectedContainer>` heap alloc + outer-map insertion cost) plus thread-per-connection overhead. PERF_TODO item J (async I/O server) is the next big lever.
-
 ##### Single client, pipelined (`-P 16`), 256-byte values
 
-Same workload as the small-value `-P 16` table above but the value is padded to 256 bytes (`-d 256` for built-ins, a 256-byte literal on the custom RPUSH). This stresses `std::string` allocation + memcpy + write paths.
+Same workload as the small-value `-P 16` table above but with a 256-byte payload (`-d 256` for built-ins, a 256-byte literal on the custom RPUSH).
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
@@ -132,12 +123,22 @@ Same workload as the small-value `-P 16` table above but the value is padded to 
 | LLEN          |      431,034 |   408,163 |     **106%** |
 | SCARD         |      454,545 |   390,624 |     **116%** |
 
-Two takeaways:
-
-  - Read-only commands that don't touch the value (`LLEN`, `SCARD`) hold parity (or better) at 256-byte values too.
-  - The random-key gap is essentially the same with 256-byte values as with small values (RPUSH-rand 84% small → 73% large at single-client, but ~75% on both for LPOP), confirming the bottleneck is per-*key* overhead (outer-map insert + per-key mutex allocation), not per-value cost. Without the median harness this gap previously looked much wider — the first iteration of `RPUSH ___ val` consistently lands in a cold-cache low (~120K rps), and the median across 5 iterations smooths it out.
-
 Full per-test CSVs and the raw-results history are under `benchmark_results/raw/`.
+
+#### Where Oktoplus wins
+
+  - **Container choice matches access pattern.** Native [vectors](docs/vectors.md) give O(1) `INDEX` (Redis's `LINDEX` is O(n)). Multi-set and multi-map are first-class. `boost::multi_index_container` with up to 3 keys is on the roadmap. You pick the container; you don't reshape your data to fit a list or hash.
+  - **Concurrent writers on different keys actually run in parallel.** The keyspace is split across 32 shards, each key has its own mutex. A workload of N writers touching N different keys uses N cores — not one. Redis 7's I/O threads parallelise socket reads/writes but command execution is single-threaded.
+  - **Hot-key and read throughput beat Redis** at every value size we benchmark (see tables above): LPUSH, SADD, LLEN, SCARD all 104-114% of Redis at `-P 16`, including 256-byte values.
+  - **Native gRPC alongside RESP.** Generate a typed client in any language straight from `commands.proto` — no need to (re)implement the wire protocol. Existing Redis tooling (`redis-cli`, `redis-benchmark`) still works on the RESP port.
+
+#### What it doesn't do (yet)
+
+  - No replication, clustering, or persistence — see the release plan below.
+  - No pub/sub, streams, scripting, or transactions.
+  - Command coverage: lists 76%, sets 94% on RESP / 18% on gRPC, strings 0% — see the per-family compatibility tables linked at the top.
+  - Random-key writes at high concurrency reach ~80% of Redis, not parity.
+  - Single-node, no production deployments.
 
 #### Release plan
 - Support all REDIS commands (at least the one relative to data storage)
