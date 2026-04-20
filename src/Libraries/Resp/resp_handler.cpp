@@ -154,6 +154,7 @@ std::string RespHandler::handle(const Args& aArgs) {
     {"INFO",         [](RespHandler& h, const Args& a) { return h.handleInfo(a); }},
     {"FLUSHDB",      [](RespHandler& h, const Args& a) { return h.handleFlush(a); }},
     {"FLUSHALL",     [](RespHandler& h, const Args& a) { return h.handleFlush(a); }},
+    {"DBSIZE",       [](RespHandler& h, const Args& a) { return h.handleDbsize(a); }},
 
     // List push (generic)
     {"LPUSH",        [](RespHandler& h, const Args& a) { return h.handlePush(a, "lpush",  &stor::Lists::pushFront); }},
@@ -289,6 +290,18 @@ std::string RespHandler::handleFlush(const Args&) {
   theStorage.vectors.clear();
   theStorage.sets.clear();
   return RespParser::formatSimpleString("OK");
+}
+
+std::string RespHandler::handleDbsize(const Args&) {
+  // DBSIZE: total key count across every storage type. Oktoplus has a
+  // single global namespace, so SELECT is a no-op and DBSIZE == sum of
+  // hostedKeys() across all containers.
+  const size_t myTotal =
+      theStorage.lists.hostedKeys()   +
+      theStorage.deques.hostedKeys()  +
+      theStorage.vectors.hostedKeys() +
+      theStorage.sets.hostedKeys();
+  return RespParser::formatInteger(static_cast<int64_t>(myTotal));
 }
 
 // ---- List commands ----

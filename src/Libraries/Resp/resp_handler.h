@@ -78,6 +78,7 @@ class RespHandler
   std::string handleSelect(const Args& aArgs);
   std::string handleInfo(const Args& aArgs);
   std::string handleFlush(const Args& aArgs);
+  std::string handleDbsize(const Args& aArgs);
 
   // List commands
   std::string handleLlen(const Args& aArgs);
