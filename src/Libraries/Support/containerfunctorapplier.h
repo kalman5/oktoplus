@@ -43,6 +43,15 @@ class ContainerFunctorApplier
 
   // Drop every container. Intended for FLUSHDB / FLUSHALL and test
   // resets, not the hot request path.
+  //
+  // WARNING: takes the outer mutex of every shard sequentially, and
+  // for each shard takes the inner per-key mutex of every container
+  // before clearing. While running, no other operation on any key
+  // can make progress (every shard outer is locked, then each inner
+  // is taken). RESP exposes this via FLUSHDB / FLUSHALL with no rate
+  // limit — a malicious client can wedge all worker threads. Acceptable
+  // today because FLUSHDB is intentionally heavy (it is in Redis too),
+  // but worth knowing if exposing to untrusted networks.
   void clear();
 
   // Apply aFunctor to a "possibly" new container (created on demand).
