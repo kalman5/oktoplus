@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 
 namespace okts::resp {
 
@@ -69,13 +70,32 @@ void RespServer::shutdown() {
   // Wake the accept thread by self-connecting before closing the acceptor:
   // on Linux, closing the listening fd from another thread does not reliably
   // unblock a thread blocked in accept().
+  //
+  // The acceptor's local endpoint can be a wildcard (0.0.0.0 or ::), to
+  // which connect()'s behaviour is implementation-defined and not
+  // guaranteed to succeed. Always use the loopback address of the same
+  // family on the local-endpoint port, and fall back to closing the
+  // acceptor anyway if the connect fails — at worst the join blocks
+  // until the next real client connects.
   boost::system::error_code myEc;
   if (theAcceptor.is_open()) {
     auto myLocal = theAcceptor.local_endpoint(myEc);
     if (!myEc) {
-      boost::asio::io_context       myIo;
-      boost::asio::ip::tcp::socket  myWaker(myIo);
-      myWaker.connect(myLocal, myEc);
+      const auto myLoopback =
+          myLocal.address().is_v6()
+              ? boost::asio::ip::tcp::endpoint(
+                    boost::asio::ip::address_v6::loopback(), myLocal.port())
+              : boost::asio::ip::tcp::endpoint(
+                    boost::asio::ip::address_v4::loopback(), myLocal.port());
+
+      boost::asio::io_context      myIo;
+      boost::asio::ip::tcp::socket myWaker(myIo);
+      // Async connect with a hard timeout so a firewall / dropped SYN
+      // can't hang the destructor. 1s is plenty on loopback; a real
+      // failure should manifest in microseconds.
+      myWaker.async_connect(myLoopback,
+                            [](const boost::system::error_code&) {});
+      myIo.run_for(std::chrono::seconds(1));
       myWaker.close(myEc);
     }
     theAcceptor.close(myEc);
