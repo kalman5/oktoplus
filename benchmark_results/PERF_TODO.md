@@ -173,51 +173,47 @@ buffer holds many entries with one allocation.
 - **Probably not worth it** unless we commit to the SDS direction
   too — the two pair naturally.
 
-## J. Async I/O RESP server (`boost::asio` worker pool)
+## J. [x] Async I/O RESP server (`boost::asio` worker pool, landed in b212b80)
 
-Already detailed in the option-3 sketch earlier in the conversation.
-Replaces thread-per-connection with `io_context` + worker pool.
-Mostly helps multi-client workloads and removes the
-use-after-free-on-shutdown latent bug Paladin flagged.
+Replaced thread-per-connection with N `io_context`s, each driven by
+exactly one worker thread (no strand overhead, no work-migration
+cache thrash). Acceptor lives on slot[0]; accepted sockets are
+pinned round-robin to a slot for life. Per-connection state
+machine: `async_read_some` → drain `tryParseCommand` → batched
+`async_write` → repeat. Connections tracked as
+`shared_ptr<Connection>` with `weak_ptr` registration on the
+server, closing the use-after-free-on-shutdown bug Paladin flagged.
 
-- **Expected lift**: 1.5–2× on c100/c200 random-key, modest on
-  single client. Single-client `-P 16` doesn't have multiple
-  connections to fan out, so the gain is from cheaper syscalls and
-  batched writes — maybe 5–10%.
-- **Effort**: medium-to-large (~300 LOC) but well-scoped.
-- **Risk**: medium — async lifetime correctness.
-- **Bonus**: closes the UAF-on-shutdown bug as a byproduct.
-- **Also fixes** the pipeline-drain correctness gap below (Q): an
-  async per-connection state machine naturally bounds drain to
-  what's already buffered without giving up cross-segment batching,
-  so we don't have to choose between correctness and throughput.
+Bench delta (vs the previous thread-per-connection HEAD,
+ITERATIONS=5):
 
-## Q. Pipeline drain currently re-enters blocking read
+  -c100 p16 SCARD-rand: 98%  -> **103%** of Redis (first random-key win)
+  -c100 p16 RPUSH-rand: 73%  -> 86%
+  -c100 p16 LLEN-rand:  89%  -> 88% (within noise)
+  -c100 p16 RPOP-rand:  82%  -> 89%
+  -P 16 d256 LPUSH:     91%  -> **112%** of Redis (flipped to a win)
+  -P 16 LRANGE_100:     110% -> **116%**
+  -P 16 d256 LRANGE:    104% -> 102% (within noise)
 
-`RespServer::handleConnection`'s drain loop calls the *blocking*
-`RespParser::readCommand` after handling each command, so a
-slow / dribbling client that sends one full command plus a partial
-next frame stalls the reply to the first command until the rest of
-the next frame arrives. (Codex finding C2.)
+Single-client `-P 1` lost ~3% on hot-key writes (one extra
+io-loop hop per command); acceptable given the multi-client wins
+and the correctness fix.
 
-A previous attempt to fix this (using a buffer-only
-`tryReadCommandFromBuffer`) was reverted because it gave up the
-accidental cross-TCP-segment batching the blocking drain provides
-— d256 LPUSH/RPUSH single-client `-P 16` regressed ~37% because each
-~285-byte command means the 16-deep pipeline batch is ~4.5 KB, well
-over the 1500-byte MTU, so multiple network reads per batch became
-multiple writes per batch.
+**Also closes Q** (pipeline drain): the async loop returns control
+on `NeedMore` instead of re-entering blocking `readCommand`, while
+batched `async_write` preserves the cross-segment batching that the
+previous tryReadCommandFromBuffer attempt gave up.
 
-The structurally correct fix lives in J: an async per-connection
-state machine processes commands as they arrive, batches replies
-when the kernel says "more is buffered" (via `read_some` with no
-deadline), and never blocks waiting for a frame to complete. Defer
-this until J.
+## Q. [x] Pipeline drain no longer re-enters blocking read (closed by J, b212b80)
 
-- **Effort**: subsumed by J.
-- **Risk**: addressed alongside async lifetime correctness in J.
-- **Why it matters**: real slow-client correctness today; not a
-  benchmark concern (redis-benchmark sends complete frames).
+Subsumed by item J. The async per-connection state machine returns
+control to the io loop on `NeedMore` instead of calling blocking
+`readCommand`, so a slow / dribbling client that sends one full
+command plus a partial next frame no longer stalls the reply to
+the first command. Cross-segment batching is preserved by batched
+`async_write`, so the d256 single-client `-P 16` regression that
+killed the previous `tryReadCommandFromBuffer` attempt does not
+recur (LPUSH-d256 actually flipped to a 112% win).
 
 ---
 
@@ -347,21 +343,21 @@ LRANGE_100 went from below parity (84% small / 70% d256) to a win.
 
 ## Suggested order
 
-(B, C, D, F, H, P done — flat_hash_map outer, sharding, embedded mutex,
-multi-iteration harness, jemalloc, vector-return on pop/range all
-landed. RPUSH-rand c=100 climbed from 19% → 33% of Redis; reads
-scaled to 82-93%; LRANGE_100 went from 84% to 110% of Redis at
-single-client `-P 16` after item P.)
+(B, C, D, F, H, J, P, Q done — flat_hash_map outer, sharding, embedded
+mutex, multi-iteration harness, jemalloc, async asio server, vector-
+return on pop/range, async pipeline-drain correctness all landed.
+After J, RPUSH-rand c=100 reached 86% of Redis, SCARD-rand became
+the first random-key win at 103%, and LPUSH-d256 flipped to a 112%
+win at single-client `-P 16`.)
 
 1. **K** (`INFO memory`) — unblocks honest memory comparison vs
    Redis in the bench harness.
 2. **E** (PGO) — likely cheap win, validates the harness.
-3. **J** (async server) — biggest remaining lever for the c=100
-   write-throughput gap.
-4. **A** (SDS) — substantial work, decide based on residual gap.
-5. **L** (`MEMORY USAGE <key>`) — pairs with A to *show* the
+3. **A** (SDS) — substantial work; the largest remaining lever now
+   that the I/O bottleneck is gone. Decide based on residual gap.
+4. **L** (`MEMORY USAGE <key>`) — pairs with A to *show* the
    per-key drop.
-6. **M** (jemalloc web dashboard) — admin/observability sugar; do
+5. **M** (jemalloc web dashboard) — admin/observability sugar; do
    after K so the data plumbing already exists.
-7. **I** (quicklist) — only if A landed and tiny-value workloads
+6. **I** (quicklist) — only if A landed and tiny-value workloads
    are a real target.

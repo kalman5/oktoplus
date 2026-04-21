@@ -17,23 +17,6 @@ std::string_view bufView(const boost::asio::streambuf& aBuffer) {
                           boost::asio::buffer_size(myBuf));
 }
 
-// Block until aBuffer contains \r\n, then return everything up to (not
-// including) the delimiter and consume line + delimiter from aBuffer.
-// Avoids std::istream / std::getline (slow due to locale/sentry).
-std::string readLineFromBuffer(boost::asio::ip::tcp::socket& aSocket,
-                               boost::asio::streambuf&       aBuffer) {
-  boost::asio::read_until(aSocket, aBuffer, "\r\n");
-  auto myView = bufView(aBuffer);
-  auto myEnd  = myView.find("\r\n");
-  // read_until guarantees presence; treat absence as a parse error.
-  if (myEnd == std::string_view::npos) {
-    return {};
-  }
-  std::string myLine(myView.data(), myEnd);
-  aBuffer.consume(myEnd + 2);
-  return myLine;
-}
-
 // Parse a non-negative or signed integer in [aPtr, aPtr+aLen) into aOut.
 // Returns true on success, false on any junk. No exceptions, no locale.
 template <class T>
@@ -43,107 +26,141 @@ bool parseInt(const char* aPtr, size_t aLen, T& aOut) {
   return myRes.ec == std::errc{} && myRes.ptr == aPtr + aLen;
 }
 
+// Per-element bulk-string cap (matches Redis's proto-max-bulk-len
+// default of 512 MiB). Anything larger is almost certainly a malformed
+// or hostile frame; honouring the wire-supplied length without a cap
+// lets a remote client request an 8-EiB allocation by sending
+// '$9223372036854775806\r\n'.
+constexpr int64_t kMaxBulkStringLen = 512LL * 1024 * 1024;
+constexpr int64_t kMaxArrayElements = 512 * 1024;
+
 } // namespace
 
-std::string RespParser::readLine(boost::asio::ip::tcp::socket& aSocket,
-                                 boost::asio::streambuf&       aBuffer) {
-  return readLineFromBuffer(aSocket, aBuffer);
-}
+RespParser::ParseOutput
+RespParser::tryParseCommand(boost::asio::streambuf& aBuffer) {
+  ParseOutput myOut; // status defaults to NeedMore
 
-// Per-element bulk-string cap (matches Redis's
-// proto-max-bulk-len default of 512 MiB). Anything larger is almost
-// certainly a malformed or hostile frame; honouring the wire-supplied
-// length without a cap lets a remote client request an 8-EiB
-// allocation by sending '$9223372036854775806\r\n'.
-constexpr int64_t kMaxBulkStringLen = 512LL * 1024 * 1024;
+  const auto myView = bufView(aBuffer);
 
-std::string RespParser::readBulkString(boost::asio::ip::tcp::socket& aSocket,
-                                       boost::asio::streambuf&       aBuffer,
-                                       int64_t                       aLength) {
-  if (aLength < 0 || aLength > kMaxBulkStringLen) {
-    throw std::runtime_error("RESP bulk-string length out of range");
+  // Find the *next* "\r\n" starting at aFrom; npos if absent.
+  auto findCrlf = [&](size_t aFrom) {
+    return myView.find("\r\n", aFrom);
+  };
+
+  size_t myEnd = findCrlf(0);
+  if (myEnd == std::string_view::npos) {
+    return myOut; // NeedMore for the header line.
   }
-  const size_t myNeeded = static_cast<size_t>(aLength) + 2; // data + \r\n
-  if (aBuffer.size() < myNeeded) {
-    boost::asio::read(
-        aSocket,
-        aBuffer,
-        boost::asio::transfer_at_least(myNeeded - aBuffer.size()));
+
+  const std::string_view myFirstLine = myView.substr(0, myEnd);
+  size_t                 myPos       = myEnd + 2;
+
+  if (myFirstLine.empty()) {
+    myOut.status = ParseStatus::Error;
+    return myOut;
   }
-  auto        myView = bufView(aBuffer);
-  std::string myData(myView.data(), static_cast<size_t>(aLength));
-  aBuffer.consume(myNeeded);
-  return myData;
+
+  if (myFirstLine[0] == '*') {
+    int64_t myCount = 0;
+    if (!parseInt(myFirstLine.data() + 1, myFirstLine.size() - 1, myCount) ||
+        myCount < 0 || myCount > kMaxArrayElements) {
+      myOut.status = ParseStatus::Error;
+      return myOut;
+    }
+
+    myOut.args.reserve(static_cast<size_t>(myCount));
+
+    for (int64_t i = 0; i < myCount; ++i) {
+      const size_t myArgEnd = findCrlf(myPos);
+      if (myArgEnd == std::string_view::npos) {
+        // Frame is incomplete — leave aBuffer untouched and let the
+        // caller fill more bytes before re-trying.
+        myOut.args.clear();
+        return myOut;
+      }
+      const std::string_view myArgLine =
+          myView.substr(myPos, myArgEnd - myPos);
+      const size_t myArgLineEnd = myArgEnd + 2;
+
+      if (myArgLine.empty() || myArgLine[0] != '$') {
+        myOut.status = ParseStatus::Error;
+        return myOut;
+      }
+      int64_t myLen = 0;
+      if (!parseInt(myArgLine.data() + 1, myArgLine.size() - 1, myLen) ||
+          myLen > kMaxBulkStringLen) {
+        myOut.status = ParseStatus::Error;
+        return myOut;
+      }
+      if (myLen < 0) {
+        myOut.args.emplace_back();
+        myPos = myArgLineEnd;
+      } else {
+        const size_t myNeeded = myArgLineEnd + static_cast<size_t>(myLen) + 2;
+        if (myView.size() < myNeeded) {
+          // Bulk-string body (or its trailing CRLF) not yet here.
+          myOut.args.clear();
+          return myOut;
+        }
+        myOut.args.emplace_back(myView.data() + myArgLineEnd,
+                                static_cast<size_t>(myLen));
+        myPos = myNeeded;
+      }
+    }
+
+    aBuffer.consume(myPos);
+    myOut.status = ParseStatus::Ok;
+    return myOut;
+  }
+
+  // Inline command: split on spaces without std::istringstream.
+  size_t myInlinePos = 0;
+  while (myInlinePos < myFirstLine.size()) {
+    while (myInlinePos < myFirstLine.size() &&
+           myFirstLine[myInlinePos] == ' ') {
+      ++myInlinePos;
+    }
+    const size_t myStart = myInlinePos;
+    while (myInlinePos < myFirstLine.size() &&
+           myFirstLine[myInlinePos] != ' ') {
+      ++myInlinePos;
+    }
+    if (myInlinePos > myStart) {
+      myOut.args.emplace_back(
+          myFirstLine.substr(myStart, myInlinePos - myStart));
+    }
+  }
+  if (myOut.args.empty()) {
+    myOut.status = ParseStatus::Error;
+    return myOut;
+  }
+  aBuffer.consume(myPos);
+  myOut.status = ParseStatus::Ok;
+  return myOut;
 }
 
 std::optional<std::vector<std::string>>
 RespParser::readCommand(boost::asio::ip::tcp::socket& aSocket,
                         boost::asio::streambuf&       aBuffer) {
-  try {
-    auto myLine = readLineFromBuffer(aSocket, aBuffer);
-    if (myLine.empty()) {
+  for (;;) {
+    auto myOut = tryParseCommand(aBuffer);
+    if (myOut.status == ParseStatus::Ok) {
+      return std::move(myOut.args);
+    }
+    if (myOut.status == ParseStatus::Error) {
       return std::nullopt;
     }
-
-    // RESP array: *N\r\n
-    if (myLine[0] == '*') {
-      int64_t myCount = 0;
-      if (!parseInt(myLine.data() + 1, myLine.size() - 1, myCount) ||
-          myCount < 0) {
+    // NeedMore: pull at least one more byte and re-attempt the parse.
+    try {
+      auto         myMutBuf = aBuffer.prepare(4096);
+      const size_t myN      = aSocket.read_some(myMutBuf);
+      if (myN == 0) {
         return std::nullopt;
       }
-      // Cap array element count to match the bulk-string cap above —
-      // a 512Ki-arg multi-bulk would already require 512MB of args
-      // alone. An attacker-supplied huge myCount would otherwise
-      // reserve an oversized vector before we ever read the elements.
-      constexpr int64_t kMaxArrayElements = 512 * 1024;
-      if (myCount > kMaxArrayElements) {
-        return std::nullopt;
-      }
-
-      std::vector<std::string> myArgs;
-      myArgs.reserve(static_cast<size_t>(myCount));
-
-      for (int64_t i = 0; i < myCount; ++i) {
-        auto myArgLine = readLineFromBuffer(aSocket, aBuffer);
-        if (myArgLine.empty() || myArgLine[0] != '$') {
-          return std::nullopt;
-        }
-        int64_t myLen = 0;
-        if (!parseInt(
-                myArgLine.data() + 1, myArgLine.size() - 1, myLen)) {
-          return std::nullopt;
-        }
-        if (myLen < 0) {
-          myArgs.emplace_back();
-        } else {
-          myArgs.push_back(readBulkString(aSocket, aBuffer, myLen));
-        }
-      }
-      return myArgs;
-    }
-
-    // Inline command: split on spaces without std::istringstream.
-    std::vector<std::string> myArgs;
-    std::string_view         myView(myLine);
-    size_t                   myPos = 0;
-    while (myPos < myView.size()) {
-      while (myPos < myView.size() && myView[myPos] == ' ') ++myPos;
-      const size_t myStart = myPos;
-      while (myPos < myView.size() && myView[myPos] != ' ') ++myPos;
-      if (myPos > myStart) {
-        myArgs.emplace_back(myView.substr(myStart, myPos - myStart));
-      }
-    }
-    if (myArgs.empty()) {
+      aBuffer.commit(myN);
+    } catch (const boost::system::system_error&) {
       return std::nullopt;
     }
-    return myArgs;
-
-  } catch (const boost::system::system_error&) {
-    return std::nullopt;
-  } catch (const std::exception&) {
-    return std::nullopt;
   }
 }
 

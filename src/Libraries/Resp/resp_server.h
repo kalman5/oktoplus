@@ -8,54 +8,69 @@
 #include <list>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace okts::resp {
 
+class Connection; // forward — defined in resp_server.cpp
+
+// Async RESP server. Architecture:
+//   - N io_contexts, each driven by exactly one thread (no strand
+//     overhead, no work-migration cache thrash).
+//   - Acceptor lives on io_context[0]; new connections are pinned
+//     round-robin to one of the io_contexts and stay there for life.
+//   - Per-connection state machine (Connection) on its owning
+//     io_context: async_read_some -> drain tryParseCommand ->
+//     batched async_write -> repeat.
+//
+// Pipeline drain no longer re-enters a blocking readCommand (closes
+// PERF_TODO Q): once the parser returns NeedMore the connection
+// schedules another async_read_some and returns control to the io
+// loop instead of blocking on a partial frame.
 class RespServer
 {
  public:
-  RespServer(stor::StorageContext& aStorage, const std::string& aEndpoint);
+  // aWorkerThreads = 0 means auto: min(hardware_concurrency, 16).
+  RespServer(stor::StorageContext& aStorage,
+             const std::string&    aEndpoint,
+             size_t                aWorkerThreads = 0);
 
   ~RespServer();
 
   void shutdown();
 
  private:
-  void acceptLoop();
-  void handleConnection(
-      std::shared_ptr<boost::asio::ip::tcp::socket> aSocket);
+  // One io_context bound to one worker thread. Workers don't share
+  // io_contexts: a connection assigned to slot[i] only ever has
+  // callbacks invoked from theWorkers[i].
+  struct IoSlot {
+    using WorkGuard = boost::asio::executor_work_guard<
+        boost::asio::io_context::executor_type>;
+    boost::asio::io_context io;
+    WorkGuard               guard;
+    std::thread             thread;
 
-  // Per-active-connection record. socket is shared with the worker
-  // thread so shutdown() can close it from outside to unblock a
-  // blocked read; worker is the std::thread driving handleConnection.
-  struct Connection {
-    std::shared_ptr<boost::asio::ip::tcp::socket> socket;
-    std::thread                                   worker;
+    IoSlot();
   };
 
-  // Drop entries whose worker has already finished. Called under
-  // theConnectionsMutex from the accept path so the list doesn't
-  // grow unboundedly when long-lived clients come and go.
+  void doAccept();
   void pruneFinishedConnectionsLocked();
 
-  stor::StorageContext& theStorage;
-  // Synchronous-mode acceptor/resolver/socket factory — boost::asio
-  // requires an io_context even when used purely synchronously.
-  // run() is never called on this; the accept loop blocks in
-  // theAcceptor.accept() directly.
-  boost::asio::io_context        theIoContext;
-  boost::asio::ip::tcp::acceptor theAcceptor;
-  std::atomic<bool>              theRunning;
-  std::thread                    theAcceptThread;
+  stor::StorageContext&                          theStorage;
+  std::vector<std::unique_ptr<IoSlot>>           theIoSlots;
+  std::atomic<size_t>                            theNextSlot;
+  // Acceptor lives on slot[0]'s io_context; the accept callback
+  // promotes accepted sockets onto a different slot's io_context.
+  // Wrapped in optional because the io_context isn't available at
+  // member-init time (it's owned by a slot we construct in the body).
+  std::optional<boost::asio::ip::tcp::acceptor>  theAcceptor;
+  std::atomic<bool>                              theRunning;
 
-  // Live client connections. shutdown() walks this list, closes every
-  // socket to wake blocked workers, then joins each worker. Replaces
-  // the previous detached-thread model where workers could outlive
-  // the server (and StorageContext) and trigger UAF.
-  std::mutex            theConnectionsMutex;
-  std::list<Connection> theConnections;
+  std::mutex                              theConnectionsMutex;
+  std::list<std::weak_ptr<Connection>>    theConnections;
 };
 
 } // namespace okts::resp

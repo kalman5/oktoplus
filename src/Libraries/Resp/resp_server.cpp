@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <cctype>
-#include <chrono>
 
 namespace okts::resp {
 
@@ -22,40 +21,210 @@ std::pair<std::string, uint16_t> parseEndpoint(const std::string& aEndpoint) {
           static_cast<uint16_t>(std::stoi(aEndpoint.substr(myPos + 1)))};
 }
 
-std::string toUpper(std::string aStr) {
-  std::transform(
-      aStr.begin(), aStr.end(), aStr.begin(), [](unsigned char c) {
-        return std::toupper(c);
-      });
-  return aStr;
+bool isQuit(const std::vector<std::string>& aCmd) {
+  if (aCmd.empty() || aCmd[0].size() != 4) {
+    return false;
+  }
+  // ASCII case-insensitive compare against "QUIT" without allocating.
+  return (aCmd[0][0] | 0x20) == 'q' && (aCmd[0][1] | 0x20) == 'u' &&
+         (aCmd[0][2] | 0x20) == 'i' && (aCmd[0][3] | 0x20) == 't';
+}
+
+size_t resolveWorkerCount(size_t aRequested) {
+  if (aRequested > 0) {
+    return aRequested;
+  }
+  const unsigned myHw = std::thread::hardware_concurrency();
+  // Cap at 16 by default — past that we pay scheduling cost without
+  // throughput gain on RESP workloads since command execution itself
+  // takes per-key locks and the bottleneck shifts to storage.
+  return myHw == 0 ? 4 : std::min<unsigned>(myHw, 16);
 }
 
 } // namespace
 
+// Per-connection state machine. Lifetime: a shared_ptr is captured by
+// every in-flight async op. When the socket is closed (peer EOF, error,
+// or shutdown-side cancel) callbacks fire with EOF / operation_aborted,
+// drop their captured shared_ptr, and the Connection self-destructs.
+//
+// Concurrency: a Connection's socket is bound to one io_context driven
+// by a single thread, so all callbacks for this Connection run serially
+// on that one thread. No strand needed, no work migration between
+// cores per command.
+class Connection : public std::enable_shared_from_this<Connection>
+{
+ public:
+  Connection(boost::asio::io_context&     aIo,
+             boost::asio::ip::tcp::socket aSocket,
+             stor::StorageContext&        aStorage)
+      : theIo(aIo)
+      , theSocket(std::move(aSocket))
+      , theHandler(aStorage) {
+    theBatchedReply.reserve(1024);
+  }
+
+  void start() {
+    boost::asio::dispatch(theIo,
+                          [self = shared_from_this()]() { self->doRead(); });
+  }
+
+  // Force-close from outside (shutdown path). Posted onto the owning
+  // io_context so it doesn't race with an in-flight callback.
+  void close() {
+    boost::asio::dispatch(theIo, [self = shared_from_this()]() {
+      boost::system::error_code myEc;
+      self->theSocket.shutdown(boost::asio::ip::tcp::socket::shutdown_both,
+                               myEc);
+      self->theSocket.close(myEc);
+    });
+  }
+
+ private:
+  void doRead() {
+    auto myMutBuf = theReadBuffer.prepare(4096);
+    theSocket.async_read_some(
+        myMutBuf,
+        [self = shared_from_this()](
+            const boost::system::error_code& aEc, size_t aN) {
+          self->onRead(aEc, aN);
+        });
+  }
+
+  void onRead(const boost::system::error_code& aEc, size_t aN) {
+    if (aEc) {
+      // EOF / cancelled / network error — drop. Last shared_from_this
+      // ref goes away when this lambda chain unwinds.
+      return;
+    }
+    theReadBuffer.commit(aN);
+
+    bool myQuit = false;
+    for (;;) {
+      auto myParse = RespParser::tryParseCommand(theReadBuffer);
+      if (myParse.status == RespParser::ParseStatus::NeedMore) {
+        break;
+      }
+      if (myParse.status == RespParser::ParseStatus::Error) {
+        // Malformed framing — close the connection. Matches Redis's
+        // behaviour on a protocol error: drop, no reply.
+        boost::system::error_code myEc;
+        theSocket.close(myEc);
+        return;
+      }
+      try {
+        theBatchedReply.append(theHandler.handle(myParse.args));
+      } catch (const std::exception& e) {
+        // RespHandler::handle catches command exceptions internally;
+        // anything that escapes is a bug. Log and close cleanly so
+        // we don't terminate the io thread.
+        LOG(ERROR) << "RESP handler threw: " << e.what();
+        boost::system::error_code myEc;
+        theSocket.close(myEc);
+        return;
+      }
+      if (isQuit(myParse.args)) {
+        myQuit = true;
+        break;
+      }
+    }
+
+    if (theBatchedReply.empty()) {
+      // Only had a partial frame — keep reading, no write needed.
+      doRead();
+      return;
+    }
+
+    // Move into the in-flight slot so theBatchedReply is free to
+    // accumulate the next batch. async_write requires the buffer to
+    // stay alive until the completion handler runs; since this
+    // Connection runs on one thread, no concurrent re-entry happens.
+    theInFlightReply = std::move(theBatchedReply);
+    theBatchedReply  = {};
+    theBatchedReply.reserve(1024);
+
+    boost::asio::async_write(
+        theSocket,
+        boost::asio::buffer(theInFlightReply),
+        [self = shared_from_this(), myQuit](
+            const boost::system::error_code& aEc, size_t) {
+          self->onWrite(aEc, myQuit);
+        });
+  }
+
+  void onWrite(const boost::system::error_code& aEc, bool aQuit) {
+    theInFlightReply.clear();
+    if (aEc || aQuit) {
+      boost::system::error_code myEc;
+      theSocket.close(myEc);
+      return;
+    }
+    doRead();
+  }
+
+  boost::asio::io_context&     theIo;
+  boost::asio::ip::tcp::socket theSocket;
+  boost::asio::streambuf       theReadBuffer;
+  // Accumulates replies for commands parsed from the current read
+  // batch. Once the read batch is drained we move it into
+  // theInFlightReply and start one async_write covering the whole
+  // batch. Preserves cross-segment coalescing (replies for N
+  // pipelined commands go out as one TCP write with Nagle off).
+  std::string theBatchedReply;
+  std::string theInFlightReply;
+  RespHandler theHandler;
+};
+
+RespServer::IoSlot::IoSlot()
+    : io()
+    , guard(boost::asio::make_work_guard(io))
+    , thread() {
+}
+
 RespServer::RespServer(stor::StorageContext& aStorage,
-                       const std::string&    aEndpoint)
+                       const std::string&    aEndpoint,
+                       size_t                aWorkerThreads)
     : theStorage(aStorage)
-    , theIoContext()
-    , theAcceptor(theIoContext)
-    , theRunning(true)
-    , theAcceptThread() {
+    , theIoSlots()
+    , theNextSlot(0)
+    , theAcceptor(std::nullopt)
+    , theRunning(true) {
 
+  const size_t myWorkers = resolveWorkerCount(aWorkerThreads);
+  theIoSlots.reserve(myWorkers);
+  for (size_t i = 0; i < myWorkers; ++i) {
+    theIoSlots.emplace_back(std::make_unique<IoSlot>());
+  }
+
+  // Acceptor lives on slot[0]; bind/listen here.
   auto [myHost, myPort] = parseEndpoint(aEndpoint);
-
-  boost::asio::ip::tcp::resolver myResolver(theIoContext);
+  boost::asio::ip::tcp::resolver myResolver(theIoSlots[0]->io);
   auto myResults = myResolver.resolve(myHost, std::to_string(myPort));
-
   auto myEndpoint = myResults.begin()->endpoint();
 
-  theAcceptor.open(myEndpoint.protocol());
-  theAcceptor.set_option(
+  theAcceptor.emplace(theIoSlots[0]->io);
+  theAcceptor->open(myEndpoint.protocol());
+  theAcceptor->set_option(
       boost::asio::ip::tcp::acceptor::reuse_address(true));
-  theAcceptor.bind(myEndpoint);
-  theAcceptor.listen();
+  theAcceptor->bind(myEndpoint);
+  theAcceptor->listen();
 
-  LOG(INFO) << "RESP server listening on " << aEndpoint;
+  LOG(INFO) << "RESP server listening on " << aEndpoint
+            << " (workers=" << myWorkers << ")";
 
-  theAcceptThread = std::thread([this]() { acceptLoop(); });
+  doAccept();
+
+  for (auto& mySlot : theIoSlots) {
+    mySlot->thread = std::thread([raw = mySlot.get()]() {
+      try {
+        raw->io.run();
+      } catch (const std::exception& e) {
+        LOG(ERROR) << "RESP io worker threw: " << e.what();
+      } catch (...) {
+        LOG(ERROR) << "RESP io worker threw: unknown";
+      }
+    });
+  }
 }
 
 RespServer::~RespServer() {
@@ -67,195 +236,103 @@ void RespServer::shutdown() {
     return;
   }
 
-  // Wake the accept thread by self-connecting before closing the acceptor:
-  // on Linux, closing the listening fd from another thread does not reliably
-  // unblock a thread blocked in accept().
-  //
-  // The acceptor's local endpoint can be a wildcard (0.0.0.0 or ::), to
-  // which connect()'s behaviour is implementation-defined and not
-  // guaranteed to succeed. Always use the loopback address of the same
-  // family on the local-endpoint port, and fall back to closing the
-  // acceptor anyway if the connect fails — at worst the join blocks
-  // until the next real client connects.
+  // Stop accepting first. cancel() makes any pending async_accept fire
+  // with operation_aborted; close() releases the listening fd.
   boost::system::error_code myEc;
-  if (theAcceptor.is_open()) {
-    auto myLocal = theAcceptor.local_endpoint(myEc);
-    if (!myEc) {
-      const auto myLoopback =
-          myLocal.address().is_v6()
-              ? boost::asio::ip::tcp::endpoint(
-                    boost::asio::ip::address_v6::loopback(), myLocal.port())
-              : boost::asio::ip::tcp::endpoint(
-                    boost::asio::ip::address_v4::loopback(), myLocal.port());
-
-      boost::asio::io_context      myIo;
-      boost::asio::ip::tcp::socket myWaker(myIo);
-      // Async connect with a hard timeout so a firewall / dropped SYN
-      // can't hang the destructor. 1s is plenty on loopback; a real
-      // failure should manifest in microseconds.
-      myWaker.async_connect(myLoopback,
-                            [](const boost::system::error_code&) {});
-      myIo.run_for(std::chrono::seconds(1));
-      myWaker.close(myEc);
-    }
-    theAcceptor.close(myEc);
+  if (theAcceptor) {
+    theAcceptor->cancel(myEc);
+    theAcceptor->close(myEc);
   }
 
-  if (theAcceptThread.joinable()) {
-    theAcceptThread.join();
-  }
-
-  // Close every active client socket (forces any blocked read to
-  // return an error so the worker exits its loop), then join each
-  // worker thread. After this point no worker can dereference theStorage,
-  // so the destructor of the owning object is safe.
-  std::list<Connection> myToJoin;
+  // Force-close every live connection. close() posts a task onto the
+  // connection's owning io_context which cancels in-flight read/write.
+  // Those handlers then drop the last shared_from_this and the
+  // Connection self-destructs.
   {
     std::lock_guard<std::mutex> myLock(theConnectionsMutex);
-    for (auto& myConn : theConnections) {
-      boost::system::error_code myCloseEc;
-      myConn.socket->shutdown(boost::asio::ip::tcp::socket::shutdown_both,
-                               myCloseEc);
-      myConn.socket->close(myCloseEc);
+    for (auto& myWeak : theConnections) {
+      if (auto myConn = myWeak.lock()) {
+        myConn->close();
+      }
     }
-    // Move out so we can join without holding the mutex.
-    myToJoin = std::move(theConnections);
     theConnections.clear();
   }
-  for (auto& myConn : myToJoin) {
-    if (myConn.worker.joinable()) {
-      myConn.worker.join();
+
+  // Release each work guard and stop each io_context, then join.
+  for (auto& mySlot : theIoSlots) {
+    mySlot->guard.reset();
+    mySlot->io.stop();
+  }
+  for (auto& mySlot : theIoSlots) {
+    if (mySlot->thread.joinable()) {
+      mySlot->thread.join();
     }
   }
+  theIoSlots.clear();
 
   LOG(INFO) << "RESP server stopped.";
 }
 
-void RespServer::acceptLoop() {
-  while (theRunning) {
-    try {
-      boost::asio::ip::tcp::socket mySocket(theIoContext);
-      theAcceptor.accept(mySocket);
+void RespServer::doAccept() {
+  theAcceptor->async_accept(
+      [this](const boost::system::error_code& aEc,
+             boost::asio::ip::tcp::socket     aSocket) {
+        if (aEc) {
+          if (theRunning) {
+            LOG(ERROR) << "RESP accept error: " << aEc.message();
+          }
+          return;
+        }
 
-      if (!theRunning) {
-        break;
-      }
+        boost::system::error_code myNoDelayEc;
+        aSocket.set_option(boost::asio::ip::tcp::no_delay(true), myNoDelayEc);
 
-      LOG(INFO) << "RESP client connected: "
-                << mySocket.remote_endpoint();
+        LOG(INFO) << "RESP client connected";
 
-      boost::system::error_code myNoDelayEc;
-      mySocket.set_option(boost::asio::ip::tcp::no_delay(true), myNoDelayEc);
+        // Round-robin onto an io_context. Move the socket onto the
+        // target io by extracting the native handle and re-assigning
+        // — sockets are bound to one io_context for life and asio
+        // doesn't expose a direct "rebind" API.
+        const size_t myIdx =
+            theNextSlot.fetch_add(1, std::memory_order_relaxed) %
+            theIoSlots.size();
+        auto& myTargetIo = theIoSlots[myIdx]->io;
 
-      // Track the connection so shutdown() can close its socket and
-      // join its worker. The shared_ptr<socket> lets the worker thread
-      // hold a stable reference while shutdown() also keeps one to
-      // call close() on it from outside.
-      auto mySocketPtr = std::make_shared<boost::asio::ip::tcp::socket>(
-          std::move(mySocket));
+        const auto myProtocol = aSocket.local_endpoint(myNoDelayEc).protocol();
+        const auto myFd       = aSocket.release(myNoDelayEc);
 
-      std::lock_guard<std::mutex> myLock(theConnectionsMutex);
-      pruneFinishedConnectionsLocked();
-      theConnections.emplace_back();
-      auto& myConn  = theConnections.back();
-      myConn.socket = mySocketPtr;
-      myConn.worker = std::thread([this, mySocketPtr]() mutable {
-        handleConnection(std::move(mySocketPtr));
+        boost::asio::ip::tcp::socket myPinned(myTargetIo);
+        myPinned.assign(myProtocol, myFd, myNoDelayEc);
+        if (myNoDelayEc) {
+          LOG(ERROR) << "RESP socket re-pin failed: " << myNoDelayEc.message();
+          ::close(myFd);
+        } else {
+          auto myConn = std::make_shared<Connection>(
+              myTargetIo, std::move(myPinned), theStorage);
+          {
+            std::lock_guard<std::mutex> myLock(theConnectionsMutex);
+            pruneFinishedConnectionsLocked();
+            theConnections.emplace_back(myConn);
+          }
+          myConn->start();
+        }
+
+        if (theRunning) {
+          doAccept();
+        }
       });
-
-    } catch (const boost::system::system_error& e) {
-      if (theRunning) {
-        LOG(ERROR) << "RESP accept error: " << e.what();
-      }
-    }
-  }
 }
 
 void RespServer::pruneFinishedConnectionsLocked() {
-  // Caller holds theConnectionsMutex. We can't tell if a worker has
-  // finished without joining it; use the heuristic that a still-open
-  // socket implies a still-running worker (handleConnection only
-  // returns once the socket has hit EOF / error). Prune entries whose
-  // socket has been closed by the worker itself on disconnect.
+  // Drop weak_ptrs whose Connection has already self-destructed so the
+  // list doesn't grow unboundedly under churn.
   for (auto myIt = theConnections.begin(); myIt != theConnections.end();) {
-    if (!myIt->socket->is_open()) {
-      if (myIt->worker.joinable()) {
-        myIt->worker.join();
-      }
+    if (myIt->expired()) {
       myIt = theConnections.erase(myIt);
     } else {
       ++myIt;
     }
   }
-}
-
-void RespServer::handleConnection(
-    std::shared_ptr<boost::asio::ip::tcp::socket> aSocketPtr) {
-  // Top-level catch-all: any exception that escapes would propagate
-  // to the thread root and terminate the process. RespHandler::handle()
-  // already wraps command logic in its own try/catch and returns an
-  // ERR reply on std::exception, but allocations (std::string growth
-  // in myBatchedReply, RespParser frame parsing) and unforeseen
-  // boost::system errors can still throw. Log and let the worker exit
-  // cleanly; the shared socket is closed on the way out so the
-  // accept loop can prune our entry from theConnections.
-  auto& aSocket = *aSocketPtr;
-  try {
-    RespHandler            myHandler(theStorage);
-    boost::asio::streambuf myBuffer;
-    std::string            myBatchedReply;
-    myBatchedReply.reserve(1024);
-
-    auto myProcess = [&](const std::vector<std::string>& aCmd) {
-      myBatchedReply.append(myHandler.handle(aCmd));
-      return toUpper(aCmd[0]) == "QUIT";
-    };
-
-    while (theRunning) {
-      // Block for at least one command.
-      auto myCmd = RespParser::readCommand(aSocket, myBuffer);
-      if (!myCmd || myCmd->empty()) {
-        break;
-      }
-
-      bool myQuit = myProcess(*myCmd);
-
-      // Drain any further already-buffered pipelined commands so we can
-      // coalesce their responses into a single socket write. With Nagle
-      // off (set in acceptLoop) plus batched writes, -P N benchmarks
-      // scale properly instead of stalling one reply per delayed-ACK.
-      while (!myQuit && theRunning && myBuffer.size() > 0) {
-        auto myMore = RespParser::readCommand(aSocket, myBuffer);
-        if (!myMore || myMore->empty()) {
-          myQuit = true;
-          break;
-        }
-        myQuit = myProcess(*myMore);
-      }
-
-      try {
-        boost::asio::write(aSocket, boost::asio::buffer(myBatchedReply));
-      } catch (const boost::system::system_error&) {
-        break;
-      }
-      myBatchedReply.clear();
-
-      if (myQuit) {
-        break;
-      }
-    }
-  } catch (const std::exception& e) {
-    LOG(ERROR) << "RESP connection handler threw: " << e.what();
-  } catch (...) {
-    LOG(ERROR) << "RESP connection handler threw: unknown exception";
-  }
-
-  // Close the socket so the next pruneFinishedConnectionsLocked() can
-  // remove this connection from theConnections.
-  boost::system::error_code myEc;
-  aSocket.close(myEc);
-
-  LOG(INFO) << "RESP client disconnected.";
 }
 
 } // namespace okts::resp
