@@ -14,11 +14,11 @@ Single client, `-P 16`, current HEAD vs Redis on the same box:
 
 | | small value | 256-byte value |
 |--|---:|---:|
-| Hot-key writes (LPUSH/SADD) | tied or slight win | 88–97% |
-| LRANGE_100 | 84% | 70% |
-| **Random-key writes (RPUSH-rand)** | **38%** | **36%** |
-| LPOP / RPOP rand | 50–64% | 56–62% |
-| Read-only (LLEN/SCARD) | 102–117% (we win) | 111–117% (we win) |
+| Hot-key writes (LPUSH/SADD) | 105% / 104% (tied or slight win) | 91% / 104% |
+| LRANGE_100 | **110% (we win)** | **104% (we win)** |
+| **Random-key writes (RPUSH-rand)** | **71%** | **81%** |
+| LPOP / RPOP rand | 73% / 83% | 73% / 89% |
+| Read-only (LLEN/SCARD) | 109–110% (we win) | 107–122% (we win) |
 
 Two structural cost centres dominate what's left:
 
@@ -326,32 +326,32 @@ Two reasonable fixes:
 - **Risk**: medium — locking new code paths.
 - **Why**: matches Redis's atomicity guarantees.
 
-## P. Drop `std::list<std::string>` return type from list ops
+## P. [x] Drop `std::list<std::string>` return type from list ops (landed)
 
 `SequenceContainer::popFront` / `popBack` / `range` / `multiplePop`
-return `std::list<std::string>` — one heap-alloc per element.
-Inconsistent with the rest of the perf push to remove per-element
-allocations (devector backing, transparent hashers). On the read
-hot path (LRANGE etc.) this is load-bearing.
+returned `std::list<std::string>` — one heap-alloc per element.
+Switched to `std::vector<std::string>` with an `if constexpr (requires
+{ c.size(); })` reserve in pop, and an exact `reserve(stop-start+1)`
+in range.
 
-Switch to `std::vector<std::string>`. Touches every storage method,
-the `RespHandler` callers (transparent — formatBulkStringArray is
-already templated), `commands_*.cpp` consumers, and
-`CommandsClient`'s public API.
+Bench delta (single client `-P 16`, ITERATIONS=5):
 
-- **Effort**: medium (~200 LOC across many files).
-- **Risk**: low — drop-in iteration semantics, but public client API
-  changes.
-- **Why**: removes N node allocs per pop/range result, log(N)
-  reallocations vs N node allocs.
+  LRANGE_100 small:  108K -> 123K rps (+13.7%)  -> 110% of Redis
+  LRANGE_100 d256:    53K ->  56K rps  (+5.3%)  -> 104% of Redis
+  LPOP/RPOP rand:    within noise (bench pops 1 element/call, so
+                     reserve(1) is essentially free either way)
+
+LRANGE_100 went from below parity (84% small / 70% d256) to a win.
 
 ---
 
 ## Suggested order
 
-(B, C, D, F, H done — flat_hash_map outer, sharding, embedded mutex,
-multi-iteration harness, jemalloc all landed. RPUSH-rand c=100
-climbed from 19% → 33% of Redis; reads scaled to 82-93%.)
+(B, C, D, F, H, P done — flat_hash_map outer, sharding, embedded mutex,
+multi-iteration harness, jemalloc, vector-return on pop/range all
+landed. RPUSH-rand c=100 climbed from 19% → 33% of Redis; reads
+scaled to 82-93%; LRANGE_100 went from 84% to 110% of Redis at
+single-client `-P 16` after item P.)
 
 1. **K** (`INFO memory`) — unblocks honest memory comparison vs
    Redis in the bench harness.

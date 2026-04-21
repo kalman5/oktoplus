@@ -6,6 +6,7 @@
 
 #include <boost/container/devector.hpp>
 
+#include <algorithm>
 #include <cstdint>
 #include <deque>
 #include <limits>
@@ -53,7 +54,7 @@ class SequenceContainer : public GenericContainer<CONTAINER>
   size_t pushFront(const std::string&                   aName,
                    const std::vector<std::string_view>& aValues);
 
-  std::list<std::string> popFront(const std::string& aName, uint64_t aCount);
+  std::vector<std::string> popFront(const std::string& aName, uint64_t aCount);
 
   size_t pushFrontExist(const std::string&                   aName,
                         const std::vector<std::string_view>& aValues);
@@ -63,7 +64,7 @@ class SequenceContainer : public GenericContainer<CONTAINER>
   size_t pushBack(const std::string&                   aName,
                   const std::vector<std::string_view>& aValues);
 
-  std::list<std::string> popBack(const std::string& aName, uint64_t aCount);
+  std::vector<std::string> popBack(const std::string& aName, uint64_t aCount);
 
   size_t size(const std::string& aName) const;
 
@@ -86,7 +87,7 @@ class SequenceContainer : public GenericContainer<CONTAINER>
                                uint64_t           aCount,
                                uint64_t           aMaxLength);
 
-  std::list<std::string>
+  std::vector<std::string>
   range(const std::string& aName, int64_t aStart, int64_t aStop) const;
 
   size_t
@@ -100,9 +101,10 @@ class SequenceContainer : public GenericContainer<CONTAINER>
   size_t pushBackExist(const std::string&                   aName,
                        const std::vector<std::string_view>& aValues);
 
-  std::list<std::string> multiplePop(const std::vector<std::string>& aNames,
-                                     Direction                       aDirection,
-                                     uint64_t                        aCount);
+  std::vector<std::string>
+  multiplePop(const std::vector<std::string>& aNames,
+              Direction                       aDirection,
+              uint64_t                        aCount);
 
  private:
   using MoveMutex = std::mutex;
@@ -152,14 +154,21 @@ size_t SequenceContainer<CONTAINER>::pushFront(
 }
 
 template <class CONTAINER>
-std::list<std::string>
+std::vector<std::string>
 SequenceContainer<CONTAINER>::popFront(const std::string& aName,
                                        const uint64_t     aCount) {
 
-  std::list<std::string> myRet;
+  std::vector<std::string> myRet;
 
   Base::theApplyer.performOnExisting(
       aName, [&myRet, &aCount](Container& aContainer) {
+        // Single allocation when the backing container exposes size():
+        // we know an upper bound on how many elements we'll move out.
+        // Keep the if constexpr guard so this template stays open to
+        // future containers that might not be sized.
+        if constexpr (requires { aContainer.size(); }) {
+          myRet.reserve(std::min<uint64_t>(aCount, aContainer.size()));
+        }
         uint64_t myCollected = 0;
         while (!aContainer.empty() && myCollected < aCount) {
           myRet.emplace_back(std::move(aContainer.front()));
@@ -206,14 +215,17 @@ size_t SequenceContainer<CONTAINER>::pushBack(
 }
 
 template <class CONTAINER>
-std::list<std::string>
+std::vector<std::string>
 SequenceContainer<CONTAINER>::popBack(const std::string& aName,
                                       const uint64_t     aCount) {
 
-  std::list<std::string> myRet;
+  std::vector<std::string> myRet;
 
   Base::theApplyer.performOnExisting(
       aName, [&myRet, &aCount](Container& aContainer) {
+        if constexpr (requires { aContainer.size(); }) {
+          myRet.reserve(std::min<uint64_t>(aCount, aContainer.size()));
+        }
         uint64_t myCollected = 0;
         while (!aContainer.empty() && myCollected < aCount) {
           myRet.emplace_back(std::move(aContainer.back()));
@@ -461,10 +473,10 @@ SequenceContainer<CONTAINER>::position(const std::string& aName,
 }
 
 template <class CONTAINER>
-std::list<std::string> SequenceContainer<CONTAINER>::range(
+std::vector<std::string> SequenceContainer<CONTAINER>::range(
     const std::string& aName, int64_t aStart, int64_t aStop) const {
 
-  std::list<std::string> myRet;
+  std::vector<std::string> myRet;
 
   Base::theApplyer.performOnExisting(
       aName, [&myRet, aStart, aStop](const Container& aContainer) {
@@ -498,6 +510,9 @@ std::list<std::string> SequenceContainer<CONTAINER>::range(
         if (myStart > myStop) {
           return;
         }
+
+        // Exact size known here — single allocation, no log N regrowth.
+        myRet.reserve(static_cast<size_t>(myStop - myStart + 1));
 
         auto myItStart = aContainer.begin();
         std::advance(myItStart, myStart);
@@ -676,11 +691,11 @@ size_t SequenceContainer<CONTAINER>::pushBackExist(
 }
 
 template <class CONTAINER>
-std::list<std::string> SequenceContainer<CONTAINER>::multiplePop(
+std::vector<std::string> SequenceContainer<CONTAINER>::multiplePop(
     const std::vector<std::string>& aNames,
     Direction                       aDirection,
     uint64_t                        aCount) {
-  std::list<std::string> myRet;
+  std::vector<std::string> myRet;
 
   for (const auto& myName : aNames) {
     if (aDirection == Direction::LEFT) {

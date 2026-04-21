@@ -25,10 +25,10 @@
 <circle cx="333.3" cy="277.2" r="3.5" fill="#3fb950"/>
 <circle cx="596.7" cy="238.5" r="3.5" fill="#3fb950"/>
 <circle cx="860.0" cy="83.6" r="3.5" fill="#3fb950"/>
-<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,308.6 333.3,298.5 596.7,260.2 860.0,104.8"/>
+<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,308.6 333.3,298.5 596.7,259.7 860.0,104.8"/>
 <circle cx="70.0" cy="308.6" r="3.5" fill="#f85149"/>
 <circle cx="333.3" cy="298.5" r="3.5" fill="#f85149"/>
-<circle cx="596.7" cy="260.2" r="3.5" fill="#f85149"/>
+<circle cx="596.7" cy="259.7" r="3.5" fill="#f85149"/>
 <circle cx="860.0" cy="104.8" r="3.5" fill="#f85149"/>
 <rect x="70" y="361" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="372" fill="#24292f">Oktoplus</text>

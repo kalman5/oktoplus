@@ -25,10 +25,10 @@ class CommandsClient final
   void
   dequeTrim(const std::string& aContainerName, int64_t aStart, int64_t aStop);
 
-  std::list<std::string> listPopFront(const std::string& aContainerName,
-                                      uint64_t           aCount);
-  std::list<std::string> dequePopFront(const std::string& aContainerName,
-                                       uint64_t           aCount);
+  std::vector<std::string> listPopFront(const std::string& aContainerName,
+                                        uint64_t           aCount);
+  std::vector<std::string> dequePopFront(const std::string& aContainerName,
+                                         uint64_t           aCount);
 
   size_t listLength(const std::string& aContainerName);
   size_t dequeLength(const std::string& aContainerName);
@@ -50,7 +50,7 @@ class CommandsClient final
        const std::function<::grpc::Status(
            ::grpc::ClientContext*, const TrimRequest&, TrimReply*)>& aFunction);
 
-  std::list<std::string>
+  std::vector<std::string>
   popFront(const std::string&                                   aContainerName,
            uint64_t                                             aCount,
            const std::function<::grpc::Status(::grpc::ClientContext*,

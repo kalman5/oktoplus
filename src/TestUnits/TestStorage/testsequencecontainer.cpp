@@ -118,20 +118,20 @@ TYPED_TEST(TestSequenceContainer, pop_front_back) {
     ASSERT_EQ(7u,
               myContainer.pushFront("l1", {"7", "6", "5", "4", "3", "2", "1"}));
 
-    ASSERT_EQ(std::list<std::string>{"1"}, myContainer.popFront("l1", 1));
+    ASSERT_EQ(std::vector<std::string>{"1"}, myContainer.popFront("l1", 1));
     ASSERT_EQ(6u, myContainer.size("l1"));
 
-    ASSERT_EQ(std::list<std::string>{"2"}, myContainer.popFront("l1", 1));
+    ASSERT_EQ(std::vector<std::string>{"2"}, myContainer.popFront("l1", 1));
     ASSERT_EQ(5u, myContainer.size("l1"));
 
-    ASSERT_EQ((std::list<std::string>{"3", "4"}),
+    ASSERT_EQ((std::vector<std::string>{"3", "4"}),
               myContainer.popFront("l1", 2));
     ASSERT_EQ(3u, myContainer.size("l1"));
 
-    ASSERT_EQ(std::list<std::string>{"7"}, myContainer.popBack("l1", 1));
+    ASSERT_EQ(std::vector<std::string>{"7"}, myContainer.popBack("l1", 1));
     ASSERT_EQ(2u, myContainer.size("l1"));
 
-    ASSERT_EQ((std::list<std::string>{"6", "5"}), myContainer.popBack("l1", 2));
+    ASSERT_EQ((std::vector<std::string>{"6", "5"}), myContainer.popBack("l1", 2));
 
     // at this point the list is empty
     ASSERT_EQ(0u, myContainer.size("l1"));
@@ -217,33 +217,33 @@ TYPED_TEST(TestSequenceContainer, range) {
 
   ASSERT_EQ(3u, myContainer.size("l1"));
 
-  ASSERT_EQ(std::list<std::string>({"1", "2", "3"}),
+  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
             myContainer.range("l1", 0, 2));
 
-  ASSERT_EQ(std::list<std::string>({"1", "2", "3"}),
+  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
             myContainer.range("l1", 0, 20));
 
-  ASSERT_EQ(std::list<std::string>({"2", "3"}), myContainer.range("l1", 1, 2));
+  ASSERT_EQ(std::vector<std::string>({"2", "3"}), myContainer.range("l1", 1, 2));
 
-  ASSERT_EQ(std::list<std::string>({"2", "3"}), myContainer.range("l1", 1, 20));
+  ASSERT_EQ(std::vector<std::string>({"2", "3"}), myContainer.range("l1", 1, 20));
 
-  ASSERT_EQ(std::list<std::string>(), myContainer.range("l1", 10, 20));
+  ASSERT_EQ(std::vector<std::string>(), myContainer.range("l1", 10, 20));
 
-  ASSERT_EQ(std::list<std::string>({"1", "2", "3"}),
+  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
             myContainer.range("l1", -3, -1));
 
-  ASSERT_EQ(std::list<std::string>({"1", "2", "3"}),
+  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
             myContainer.range("l1", -30, -1));
 
-  ASSERT_EQ(std::list<std::string>({"1", "2"}),
+  ASSERT_EQ(std::vector<std::string>({"1", "2"}),
             myContainer.range("l1", -30, -2));
 
-  ASSERT_EQ(std::list<std::string>(), myContainer.range("l1", -30, -10));
+  ASSERT_EQ(std::vector<std::string>(), myContainer.range("l1", -30, -10));
 
-  ASSERT_EQ(std::list<std::string>({"1", "2"}),
+  ASSERT_EQ(std::vector<std::string>({"1", "2"}),
             myContainer.range("l1", -30, 1));
 
-  ASSERT_EQ(std::list<std::string>({"1", "2", "3"}),
+  ASSERT_EQ(std::vector<std::string>({"1", "2", "3"}),
             myContainer.range("l1", -30, 30));
 }
 
@@ -259,7 +259,7 @@ TYPED_TEST(TestSequenceContainer, remove) {
     ASSERT_EQ(0u, myContainer.remove("l1", -1, "7"));
     ASSERT_EQ(0u, myContainer.remove("l1", 1, "7"));
 
-    ASSERT_EQ(std::list<std::string>({"1", "3", "3", "3", "4", "3", "6", "6"}),
+    ASSERT_EQ(std::vector<std::string>({"1", "3", "3", "3", "4", "3", "6", "6"}),
               myContainer.range("l1", -30, 30));
   }
 
@@ -270,7 +270,7 @@ TYPED_TEST(TestSequenceContainer, remove) {
         myContainer.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myContainer.remove("l1", 0, "3"));
 
-    ASSERT_EQ(std::list<std::string>({"1", "4", "6", "6"}),
+    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
               myContainer.range("l1", -30, 30));
   }
 
@@ -281,7 +281,7 @@ TYPED_TEST(TestSequenceContainer, remove) {
         myContainer.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myContainer.remove("l1", 20, "3"));
 
-    ASSERT_EQ(std::list<std::string>({"1", "4", "6", "6"}),
+    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
               myContainer.range("l1", -30, 30));
   }
 
@@ -292,7 +292,7 @@ TYPED_TEST(TestSequenceContainer, remove) {
         myContainer.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myContainer.remove("l1", 4, "3"));
 
-    ASSERT_EQ(std::list<std::string>({"1", "4", "6", "6"}),
+    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
               myContainer.range("l1", -30, 30));
   }
 
@@ -303,7 +303,7 @@ TYPED_TEST(TestSequenceContainer, remove) {
         myContainer.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(2u, myContainer.remove("l1", 2, "3"));
 
-    ASSERT_EQ(std::list<std::string>({"1", "3", "4", "3", "6", "6"}),
+    ASSERT_EQ(std::vector<std::string>({"1", "3", "4", "3", "6", "6"}),
               myContainer.range("l1", -30, 30));
   }
 
@@ -314,7 +314,7 @@ TYPED_TEST(TestSequenceContainer, remove) {
         myContainer.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myContainer.remove("l1", -20, "3"));
 
-    ASSERT_EQ(std::list<std::string>({"1", "4", "6", "6"}),
+    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
               myContainer.range("l1", -30, 30));
   }
 
@@ -325,7 +325,7 @@ TYPED_TEST(TestSequenceContainer, remove) {
         myContainer.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(4u, myContainer.remove("l1", -4, "3"));
 
-    ASSERT_EQ(std::list<std::string>({"1", "4", "6", "6"}),
+    ASSERT_EQ(std::vector<std::string>({"1", "4", "6", "6"}),
               myContainer.range("l1", -30, 30));
   }
 
@@ -336,7 +336,7 @@ TYPED_TEST(TestSequenceContainer, remove) {
         myContainer.pushBack("l1", {"1", "3", "3", "3", "4", "3", "6", "6"}));
     ASSERT_EQ(3u, myContainer.remove("l1", -3, "3"));
 
-    ASSERT_EQ(std::list<std::string>({"1", "3", "4", "6", "6"}),
+    ASSERT_EQ(std::vector<std::string>({"1", "3", "4", "6", "6"}),
               myContainer.range("l1", -30, 30));
   }
 }
@@ -370,13 +370,13 @@ TYPED_TEST(TestSequenceContainer, set) {
 
     ASSERT_EQ(Container::Status::OK, myContainer.set("l1", 3, "40"));
 
-    ASSERT_EQ(std::list<std::string>({"1", "2", "3", "40", "5", "6", "7", "8"}),
+    ASSERT_EQ(std::vector<std::string>({"1", "2", "3", "40", "5", "6", "7", "8"}),
               myContainer.range("l1", -30, 30));
 
     ASSERT_EQ(Container::Status::OK, myContainer.set("l1", -3, "60"));
 
     ASSERT_EQ(
-        std::list<std::string>({"1", "2", "3", "40", "5", "60", "7", "8"}),
+        std::vector<std::string>({"1", "2", "3", "40", "5", "60", "7", "8"}),
         myContainer.range("l1", -30, 30));
   }
 }
@@ -508,7 +508,7 @@ TYPED_TEST(TestSequenceContainer, trim) {
 
     ASSERT_EQ(8u, myContainer.size("l1"));
 
-    ASSERT_EQ(std::list<std::string>({"0", "1", "2", "3", "4", "5", "6", "7"}),
+    ASSERT_EQ(std::vector<std::string>({"0", "1", "2", "3", "4", "5", "6", "7"}),
               myContainer.range("l1", -30, 30));
   }
 
@@ -522,7 +522,7 @@ TYPED_TEST(TestSequenceContainer, trim) {
 
     ASSERT_EQ(8u, myContainer.size("l1"));
 
-    ASSERT_EQ(std::list<std::string>({"0", "1", "2", "3", "4", "5", "6", "7"}),
+    ASSERT_EQ(std::vector<std::string>({"0", "1", "2", "3", "4", "5", "6", "7"}),
               myContainer.range("l1", -30, 30));
   }
 
@@ -536,7 +536,7 @@ TYPED_TEST(TestSequenceContainer, trim) {
 
     ASSERT_EQ(0u, myContainer.size("l1"));
 
-    ASSERT_EQ(std::list<std::string>({}), myContainer.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({}), myContainer.range("l1", -30, 30));
     ASSERT_EQ(0u, myContainer.hostedKeys());
   }
 
@@ -550,7 +550,7 @@ TYPED_TEST(TestSequenceContainer, trim) {
 
     ASSERT_EQ(0u, myContainer.size("l1"));
 
-    ASSERT_EQ(std::list<std::string>({}), myContainer.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({}), myContainer.range("l1", -30, 30));
     ASSERT_EQ(0u, myContainer.hostedKeys());
   }
 
@@ -564,7 +564,7 @@ TYPED_TEST(TestSequenceContainer, trim) {
 
     ASSERT_EQ(6u, myContainer.size("l1"));
 
-    ASSERT_EQ(std::list<std::string>({"1", "2", "3", "4", "5", "6"}),
+    ASSERT_EQ(std::vector<std::string>({"1", "2", "3", "4", "5", "6"}),
               myContainer.range("l1", -30, 30));
   }
 
@@ -578,7 +578,7 @@ TYPED_TEST(TestSequenceContainer, trim) {
 
     ASSERT_EQ(1u, myContainer.size("l1"));
 
-    ASSERT_EQ(std::list<std::string>({"5"}), myContainer.range("l1", -30, 30));
+    ASSERT_EQ(std::vector<std::string>({"5"}), myContainer.range("l1", -30, 30));
   }
 
   {
@@ -589,7 +589,7 @@ TYPED_TEST(TestSequenceContainer, trim) {
 
     myContainer.trim("l1", 5, 50);
 
-    ASSERT_EQ(std::list<std::string>({"5", "6", "7"}),
+    ASSERT_EQ(std::vector<std::string>({"5", "6", "7"}),
               myContainer.range("l1", -30, 30));
   }
 }

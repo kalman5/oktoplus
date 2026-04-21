@@ -64,7 +64,7 @@ void CommandsClient::dequeTrim(const std::string& aListName,
        });
 }
 
-std::list<std::string>
+std::vector<std::string>
 CommandsClient::listPopFront(const std::string& aContainerName,
                              const uint64_t     aCount) {
   return popFront(aContainerName,
@@ -76,7 +76,7 @@ CommandsClient::listPopFront(const std::string& aContainerName,
                   });
 }
 
-std::list<std::string>
+std::vector<std::string>
 CommandsClient::dequePopFront(const std::string& aContainerName,
                               const uint64_t     aCount) {
   return popFront(aContainerName,
@@ -183,7 +183,7 @@ void CommandsClient::trim(
   }
 }
 
-std::list<std::string> CommandsClient::popFront(
+std::vector<std::string> CommandsClient::popFront(
     const std::string&                                   aContainerName,
     const uint64_t                                       aCount,
     const std::function<::grpc::Status(::grpc::ClientContext*,
@@ -208,7 +208,8 @@ std::list<std::string> CommandsClient::popFront(
     throw std::runtime_error(myStatus.error_message());
   }
 
-  std::list<std::string> myRet;
+  std::vector<std::string> myRet;
+  myRet.reserve(myReply.value_size());
   for (auto& myValue : *myReply.mutable_value()) {
     myRet.emplace_back(std::move(myValue));
   }
