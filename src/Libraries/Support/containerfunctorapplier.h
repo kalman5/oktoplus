@@ -186,7 +186,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnNew(const std::string& aName,
         std::string_view(aName),
         [&aName](const auto& aCtor) {
           aCtor(aName, std::make_unique<ProtectedContainer>());
-          LOG(INFO) << "Inserted new container at key \"" << aName << "\"";
+          VLOG(2) << "Inserted new container at key \"" << aName << "\"";
         });
     myContainer       = myIterator->second.get();
     mySecondLevelLock = std::unique_lock<ContainerMutex>(myContainer->mutex,
@@ -284,7 +284,7 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
     }
 
     myShard.storage.erase(myIt);
-    LOG(INFO) << "Removed container at key \"" << aName << "\"";
+    VLOG(2) << "Removed container at key \"" << aName << "\"";
   }
 }
 

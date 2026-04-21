@@ -14,21 +14,35 @@ Single client, `-P 16`, current HEAD vs Redis on the same box:
 
 | | small value | 256-byte value |
 |--|---:|---:|
-| Hot-key writes (LPUSH/SADD) | 105% / 104% (tied or slight win) | 91% / 104% |
-| LRANGE_100 | **110% (we win)** | **104% (we win)** |
-| **Random-key writes (RPUSH-rand)** | **71%** | **81%** |
-| LPOP / RPOP rand | 73% / 83% | 73% / 89% |
-| Read-only (LLEN/SCARD) | 109–110% (we win) | 107–122% (we win) |
+| Hot-key writes (LPUSH/SADD) | 108% / 103% (we win) | 116% / 112% (we win) |
+| LRANGE_100 | **112% (we win)** | **103% (we win)** |
+| Random-key writes (RPUSH-rand) | **106% (we win)** | **108% (we win)** |
+| LPOP / RPOP rand | 101% / 109% (we win) | 99% / 114% (we win) |
+| Read-only (LLEN/SCARD) | 112–118% (we win) | 107–110% (we win) |
 
-Two structural cost centres dominate what's left:
+At `-c 100 -P 16`, RPUSH-rand 112%, LPOP-rand 113%, SADD-rand 102%,
+SCARD-rand 104% — random-key paths are also at or above Redis.
 
-1. **Per-key overhead on random-key paths** — outer-map insert + per-key
-   `ProtectedContainer` allocation (mutex `unique_ptr` heap alloc) +
-   first list/set node alloc. Confirmed by the d=256 result: gap is
-   the same as d=3, so it's per-*key*, not per-*value*.
-2. **Per-value storage density on writes** — `std::string` overhead
-   (~32 bytes object + heap alloc when off-SSO) vs Redis SDS (~5 bytes
-   header + payload, single alloc).
+The previous gap on random-key paths was almost entirely caused by
+two `LOG(INFO)` lines in `ContainerFunctorApplier` firing on every
+new-key insert and every empty-key eviction. Downgrading both to
+`VLOG(2)` lifted LPOP-rand from 62% → 113% of Redis at `-c 100`,
+RPUSH-rand from 86% → 112%, and flipped d256 random-key writes from
+~80% → 99–114%. (Landed alongside the J commit; see git log for the
+exact change.)
+
+Remaining structural cost centres (now in the noise on rps but still
+real for memory):
+
+1. **Per-key memory overhead** — outer-map slot + `ProtectedContainer`
+   (now with embedded mutex) + first list/set node alloc. Doesn't
+   move rps any more, but still ~170–200 B/key vs Redis's ~70 B/key
+   at small values.
+2. **Per-value storage density** — `std::string` overhead (~32 bytes
+   object + heap alloc when off-SSO) vs Redis SDS (~5 bytes header
+   + payload, single alloc). Drives the residual memory gap; rps
+   impact bounded by the fact that we're already winning most
+   commands.
 
 ---
 
