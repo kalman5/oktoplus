@@ -622,6 +622,45 @@ def main() -> int:
             )
             extra_lines.append("chart_memory_residual.svg")
 
+    # Parallelism-advantage chart: LPOS scan on a list of N elements,
+    # multi-key, varying clients. Pure CPU per command (~5 bytes wire),
+    # so Redis stays capped at single-core ceiling and Oktoplus scales
+    # with cores. Only emit if run_parallelism_advantage_bench.sh has
+    # produced raw/parallelism_*.csv at -P 16 with N=10000.
+    par_okto = RAW / "parallelism_oktoplus.csv"
+    par_redis = RAW / "parallelism_redis.csv"
+    if par_okto.exists() and par_redis.exists():
+        import csv as _csv
+        def _load_par(path):
+            out = {}
+            with path.open() as fh:
+                for row in _csv.DictReader(fh):
+                    if row["test"] != "LPOS_miss":
+                        continue
+                    if int(row["N_elements"]) != 10000:
+                        continue
+                    out[int(row["clients"])] = float(row["rps"])
+            return out
+        po = _load_par(par_okto)
+        pr = _load_par(par_redis)
+        clients = sorted(set(po) & set(pr))
+        if clients:
+            okto_par  = [po[c] for c in clients]
+            redis_par = [pr[c] for c in clients]
+            line_chart(
+                title=("LPOS scan on 10K-element lists, multi-key, varying "
+                       "clients (-P 16) — rps (higher is better)"),
+                x_values=clients,
+                series=[
+                    ("Oktoplus", okto_par,  "#3fb950"),
+                    ("Redis",    redis_par, "#f85149"),
+                ],
+                x_label="concurrent clients",
+                y_max=max(max(okto_par), max(redis_par)) * 1.10,
+                out_path=HERE / "chart_parallelism.svg",
+            )
+            extra_lines.append("chart_parallelism.svg")
+
     print(
         "wrote chart_p1.svg, chart_p16.svg, chart_p16_d256.svg, "
         "chart_concurrency.svg, chart_concurrency_random.svg, report.html"

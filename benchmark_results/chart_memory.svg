@@ -6,13 +6,13 @@
 <line x1="70" y1="268.0" x2="860" y2="268.0" stroke="#d0d7de" stroke-width="1"/>
 <text x="62" y="272.0" text-anchor="end" fill="#24292f">327</text>
 <line x1="70" y1="216.0" x2="860" y2="216.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="220.0" text-anchor="end" fill="#24292f">655</text>
+<text x="62" y="220.0" text-anchor="end" fill="#24292f">654</text>
 <line x1="70" y1="163.99999999999997" x2="860" y2="163.99999999999997" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="167.99999999999997" text-anchor="end" fill="#24292f">982</text>
+<text x="62" y="167.99999999999997" text-anchor="end" fill="#24292f">981</text>
 <line x1="70" y1="112.0" x2="860" y2="112.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="116.0" text-anchor="end" fill="#24292f">1,310</text>
+<text x="62" y="116.0" text-anchor="end" fill="#24292f">1,309</text>
 <line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="64.0" text-anchor="end" fill="#24292f">1,637</text>
+<text x="62" y="64.0" text-anchor="end" fill="#24292f">1,636</text>
 <line x1="70" y1="60" x2="70" y2="320" stroke="#57606a" stroke-width="1"/>
 <line x1="70" y1="320" x2="860" y2="320" stroke="#57606a" stroke-width="1"/>
 <text x="70.0" y="338" text-anchor="middle" fill="#24292f">3</text>
@@ -20,16 +20,16 @@
 <text x="596.6666666666666" y="338" text-anchor="middle" fill="#24292f">256</text>
 <text x="860.0" y="338" text-anchor="middle" fill="#24292f">1024</text>
 <text x="440.0" y="352" text-anchor="middle" fill="#24292f">value size (bytes)</text>
-<polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,288.6 333.3,275.7 596.7,237.5 860.0,83.6"/>
+<polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,288.6 333.3,275.7 596.7,237.4 860.0,83.6"/>
 <circle cx="70.0" cy="288.6" r="3.5" fill="#3fb950"/>
 <circle cx="333.3" cy="275.7" r="3.5" fill="#3fb950"/>
-<circle cx="596.7" cy="237.5" r="3.5" fill="#3fb950"/>
+<circle cx="596.7" cy="237.4" r="3.5" fill="#3fb950"/>
 <circle cx="860.0" cy="83.6" r="3.5" fill="#3fb950"/>
-<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,308.7 333.3,298.7 596.7,260.7 860.0,106.7"/>
+<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,308.7 333.3,298.7 596.7,260.2 860.0,106.5"/>
 <circle cx="70.0" cy="308.7" r="3.5" fill="#f85149"/>
 <circle cx="333.3" cy="298.7" r="3.5" fill="#f85149"/>
-<circle cx="596.7" cy="260.7" r="3.5" fill="#f85149"/>
-<circle cx="860.0" cy="106.7" r="3.5" fill="#f85149"/>
+<circle cx="596.7" cy="260.2" r="3.5" fill="#f85149"/>
+<circle cx="860.0" cy="106.5" r="3.5" fill="#f85149"/>
 <rect x="70" y="361" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="372" fill="#24292f">Oktoplus</text>
 <rect x="230" y="361" width="14" height="14" fill="#f85149"/>
