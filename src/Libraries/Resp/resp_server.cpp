@@ -2,10 +2,14 @@
 #include "Resp/resp_handler.h"
 #include "Resp/resp_parser.h"
 
+#include <boost/asio/steady_timer.hpp>
+
 #include <glog/logging.h>
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
+#include <memory>
 
 namespace okts::resp {
 
@@ -363,9 +367,41 @@ void RespServer::doAccept() {
       [this](const boost::system::error_code& aEc,
              boost::asio::ip::tcp::socket     aSocket) {
         if (aEc) {
-          if (theRunning) {
-            LOG(ERROR) << "RESP accept error: " << aEc.message();
+          // Two distinct cases:
+          //
+          //   1. operation_aborted (shutdown cancelled the
+          //      acceptor): we're tearing down; do NOT re-arm.
+          //   2. Any other error -- EMFILE (per-process fd limit),
+          //      ECONNABORTED (peer RST'd between SYN-ACK and
+          //      accept), ENOMEM, etc. These are transient: the
+          //      client connection is lost but the listener is
+          //      still healthy and must keep accepting. Without
+          //      re-arming, a single EMFILE silently kills the
+          //      entire RESP endpoint with one log line.
+          if (!theRunning ||
+              aEc == boost::asio::error::operation_aborted) {
+            return;
           }
+          // Throttled re-arm. EMFILE in particular can persist for
+          // many consecutive accepts (the kernel keeps returning it
+          // until enough fds are reclaimed); without a backoff we
+          // burn CPU and fill the log spinning. 100ms is fast enough
+          // that real clients barely notice but slow enough that a
+          // sustained EMFILE only logs ~10 lines/s instead of 100k.
+          LOG_EVERY_N(ERROR, 100)
+              << "RESP accept error (transient, re-arming): "
+              << aEc.message() << " [logged 1/100]";
+          auto myTimer = std::make_shared<boost::asio::steady_timer>(
+              theIoSlots[0]->io);
+          myTimer->expires_after(std::chrono::milliseconds(100));
+          myTimer->async_wait(
+              [this, myTimer](const boost::system::error_code& aWaitEc) {
+                if (aWaitEc == boost::asio::error::operation_aborted ||
+                    !theRunning) {
+                  return;
+                }
+                doAccept();
+              });
           return;
         }
 
