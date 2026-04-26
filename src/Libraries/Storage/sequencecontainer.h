@@ -404,20 +404,26 @@ SequenceContainer<CONTAINER>::move(const std::string& aSourceName,
           if (aContainer.empty()) {
             return;
           }
-          std::string myValue;
-
-          if (aSourceDirection == Direction::LEFT) {
-            myValue = aContainer.front();
-            aContainer.pop_front();
-          } else {
-            myValue = aContainer.back();
-            aContainer.pop_back();
-          }
+          // Copy first, then push, then pop. If either the copy or the
+          // push throws (chunk-grow std::bad_alloc), the container is
+          // unchanged — no silent data loss. devector's pop_front /
+          // pop_back are noexcept, so once we've pushed successfully the
+          // pop cannot fail and we won't observe a transient duplicate
+          // outside this lock.
+          std::string myValue = (aSourceDirection == Direction::LEFT)
+                                    ? aContainer.front()
+                                    : aContainer.back();
 
           if (aDestinationDirection == Direction::LEFT) {
             aContainer.push_front(myValue);
           } else {
             aContainer.push_back(myValue);
+          }
+
+          if (aSourceDirection == Direction::LEFT) {
+            aContainer.pop_front();
+          } else {
+            aContainer.pop_back();
           }
 
           myRet = std::move(myValue);
@@ -458,15 +464,16 @@ SequenceContainer<CONTAINER>::move(const std::string& aSourceName,
         if (aSourceContainer.empty()) {
           return;
         }
-        std::string myValue;
-
-        if (aSourceDirection == Direction::LEFT) {
-          myValue = aSourceContainer.front();
-          aSourceContainer.pop_front();
-        } else {
-          myValue = aSourceContainer.back();
-          aSourceContainer.pop_back();
-        }
+        // Copy out first, then push to destination, then pop from
+        // source. Earlier the order was pop-then-push: if the
+        // destination's push_front / push_back hit a chunk-grow
+        // std::bad_alloc the source mutation had already committed and
+        // the value vanished (silent data loss on OOM). Push-first is
+        // safe because devector's pop_* are noexcept, so once the
+        // destination accepted the value the source pop cannot fail.
+        std::string myValue = (aSourceDirection == Direction::LEFT)
+                                  ? aSourceContainer.front()
+                                  : aSourceContainer.back();
 
         Base::theApplyer.performOnNew(
             aDestinationName,
@@ -478,6 +485,12 @@ SequenceContainer<CONTAINER>::move(const std::string& aSourceName,
                 aDestinationContainer.push_back(myValue);
               }
             });
+
+        if (aSourceDirection == Direction::LEFT) {
+          aSourceContainer.pop_front();
+        } else {
+          aSourceContainer.pop_back();
+        }
 
         myRet = std::move(myValue);
       });
