@@ -73,6 +73,7 @@ class SpinLock
 class BareSpinlock
 {
   friend class std::lock_guard<BareSpinlock>;
+  friend class std::unique_lock<BareSpinlock>;
   DISABLE_EVIL_CONSTRUCTOR(BareSpinlock);
 
  public:

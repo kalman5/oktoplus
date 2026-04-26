@@ -162,13 +162,6 @@ class ContainerFunctorApplier
     // the mutex through a `const ProtectedContainer*` view.
     mutable ContainerMutex mutex;
     Container              storage;
-    // Clients suspended on BLPOP / BRPOP / etc. against this key.
-    // Lazy-allocated because almost every key has zero waiters; the
-    // 8-byte unique_ptr keeps per-key overhead low for non-blocking
-    // workloads. Manipulated only under `mutex`. std::list is used
-    // for stable iterators so a Waiter can be removed by handle on
-    // timeout or disconnect.
-    std::unique_ptr<std::list<okts::stor::BlockingWaiter>> waiters;
   };
 
   struct string_hash {
@@ -186,6 +179,23 @@ class ContainerFunctorApplier
                                       string_hash,
                                       std::equal_to<>>;
 
+  // Waiters live in a *separate* per-shard map, parallel to the
+  // storage map. This matches Redis's `db->blocking_keys` design:
+  // an empty list gets evicted from the keyspace normally, while
+  // BLPOP-family waiters parked on that key survive in the
+  // independent map until a future LPUSH/RPUSH wakes them or the
+  // BLPOP timeout fires.
+  //
+  // Protected by the shard mutex (BareSpinlock). Operations are
+  // brief: register / cancel / drain each touch one map entry under
+  // the lock and exit. Producers re-acquire the shard mutex after
+  // their per-key work to drain; safe because the lock-ordering
+  // (shard → inner) is already established and held by the producer
+  // before re-entry.
+  using WaiterList = std::list<okts::stor::BlockingWaiter>;
+  using WaiterMap  = absl::flat_hash_map<std::string, WaiterList,
+                                         string_hash, std::equal_to<>>;
+
   // Outer shard mutex is a user-space TTAS spinlock with no
   // scheduler yield (BareSpinlock; see Support/spinlock.h).
   // Profiling under a hot-key workload (50 clients hammering one key,
@@ -202,6 +212,22 @@ class ContainerFunctorApplier
   struct Shard {
     mutable ShardMutex mutex;
     Storage            storage;
+    // BLPOP / BRPOP waiters parked on keys in this shard. Lives
+    // alongside `storage` so list eviction doesn't affect waiter
+    // survival; both maps are protected by `mutex`.
+    WaiterMap          waiters;
+    // Lock-free hint of "are there any waiters in this shard?". The
+    // producer hot path (LPUSH/RPUSH) reads this with relaxed
+    // ordering before deciding whether to re-acquire the shard
+    // mutex for a drain pass. Without this, every push under heavy
+    // hot-key contention pays a second shard-mutex round trip while
+    // holding the inner mutex, which collapses throughput from
+    // ~1M rps to ~750 rps. Updated under shard mutex in
+    // registerWaiter / cancelWaiter / drain; the value is always
+    // safe to over-read (reading 0 when actually 0 → skip drain
+    // correctly; reading >0 when actually 0 → take the lock and
+    // find an empty map, no-op).
+    std::atomic<size_t> waiterCount{0};
   };
 
   // Power of two so we can use bitmask routing.
@@ -374,14 +400,9 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
       return;
     }
 
-    // Don't evict if BLPOP/BRPOP-style waiters are still parked on
-    // this key -- they're waiting for the next push, and the entry
-    // has to outlive them so the producer can find them.
-    if (myEvicted->waiters && !myEvicted->waiters->empty()) {
-      myIt->second = std::move(myEvicted);
-      return;
-    }
-
+    // Empty list: evict unconditionally. BLPOP/BRPOP waiters live in
+    // the parallel shard.waiters map, not in the storage entry, so
+    // dropping the entry here doesn't strand them.
     myShard.storage.erase(myIt);
     VLOG(2) << "Removed container at key \"" << aName << "\"";
   }
@@ -421,36 +442,12 @@ ContainerFunctorApplier<CONTAINER>::registerWaiter(
     const std::string& aName, okts::stor::BlockingWaiter aWaiter) {
   auto& myShard = shardFor(aName);
 
-  ProtectedContainer*              myContainer = nullptr;
-  std::unique_lock<ContainerMutex> mySecondLevelLock;
-
-  while (true) {
-    std::lock_guard<ShardMutex> myLock(myShard.mutex);
-
-    // lazy_emplace creates an empty entry if the key doesn't exist
-    // yet — the waiter has to live somewhere even when no list does.
-    auto myIterator = myShard.storage.lazy_emplace(
-        std::string_view(aName),
-        [&aName](const auto& aCtor) {
-          aCtor(aName, std::make_unique<ProtectedContainer>());
-        });
-    myContainer       = myIterator->second.get();
-    mySecondLevelLock = std::unique_lock<ContainerMutex>(myContainer->mutex,
-                                                          std::try_to_lock);
-    if (mySecondLevelLock.owns_lock()) {
-      break;
-    }
-  }
-
-  assert(mySecondLevelLock.owns_lock());
-  if (!myContainer->waiters) {
-    myContainer->waiters =
-        std::make_unique<std::list<okts::stor::BlockingWaiter>>();
-  }
+  std::lock_guard<ShardMutex> myLock(myShard.mutex);
   const auto myId =
       theNextWaiterId.fetch_add(1, std::memory_order_relaxed);
   aWaiter.id = myId;
-  myContainer->waiters->push_back(std::move(aWaiter));
+  myShard.waiters[aName].push_back(std::move(aWaiter));
+  myShard.waiterCount.fetch_add(1, std::memory_order_relaxed);
   return myId;
 }
 
@@ -459,31 +456,21 @@ bool ContainerFunctorApplier<CONTAINER>::cancelWaiter(
     const std::string& aName, okts::stor::WaiterId aId) {
   auto& myShard = shardFor(aName);
 
-  ProtectedContainer*              myContainer = nullptr;
-  std::unique_lock<ContainerMutex> mySecondLevelLock;
-
-  while (true) {
-    std::lock_guard<ShardMutex> myLock(myShard.mutex);
-
-    auto myIt = myShard.storage.find(aName);
-    if (myIt == myShard.storage.end()) {
-      return false;
-    }
-    myContainer       = myIt->second.get();
-    mySecondLevelLock = std::unique_lock<ContainerMutex>(myContainer->mutex,
-                                                          std::try_to_lock);
-    if (mySecondLevelLock.owns_lock()) {
-      break;
-    }
-  }
-
-  if (!myContainer->waiters) {
+  std::lock_guard<ShardMutex> myLock(myShard.mutex);
+  auto myIt = myShard.waiters.find(aName);
+  if (myIt == myShard.waiters.end()) {
     return false;
   }
-  for (auto myWIt = myContainer->waiters->begin();
-       myWIt != myContainer->waiters->end(); ++myWIt) {
+  auto& myList = myIt->second;
+  for (auto myWIt = myList.begin(); myWIt != myList.end(); ++myWIt) {
     if (myWIt->id == aId) {
-      myContainer->waiters->erase(myWIt);
+      myList.erase(myWIt);
+      myShard.waiterCount.fetch_sub(1, std::memory_order_relaxed);
+      // Drop the map entry when its waiter list empties so we don't
+      // accumulate empty buckets across the keyspace lifetime.
+      if (myList.empty()) {
+        myShard.waiters.erase(myIt);
+      }
       return true;
     }
   }
@@ -500,26 +487,48 @@ ContainerFunctorApplier<CONTAINER>::tryPopOrRegisterWaiter(
     okts::stor::WaiterId*      aWaiterId) {
   auto& myShard = shardFor(aName);
 
+  // Hold the shard lock for the whole try-pop-or-register critical
+  // section. Otherwise a producer could push between our pop attempt
+  // and the registration; the producer would see no waiter to wake,
+  // and the waiter would never be served by that push (next push or
+  // timeout would handle it but the latency hit is real).
+  //
+  // The shard lock is a fast spinlock and BLPOP / BRPOP are
+  // infrequent vs the LPUSH/RPUSH hot path, so the extended hold is
+  // not a meaningful cost.
   ProtectedContainer*              myContainer = nullptr;
   std::unique_lock<ContainerMutex> mySecondLevelLock;
+  std::unique_lock<ShardMutex>     myShardLock;
 
   while (true) {
-    std::lock_guard<ShardMutex> myLock(myShard.mutex);
+    myShardLock = std::unique_lock<ShardMutex>(myShard.mutex);
 
-    auto myIterator = myShard.storage.lazy_emplace(
-        std::string_view(aName),
-        [&aName](const auto& aCtor) {
-          aCtor(aName, std::make_unique<ProtectedContainer>());
-        });
-    myContainer       = myIterator->second.get();
+    auto myIt = myShard.storage.find(aName);
+    if (myIt == myShard.storage.end()) {
+      // No list; can't possibly pop anything. Register the waiter
+      // directly under the shard lock.
+      const auto myId =
+          theNextWaiterId.fetch_add(1, std::memory_order_relaxed);
+      aWaiter.id = myId;
+      myShard.waiters[aName].push_back(std::move(aWaiter));
+      myShard.waiterCount.fetch_add(1, std::memory_order_relaxed);
+      if (aWaiterId) {
+        *aWaiterId = myId;
+      }
+      return std::nullopt;
+    }
+    myContainer       = myIt->second.get();
     mySecondLevelLock = std::unique_lock<ContainerMutex>(myContainer->mutex,
                                                           std::try_to_lock);
     if (mySecondLevelLock.owns_lock()) {
       break;
     }
+    // Failed to take inner: release shard and retry the whole lookup.
+    myShardLock.unlock();
   }
 
   assert(mySecondLevelLock.owns_lock());
+  assert(myShardLock.owns_lock());
 
   // Try non-blocking pop first.
   auto myPopped = aTryPop(myContainer->storage);
@@ -530,15 +539,12 @@ ContainerFunctorApplier<CONTAINER>::tryPopOrRegisterWaiter(
     return myPopped;
   }
 
-  // Empty: register as waiter.
-  if (!myContainer->waiters) {
-    myContainer->waiters =
-        std::make_unique<std::list<okts::stor::BlockingWaiter>>();
-  }
+  // Empty: register as waiter on the shard's parallel waiter map.
   const auto myId =
       theNextWaiterId.fetch_add(1, std::memory_order_relaxed);
   aWaiter.id = myId;
-  myContainer->waiters->push_back(std::move(aWaiter));
+  myShard.waiters[aName].push_back(std::move(aWaiter));
+  myShard.waiterCount.fetch_add(1, std::memory_order_relaxed);
   if (aWaiterId) {
     *aWaiterId = myId;
   }
@@ -585,21 +591,44 @@ void ContainerFunctorApplier<CONTAINER>::performAndDrainWaiters(
     assert(mySecondLevelLock.owns_lock());
     aFunctor(myContainer->storage);
 
-    if (myContainer->waiters && !myContainer->waiters->empty()) {
-      auto& myWList = *myContainer->waiters;
-      while (!myWList.empty()) {
-        auto& myWaiter = myWList.front();
-        std::optional<std::string> myValue;
-        if (myWaiter.wantsFront) {
-          myValue = aPopFront(myContainer->storage);
-        } else {
-          myValue = aPopBack(myContainer->storage);
+    // Hot-path skip: the per-shard atomic waiterCount lets the
+    // common case (no BLPOP/BRPOP waiters anywhere in this shard)
+    // avoid the second shard-mutex round trip entirely. A relaxed
+    // read here is correct because:
+    //   - if the counter is genuinely 0, there's nothing to drain;
+    //   - if a waiter just registered on this shard between our
+    //     load and the lock take, our push has already landed in
+    //     storage, so the next push (or the cancel/timeout path)
+    //     handles them.
+    if (myShard.waiterCount.load(std::memory_order_relaxed) > 0) {
+      // Re-acquire the shard mutex briefly to look at the parallel
+      // waiter map. Lock ordering (shard → inner) is preserved
+      // because we acquire shard *after* releasing it earlier and
+      // no thread can be holding shard waiting for our inner (the
+      // only way to wait for inner is via the shard → try-inner
+      // pattern, which releases shard if try-inner fails).
+      std::lock_guard<ShardMutex> myShardLock(myShard.mutex);
+      auto myWaiterIt = myShard.waiters.find(aName);
+      if (myWaiterIt != myShard.waiters.end()) {
+        auto& myWList = myWaiterIt->second;
+        while (!myWList.empty()) {
+          auto& myWaiter = myWList.front();
+          std::optional<std::string> myValue;
+          if (myWaiter.wantsFront) {
+            myValue = aPopFront(myContainer->storage);
+          } else {
+            myValue = aPopBack(myContainer->storage);
+          }
+          if (!myValue) {
+            break; // storage drained
+          }
+          myFiring.emplace_back(std::move(myWaiter), std::move(myValue));
+          myWList.pop_front();
+          myShard.waiterCount.fetch_sub(1, std::memory_order_relaxed);
         }
-        if (!myValue) {
-          break; // storage drained
+        if (myWList.empty()) {
+          myShard.waiters.erase(myWaiterIt);
         }
-        myFiring.emplace_back(std::move(myWaiter), std::move(myValue));
-        myWList.pop_front();
       }
     }
 
