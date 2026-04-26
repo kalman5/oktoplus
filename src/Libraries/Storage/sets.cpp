@@ -1,5 +1,7 @@
 #include "Storage/sets.h"
 
+#include "Storage/sequencecontainer.h"  // detail::safeAbs
+
 #include <algorithm>
 #include <random>
 
@@ -269,7 +271,11 @@ Sets::randMember(const std::string& aName, int64_t aCount) const {
           // pick K times. Materialise once (O(N)) then K random picks
           // (O(K)) — total O(N + K), better than O(K*N) of advancing
           // a forward iterator per pick on flat_hash_set.
-          auto                     myN = static_cast<size_t>(-aCount);
+          //
+          // detail::safeAbs avoids signed-negation UB when a client
+          // passes INT64_MIN as the negative count; bare `-aCount`
+          // overflows int64_t.
+          auto                     myN = static_cast<size_t>(detail::safeAbs(aCount));
           std::vector<std::string> myAll(aContainer.begin(),
                                          aContainer.end());
           myRet.reserve(myN);
