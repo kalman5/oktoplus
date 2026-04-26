@@ -251,6 +251,30 @@ TEST_F(TestSets, unionStore_overwrites_destination_when_empty) {
   EXPECT_FALSE(mySets.isMember("dest", "stale"));
 }
 
+// Regression: SINTER with a missing key must collapse to empty,
+// matching Redis semantics ("missing key == empty set"). Pre-fix,
+// performOnExisting was a no-op for the missing key and the filter
+// step was skipped, leaving the prior intersection un-narrowed.
+TEST_F(TestSets, inter_missing_later_key_is_empty) {
+  oktss::Sets mySets;
+  mySets.add("s1", {"a", "b", "c"});
+  mySets.add("s2", {"a", "b"});
+  // "s_missing" does not exist anywhere in the set namespace.
+
+  // Sanity: real intersection works.
+  EXPECT_EQ(2u, mySets.inter({"s1", "s2"}).size());
+
+  // The bug case: any missing later input must collapse the result.
+  EXPECT_TRUE(mySets.inter({"s1", "s_missing"}).empty());
+  EXPECT_TRUE(mySets.inter({"s1", "s2", "s_missing"}).empty());
+  EXPECT_TRUE(mySets.inter({"s1", "s_missing", "s2"}).empty());
+
+  // Missing first key: was already correct (myRet stays empty),
+  // but assert anyway so the contract is documented.
+  EXPECT_TRUE(mySets.inter({"s_missing", "s1"}).empty());
+  EXPECT_TRUE(mySets.inter({"s_missing"}).empty());
+}
+
 // Regression: INT64_MIN signed-negation UB in randMember (fixed in
 // aad49f3). The "with replacement" branch did `static_cast<size_t>
 // (-aCount)` which overflows int64_t when a wire client passes

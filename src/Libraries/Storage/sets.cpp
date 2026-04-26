@@ -95,17 +95,44 @@ Sets::Container Sets::inter(const std::vector<std::string_view>& aNames) {
     return myRet;
   }
 
+  // Redis semantics: a missing key is treated as an empty set.
+  // Intersection with an empty set is empty -- so a single missing
+  // input forces SINTER's reply to be empty regardless of what the
+  // other inputs contain.
+  //
+  // performOnExisting is a no-op when the key doesn't exist, which
+  // means a missing aNames[0] correctly leaves myRet empty (the
+  // loop guard `!myRet.empty()` then short-circuits). But for
+  // i >= 1 the no-op was a bug: the filter never ran, the
+  // current myRet was kept as-is, and SINTER returned the wrong
+  // (non-empty) set. We now track whether each lambda actually
+  // executed and clear myRet if any input was missing.
+  bool myFirstRan = false;
   theApplyer.performOnExisting(
       std::string(aNames[0]),
-      [&myRet](const Container& aContainer) { myRet = aContainer; });
+      [&myRet, &myFirstRan](const Container& aContainer) {
+        myFirstRan = true;
+        myRet      = aContainer;
+      });
+  if (!myFirstRan) {
+    return myRet; // already empty
+  }
 
   for (size_t i = 1; i < aNames.size() && !myRet.empty(); ++i) {
+    bool myRan = false;
     theApplyer.performOnExisting(
-        std::string(aNames[i]), [&myRet](const Container& aContainer) {
+        std::string(aNames[i]),
+        [&myRet, &myRan](const Container& aContainer) {
+          myRan = true;
           absl::erase_if(myRet, [&aContainer](const std::string& aVal) {
             return aContainer.count(aVal) == 0;
           });
         });
+    if (!myRan) {
+      // Missing key == empty set; intersection collapses.
+      myRet.clear();
+      break;
+    }
   }
 
   return myRet;
