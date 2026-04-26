@@ -218,6 +218,46 @@ on `NeedMore` instead of re-entering blocking `readCommand`, while
 batched `async_write` preserves the cross-segment batching that the
 previous tryReadCommandFromBuffer attempt gave up.
 
+## R. Close the remaining post-FLUSHALL residual gap
+
+`FLUSHALL` / `FLUSHDB` clear every container then call
+`mallctl("arena.<all>.purge")` (see `Storage/release_memory.h`).
+Post-flush RSS lands close to baseline, but a constant ~3–5 MiB
+*delta-over-baseline* gap to Redis remains across the workload
+sweep:
+
+  100k x    3B:  Okto 5.5 MiB delta vs Redis 0.7 MiB
+  100k x 1024B:  Okto 6.3 MiB delta vs Redis 1.7 MiB
+    1M x    3B:  Okto 8.3 MiB delta vs Redis 2.2 MiB
+    1M x 1024B:  Okto 17  MiB delta vs Redis 14  MiB
+
+`arena.<all>.purge` releases dirty extents but jemalloc can hold
+"muzzy" extents (madvise(MADV_FREE) but still mapped) and per-arena
+metadata that purge alone doesn't reclaim. Default `narenas` on
+Linux is `4 * ncpus` so on a 16-core box that's 64 arenas, each
+carrying its own bookkeeping.
+
+Things to try, cheapest first:
+  - `arena.<all>.decay` *before* `arena.<all>.purge` to push muzzy
+    extents through to dirty before purging.
+  - `MALLOC_CONF=dirty_decay_ms:0,muzzy_decay_ms:0` at startup so
+    jemalloc returns pages aggressively without explicit purge.
+    Costs perf on bursty workloads (no reuse buffer); needs a
+    bench A/B.
+  - `thread.tcache.flush` on every worker thread — tcache hangs
+    onto small-object slabs across allocations.
+  - Lower `narenas` (e.g. `narenas:8`) — trades multi-threaded
+    alloc throughput for less per-arena bookkeeping. Bench needed.
+
+- **Effort**: small for the mallctl variants, medium for tcache
+  iteration over threads, small for `MALLOC_CONF` (one env var,
+  but needs a startup-vs-CMake decision).
+- **Risk**: low; FLUSHALL is admin-only, latency cost is
+  acceptable. `MALLOC_CONF` aggressive decay does affect steady-
+  state perf — measure before committing.
+- **Why**: closes the visible "retains 5x more memory after flush"
+  story without giving up the per-key throughput jemalloc buys.
+
 ## Q. [x] Pipeline drain no longer re-enters blocking read (closed by J, b212b80)
 
 Subsumed by item J. The async per-connection state machine returns
@@ -366,12 +406,15 @@ win at single-client `-P 16`.)
 
 1. **K** (`INFO memory`) — unblocks honest memory comparison vs
    Redis in the bench harness.
-2. **E** (PGO) — likely cheap win, validates the harness.
-3. **A** (SDS) — substantial work; the largest remaining lever now
-   that the I/O bottleneck is gone. Decide based on residual gap.
-4. **L** (`MEMORY USAGE <key>`) — pairs with A to *show* the
+2. **R** (post-FLUSHALL residual) — small mallctl tweaks to close
+   the last ~3–5 MiB delta over baseline. Cheap, contained.
+3. **E** (PGO) — likely cheap win, validates the harness.
+4. **A** (SDS) — substantial work; the largest remaining lever now
+   that the I/O bottleneck is gone. Decide based on steady-state
+   per-key gap (~2–3× Redis at small values).
+5. **L** (`MEMORY USAGE <key>`) — pairs with A to *show* the
    per-key drop.
-5. **M** (jemalloc web dashboard) — admin/observability sugar; do
+6. **M** (jemalloc web dashboard) — admin/observability sugar; do
    after K so the data plumbing already exists.
-6. **I** (quicklist) — only if A landed and tiny-value workloads
+7. **I** (quicklist) — only if A landed and tiny-value workloads
    are a real target.
