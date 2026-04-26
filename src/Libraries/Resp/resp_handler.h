@@ -3,6 +3,10 @@
 #include "Storage/storage_context.h"
 #include "Resp/resp_parser.h"
 
+#include <boost/asio/io_context.hpp>
+
+#include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -14,17 +18,39 @@ class RespHandler
  public:
   explicit RespHandler(stor::StorageContext& aStorage);
 
+  // Sink the connection installs once at construction so blocking
+  // commands can deliver a reply asynchronously after the handle()
+  // call has already returned. The sink is responsible for posting
+  // the reply onto the connection's owning io_context (so the actual
+  // socket write happens on the right thread).
+  using DeferredReplySink = std::function<void(std::string)>;
+
+  // Wire the connection-side context the handler needs for blocking
+  // commands. `aIo` is used to construct steady_timers for BLPOP
+  // timeouts. `aSink` is invoked when a blocking command finally has
+  // a reply ready.
+  void setDeferredContext(boost::asio::io_context& aIo,
+                          DeferredReplySink        aSink);
+
+  // Returns the immediate RESP reply for a non-blocking command, or
+  // an empty string when the command suspended (BLPOP / BRPOP / …).
+  // For suspended commands the reply will be delivered later via the
+  // DeferredReplySink installed by setDeferredContext(); the empty
+  // string acts as a sentinel because legitimate RESP replies are
+  // never empty (every protocol-level reply is at least 4 bytes).
   std::string handle(const std::vector<std::string>& aArgs);
 
- private:
   using Args        = std::vector<std::string>;
+
+  // Per-command handler implementations below are public so the
+  // file-scope dispatch table in resp_handler.cpp can call them
+  // without a friend dance. They are NOT intended as a stable client
+  // API -- handle() is the entry point. Direct calls bypass dispatch
+  // bookkeeping (case folding, blocking-command intercept).
+ private:
   using HandlerFn   = std::string (*)(RespHandler&, const Args&);
 
-  struct Entry {
-    std::string_view name;   // already upper-cased
-    HandlerFn        fn;
-  };
-
+ public:
   // Helpers
   static std::string validateMinArgs(const Args& aArgs,
                                      size_t aMin,
@@ -95,6 +121,20 @@ class RespHandler
   std::string handleLpos(const Args& aArgs);
   std::string handleLmpop(const Args& aArgs);
 
+  // Blocking list commands. Each returns std::nullopt if it
+  // suspended; the deferred sink will deliver the reply when a
+  // producer wakes the waiter or the timeout expires.
+  std::optional<std::string> handleBlpop(const Args& aArgs);
+  std::optional<std::string> handleBrpop(const Args& aArgs);
+
+  // Helpers for blocking commands
+  std::optional<std::string> handleBlockingPop(const Args&     aArgs,
+                                               std::string_view aCommand,
+                                               bool             aFront);
+  static std::string formatBlpopReply(const std::string& aKey,
+                                      const std::string& aValue);
+  static std::string formatBlpopNilReply();
+
   // Set commands
   std::string handleSadd(const Args& aArgs);
   std::string handleScard(const Args& aArgs);
@@ -107,7 +147,21 @@ class RespHandler
   std::string handleSrem(const Args& aArgs);
   std::string handleSunionstore(const Args& aArgs);
 
-  stor::StorageContext& theStorage;
+  // Storage accessors: dispatch-table lambdas live at file scope
+  // (anonymous namespace) so they reach the storage through these
+  // public references rather than poking at theStorage directly.
+  stor::Lists& lists() { return theStorage.lists; }
+  stor::Sets&  sets()  { return theStorage.sets;  }
+
+ private:
+  stor::StorageContext&     theStorage;
+  // Blocking-command context. Owned by the Connection (lifetime tied
+  // to the connection's io_context); set once at construction. nullptr
+  // / null sink means blocking commands are not available (e.g. unit
+  // tests that drive the handler synchronously) — the handler returns
+  // an error reply in that case.
+  boost::asio::io_context*  theIo   = nullptr;
+  DeferredReplySink         theSink;
 };
 
 } // namespace okts::resp

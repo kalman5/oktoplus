@@ -1,17 +1,22 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <cstddef>
+#include <list>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <absl/container/flat_hash_map.h>
 
 #include <glog/logging.h>
 
+#include "Storage/blocking_waiter.h"
 #include "Support/noncopyable.h"
 #include "Support/spinlock.h"
 
@@ -71,6 +76,67 @@ class ContainerFunctorApplier
   template <class F>
   void performOnExisting(const std::string& aName, F&& aFunctor) const;
 
+  // ---- Blocking-waiter API (BLPOP / BRPOP / BLMPOP / BLMOVE / BRPOPLPUSH) -
+
+  // Register a waiter on the given key, creating an empty entry if
+  // the key doesn't exist. Returns the new waiter's id; pass it to
+  // cancelWaiter() if a timeout fires or the client disconnects
+  // before the waiter is woken naturally.
+  //
+  // The caller must already have *failed* a non-blocking pop attempt
+  // before registering — this method does not retry to drain
+  // anything; it just enqueues the waiter.
+  okts::stor::WaiterId registerWaiter(const std::string&         aName,
+                                      okts::stor::BlockingWaiter aWaiter);
+
+  // Atomic "try non-blocking pop, otherwise register a waiter". The
+  // single lock acquisition closes the race where a producer pushes
+  // between an unlocked pop attempt and a follow-up registerWaiter.
+  //
+  //   aTryPop(storage) returns std::optional<std::string> -- the
+  //                    popped value if storage was non-empty,
+  //                    std::nullopt otherwise. The caller chooses
+  //                    front-vs-back via this lambda body.
+  //
+  // On success (pop): returns the value, *aWaiterId is set to 0
+  // (nothing to cancel).
+  // On registration: returns std::nullopt, *aWaiterId is set to the
+  // new waiter's id.
+  template <class TryPop>
+  std::optional<std::string>
+  tryPopOrRegisterWaiter(const std::string&         aName,
+                         TryPop&&                   aTryPop,
+                         okts::stor::BlockingWaiter aWaiter,
+                         okts::stor::WaiterId*      aWaiterId);
+
+  // Remove a registered waiter by id. Returns true if the waiter was
+  // found and erased (i.e. the caller still owns the wake side and
+  // must invoke its onWake itself with std::nullopt). Returns false
+  // if the waiter was already woken / removed (the producer side
+  // got there first; nothing to cancel).
+  bool cancelWaiter(const std::string& aName, okts::stor::WaiterId aId);
+
+  // Run aFunctor under the per-key inner lock, then drain any waiters
+  // parked on this key. For each waiter (FIFO), pop from its
+  // preferred end of the storage and hand the value to onWake; stop
+  // when either the waiters list or the storage is empty. Finally,
+  // run aFinalize(container) under the same lock so the caller can
+  // observe the storage state *after* both push and drain (used by
+  // LPUSH/RPUSH to capture the post-wake length for the reply).
+  //
+  // aPopFront and aPopBack must be invocable as
+  // `std::optional<std::string> (Container&)` -- pop and return the
+  // popped value, or nullopt if the storage is empty. They're passed
+  // in (rather than calling storage.front()/pop_front() directly) so
+  // this method stays generic across containers that store types
+  // other than std::string.
+  template <class F, class PopFront, class PopBack, class Finalize>
+  void performAndDrainWaiters(const std::string& aName,
+                              F&&                aFunctor,
+                              PopFront&&         aPopFront,
+                              PopBack&&          aPopBack,
+                              Finalize&&         aFinalize);
+
  private:
   // Plain non-recursive mutex. The only command that used to re-enter
   // the SAME per-key lock was LMOVE / RPOPLPUSH with source ==
@@ -96,6 +162,13 @@ class ContainerFunctorApplier
     // the mutex through a `const ProtectedContainer*` view.
     mutable ContainerMutex mutex;
     Container              storage;
+    // Clients suspended on BLPOP / BRPOP / etc. against this key.
+    // Lazy-allocated because almost every key has zero waiters; the
+    // 8-byte unique_ptr keeps per-key overhead low for non-blocking
+    // workloads. Manipulated only under `mutex`. std::list is used
+    // for stable iterators so a Waiter can be removed by handle on
+    // timeout or disconnect.
+    std::unique_ptr<std::list<okts::stor::BlockingWaiter>> waiters;
   };
 
   struct string_hash {
@@ -137,6 +210,10 @@ class ContainerFunctorApplier
 
   Shard&       shardFor(std::string_view aName);
   const Shard& shardFor(std::string_view aName) const;
+
+  // Monotonically increasing waiter id source (for cancel-by-id
+  // semantics). Bumps once per registerWaiter() call.
+  std::atomic<okts::stor::WaiterId> theNextWaiterId{1};
 
   mutable std::array<Shard, kShards> theShards;
 };
@@ -297,6 +374,14 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
       return;
     }
 
+    // Don't evict if BLPOP/BRPOP-style waiters are still parked on
+    // this key -- they're waiting for the next push, and the entry
+    // has to outlive them so the producer can find them.
+    if (myEvicted->waiters && !myEvicted->waiters->empty()) {
+      myIt->second = std::move(myEvicted);
+      return;
+    }
+
     myShard.storage.erase(myIt);
     VLOG(2) << "Removed container at key \"" << aName << "\"";
   }
@@ -328,6 +413,208 @@ void ContainerFunctorApplier<CONTAINER>::performOnExisting(
 
   assert(mySecondLevelLock.owns_lock());
   aFunctor(myContainer->storage);
+}
+
+template <class CONTAINER>
+okts::stor::WaiterId
+ContainerFunctorApplier<CONTAINER>::registerWaiter(
+    const std::string& aName, okts::stor::BlockingWaiter aWaiter) {
+  auto& myShard = shardFor(aName);
+
+  ProtectedContainer*              myContainer = nullptr;
+  std::unique_lock<ContainerMutex> mySecondLevelLock;
+
+  while (true) {
+    std::lock_guard<ShardMutex> myLock(myShard.mutex);
+
+    // lazy_emplace creates an empty entry if the key doesn't exist
+    // yet — the waiter has to live somewhere even when no list does.
+    auto myIterator = myShard.storage.lazy_emplace(
+        std::string_view(aName),
+        [&aName](const auto& aCtor) {
+          aCtor(aName, std::make_unique<ProtectedContainer>());
+        });
+    myContainer       = myIterator->second.get();
+    mySecondLevelLock = std::unique_lock<ContainerMutex>(myContainer->mutex,
+                                                          std::try_to_lock);
+    if (mySecondLevelLock.owns_lock()) {
+      break;
+    }
+  }
+
+  assert(mySecondLevelLock.owns_lock());
+  if (!myContainer->waiters) {
+    myContainer->waiters =
+        std::make_unique<std::list<okts::stor::BlockingWaiter>>();
+  }
+  const auto myId =
+      theNextWaiterId.fetch_add(1, std::memory_order_relaxed);
+  aWaiter.id = myId;
+  myContainer->waiters->push_back(std::move(aWaiter));
+  return myId;
+}
+
+template <class CONTAINER>
+bool ContainerFunctorApplier<CONTAINER>::cancelWaiter(
+    const std::string& aName, okts::stor::WaiterId aId) {
+  auto& myShard = shardFor(aName);
+
+  ProtectedContainer*              myContainer = nullptr;
+  std::unique_lock<ContainerMutex> mySecondLevelLock;
+
+  while (true) {
+    std::lock_guard<ShardMutex> myLock(myShard.mutex);
+
+    auto myIt = myShard.storage.find(aName);
+    if (myIt == myShard.storage.end()) {
+      return false;
+    }
+    myContainer       = myIt->second.get();
+    mySecondLevelLock = std::unique_lock<ContainerMutex>(myContainer->mutex,
+                                                          std::try_to_lock);
+    if (mySecondLevelLock.owns_lock()) {
+      break;
+    }
+  }
+
+  if (!myContainer->waiters) {
+    return false;
+  }
+  for (auto myWIt = myContainer->waiters->begin();
+       myWIt != myContainer->waiters->end(); ++myWIt) {
+    if (myWIt->id == aId) {
+      myContainer->waiters->erase(myWIt);
+      return true;
+    }
+  }
+  return false;
+}
+
+template <class CONTAINER>
+template <class TryPop>
+std::optional<std::string>
+ContainerFunctorApplier<CONTAINER>::tryPopOrRegisterWaiter(
+    const std::string&         aName,
+    TryPop&&                   aTryPop,
+    okts::stor::BlockingWaiter aWaiter,
+    okts::stor::WaiterId*      aWaiterId) {
+  auto& myShard = shardFor(aName);
+
+  ProtectedContainer*              myContainer = nullptr;
+  std::unique_lock<ContainerMutex> mySecondLevelLock;
+
+  while (true) {
+    std::lock_guard<ShardMutex> myLock(myShard.mutex);
+
+    auto myIterator = myShard.storage.lazy_emplace(
+        std::string_view(aName),
+        [&aName](const auto& aCtor) {
+          aCtor(aName, std::make_unique<ProtectedContainer>());
+        });
+    myContainer       = myIterator->second.get();
+    mySecondLevelLock = std::unique_lock<ContainerMutex>(myContainer->mutex,
+                                                          std::try_to_lock);
+    if (mySecondLevelLock.owns_lock()) {
+      break;
+    }
+  }
+
+  assert(mySecondLevelLock.owns_lock());
+
+  // Try non-blocking pop first.
+  auto myPopped = aTryPop(myContainer->storage);
+  if (myPopped) {
+    if (aWaiterId) {
+      *aWaiterId = 0;
+    }
+    return myPopped;
+  }
+
+  // Empty: register as waiter.
+  if (!myContainer->waiters) {
+    myContainer->waiters =
+        std::make_unique<std::list<okts::stor::BlockingWaiter>>();
+  }
+  const auto myId =
+      theNextWaiterId.fetch_add(1, std::memory_order_relaxed);
+  aWaiter.id = myId;
+  myContainer->waiters->push_back(std::move(aWaiter));
+  if (aWaiterId) {
+    *aWaiterId = myId;
+  }
+  return std::nullopt;
+}
+
+template <class CONTAINER>
+template <class F, class PopFront, class PopBack, class Finalize>
+void ContainerFunctorApplier<CONTAINER>::performAndDrainWaiters(
+    const std::string& aName,
+    F&&                aFunctor,
+    PopFront&&         aPopFront,
+    PopBack&&          aPopBack,
+    Finalize&&         aFinalize) {
+  auto& myShard = shardFor(aName);
+
+  // Collect waiters whose onWake we need to invoke after dropping the
+  // lock. Holding the inner mutex while running an arbitrary callback
+  // risks both deadlock (the callback might recursively touch storage)
+  // and convoying (callbacks might stall behind unrelated I/O).
+  std::vector<std::pair<okts::stor::BlockingWaiter,
+                        std::optional<std::string>>> myFiring;
+
+  {
+    ProtectedContainer*              myContainer = nullptr;
+    std::unique_lock<ContainerMutex> mySecondLevelLock;
+
+    while (true) {
+      std::lock_guard<ShardMutex> myLock(myShard.mutex);
+
+      auto myIterator = myShard.storage.lazy_emplace(
+          std::string_view(aName),
+          [&aName](const auto& aCtor) {
+            aCtor(aName, std::make_unique<ProtectedContainer>());
+          });
+      myContainer       = myIterator->second.get();
+      mySecondLevelLock = std::unique_lock<ContainerMutex>(myContainer->mutex,
+                                                            std::try_to_lock);
+      if (mySecondLevelLock.owns_lock()) {
+        break;
+      }
+    }
+
+    assert(mySecondLevelLock.owns_lock());
+    aFunctor(myContainer->storage);
+
+    if (myContainer->waiters && !myContainer->waiters->empty()) {
+      auto& myWList = *myContainer->waiters;
+      while (!myWList.empty()) {
+        auto& myWaiter = myWList.front();
+        std::optional<std::string> myValue;
+        if (myWaiter.wantsFront) {
+          myValue = aPopFront(myContainer->storage);
+        } else {
+          myValue = aPopBack(myContainer->storage);
+        }
+        if (!myValue) {
+          break; // storage drained
+        }
+        myFiring.emplace_back(std::move(myWaiter), std::move(myValue));
+        myWList.pop_front();
+      }
+    }
+
+    // Final hook so the caller can capture post-drain storage state
+    // (e.g. LPUSH's return value) under the same lock.
+    aFinalize(myContainer->storage);
+  }
+
+  // Lock released. Fire wake callbacks. Each onWake is expected to
+  // post onto the waiter's owning io_context and return quickly.
+  for (auto& myEntry : myFiring) {
+    if (myEntry.first.onWake) {
+      myEntry.first.onWake(std::move(myEntry.second));
+    }
+  }
 }
 
 } // namespace sup

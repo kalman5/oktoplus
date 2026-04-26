@@ -14,7 +14,7 @@ If this reminds you of REDIS then you are right, I was inspired by it, however:
 
 Redis Commands Compatibility (gRPC / RESP)
 
-  - [LISTS](docs/compatibility_lists.md) — 76% / 76% (16 / 21, blocking variants TBD)
+  - [LISTS](docs/compatibility_lists.md) — 76% / 86% (16 / 18 of 21; BLMPOP / BLMOVE / BRPOPLPUSH TBD)
   - [SETS](docs/compatibility_sets.md) — 18% / 94% (3 gRPC, 16 RESP of 17)
   - [STRINGS](docs/compatibility_strings.md) — 0% / 0%
 

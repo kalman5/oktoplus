@@ -5,12 +5,17 @@
 
 #include <absl/container/flat_hash_map.h>
 
+#include <boost/asio/post.hpp>
+#include <boost/asio/steady_timer.hpp>
+
 #include <glog/logging.h>
 
 #include <algorithm>
 #include <cctype>
 #include <charconv>
+#include <chrono>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <string_view>
 
@@ -214,17 +219,33 @@ RespHandler::RespHandler(stor::StorageContext& aStorage)
     : theStorage(aStorage) {
 }
 
+void RespHandler::setDeferredContext(boost::asio::io_context& aIo,
+                                     DeferredReplySink        aSink) {
+  theIo   = &aIo;
+  theSink = std::move(aSink);
+}
 
-std::string RespHandler::handle(const Args& aArgs) {
-  if (aArgs.empty()) {
-    return RespParser::formatError("ERR empty command");
-  }
+namespace {
 
-  // Build the dispatch table once at first call. Lambdas have no
-  // capture, so they decay to function pointers — the whole table
-  // lives in rodata. No per-connection allocations.
-  // clang-format off
-  static const Entry kHandlers[] = {
+// Dispatch table for non-blocking RESP commands. Defined once at
+// program start (anonymous namespace, file-scope). Lambdas have no
+// capture so they decay to function pointers and the whole table
+// lives in rodata; no per-connection allocations. The lambdas call
+// public RespHandler members.
+//
+// Blocking commands (BLPOP / BRPOP) live outside this table since
+// they return std::optional<std::string>; see RespHandler::handle.
+using HandlerFn = std::string (*)(RespHandler&,
+                                  const std::vector<std::string>&);
+struct Entry {
+  std::string_view name;   // already upper-cased
+  HandlerFn        fn;
+};
+
+using Args = std::vector<std::string>;
+
+// clang-format off
+const Entry kHandlers[] = {
     // General
     {"PING",         [](RespHandler& h, const Args& a) { return h.handlePing(a); }},
     {"QUIT",         [](RespHandler& h, const Args& a) { return h.handleQuit(a); }},
@@ -248,12 +269,12 @@ std::string RespHandler::handle(const Args& aArgs) {
     // replacement, allowNegative=true).
     {"LPOP",         [](RespHandler& h, const Args& a) {
       return h.handlePopWithOptionalCount(a, "lpop", false, [&h](const std::string& k, int64_t c) {
-        return h.theStorage.lists.popFront(k, static_cast<uint64_t>(c));
+        return h.lists().popFront(k, static_cast<uint64_t>(c));
       });
     }},
     {"RPOP",         [](RespHandler& h, const Args& a) {
       return h.handlePopWithOptionalCount(a, "rpop", false, [&h](const std::string& k, int64_t c) {
-        return h.theStorage.lists.popBack(k, static_cast<uint64_t>(c));
+        return h.lists().popBack(k, static_cast<uint64_t>(c));
       });
     }},
 
@@ -272,34 +293,34 @@ std::string RespHandler::handle(const Args& aArgs) {
     // Set commands (generic multi-key ops)
     {"SDIFF",        [](RespHandler& h, const Args& a) {
       return h.handleSetOp(a, "sdiff", 1, [&h](const std::vector<std::string_view>& k) {
-        return h.theStorage.sets.diff(k);
+        return h.sets().diff(k);
       });
     }},
     {"SINTER",       [](RespHandler& h, const Args& a) {
       return h.handleSetOp(a, "sinter", 1, [&h](const std::vector<std::string_view>& k) {
-        return h.theStorage.sets.inter(k);
+        return h.sets().inter(k);
       });
     }},
     {"SUNION",       [](RespHandler& h, const Args& a) {
       return h.handleSetOp(a, "sunion", 1, [&h](const std::vector<std::string_view>& k) {
-        return h.theStorage.sets.unionSets(k);
+        return h.sets().unionSets(k);
       });
     }},
     {"SMEMBERS",     [](RespHandler& h, const Args& a) {
       return h.handleSetOp(a, "smembers", 1, [&h](const std::vector<std::string_view>& k) {
-        return h.theStorage.sets.members(std::string(k[0]));
+        return h.sets().members(std::string(k[0]));
       });
     }},
 
     // Set pop/random (generic)
     {"SPOP",         [](RespHandler& h, const Args& a) {
       return h.handlePopWithOptionalCount(a, "spop", false, [&h](const std::string& k, int64_t c) {
-        return h.theStorage.sets.pop(k, static_cast<size_t>(c));
+        return h.sets().pop(k, static_cast<size_t>(c));
       });
     }},
     {"SRANDMEMBER",  [](RespHandler& h, const Args& a) {
       return h.handlePopWithOptionalCount(a, "srandmember", true, [&h](const std::string& k, int64_t c) {
-        return h.theStorage.sets.randMember(k, c);
+        return h.sets().randMember(k, c);
       });
     }},
 
@@ -314,37 +335,43 @@ std::string RespHandler::handle(const Args& aArgs) {
     {"SMOVE",        [](RespHandler& h, const Args& a) { return h.handleSmove(a); }},
     {"SREM",         [](RespHandler& h, const Args& a) { return h.handleSrem(a); }},
     {"SUNIONSTORE",  [](RespHandler& h, const Args& a) { return h.handleSunionstore(a); }},
-  };
-  // clang-format on
+};
+// clang-format on
 
-  // Index the dispatch table into a flat_hash_map once at first call.
-  // string_view + transparent hash means no allocations on lookup —
-  // the upper-cased stack-buffer view is matched directly. Cuts the
-  // O(N) linear scan over kHandlers to O(1) and stays cheap as the
-  // command set grows.
-  struct StringHash {
-    using is_transparent = void;
-    size_t operator()(std::string_view s) const {
-      return absl::Hash<std::string_view>{}(s);
-    }
-  };
-  static const auto kIndex = []() {
-    absl::flat_hash_map<std::string_view, HandlerFn, StringHash, std::equal_to<>>
-        myMap;
-    myMap.reserve(std::size(kHandlers));
-    for (const auto& myEntry : kHandlers) {
-      myMap.emplace(myEntry.name, myEntry.fn);
-    }
-    return myMap;
-  }();
+struct StringHash {
+  using is_transparent = void;
+  size_t operator()(std::string_view s) const {
+    return absl::Hash<std::string_view>{}(s);
+  }
+};
+
+// O(1) lookup. string_view + transparent hash, no allocation on
+// lookup. Built once at static-init by walking kHandlers.
+const absl::flat_hash_map<std::string_view, HandlerFn,
+                          StringHash, std::equal_to<>> kIndex = []() {
+  absl::flat_hash_map<std::string_view, HandlerFn,
+                      StringHash, std::equal_to<>> myMap;
+  myMap.reserve(std::size(kHandlers));
+  for (const auto& myEntry : kHandlers) {
+    myMap.emplace(myEntry.name, myEntry.fn);
+  }
+  return myMap;
+}();
+
+} // namespace
+
+std::string RespHandler::handle(const Args& aArgs) {
+  if (aArgs.empty()) {
+    return RespParser::formatError("ERR empty command");
+  }
 
   // Most RESP clients (redis-cli, redis-benchmark, production drivers)
   // send commands already upper-cased. Try the raw view first; only
   // pay the toUpperStack pass on a miss (handles lowercase / mixed
   // case clients without slowing down the common path).
   auto myIt = kIndex.find(std::string_view(aArgs[0]));
-  char myBuf[kMaxCmdLen];
   if (myIt == kIndex.end()) {
+    char myBuf[kMaxCmdLen];
     std::string_view myUpper = toUpperStack(aArgs[0], myBuf);
     if (!myUpper.empty()) {
       myIt = kIndex.find(myUpper);
@@ -358,6 +385,27 @@ std::string RespHandler::handle(const Args& aArgs) {
       return RespParser::formatError(std::string("ERR ") + e.what());
     }
   }
+
+  // Blocking commands sit outside the static dispatch table because
+  // their handlers return std::optional<std::string> -- empty when
+  // the command suspended (the eventual reply is delivered via the
+  // deferred sink). Match case-insensitively against the raw arg
+  // (the table miss above didn't normalize for us if the cmd isn't
+  // in the table).
+  const bool myIsBlpop = iequalsToUpper(aArgs[0], "BLPOP");
+  const bool myIsBrpop = !myIsBlpop && iequalsToUpper(aArgs[0], "BRPOP");
+  if (myIsBlpop || myIsBrpop) {
+    try {
+      auto myBlocking = myIsBlpop ? handleBlpop(aArgs) : handleBrpop(aArgs);
+      // Empty optional means the handler accepted and suspended --
+      // the sentinel empty string is what the Connection's read loop
+      // checks to decide whether to enter the blocked state.
+      return myBlocking ? *myBlocking : std::string{};
+    } catch (const std::exception& e) {
+      return RespParser::formatError(std::string("ERR ") + e.what());
+    }
+  }
+
   return RespParser::formatError("ERR unknown command '" + aArgs[0] + "'");
 }
 
@@ -771,6 +819,131 @@ std::string RespHandler::handleSunionstore(const Args& aArgs) {
   auto myKeys = extractValues(aArgs, 2);
   auto mySize = theStorage.sets.unionStore(aArgs[1], myKeys);
   return RespParser::formatInteger(static_cast<int64_t>(mySize));
+}
+
+// ---- Blocking list commands -------------------------------------------
+
+// BLPOP / BRPOP successful reply is a 2-element array of (key, value).
+// On timeout Redis returns the nil array (`*-1\r\n`).
+std::string RespHandler::formatBlpopReply(const std::string& aKey,
+                                          const std::string& aValue) {
+  std::string myReply;
+  myReply.reserve(8 + aKey.size() + aValue.size() + 16);
+  RespParser::appendArrayHeader(myReply, 2);
+  RespParser::appendBulkString(myReply, aKey);
+  RespParser::appendBulkString(myReply, aValue);
+  return myReply;
+}
+
+std::string RespHandler::formatBlpopNilReply() {
+  return "*-1\r\n";
+}
+
+std::optional<std::string>
+RespHandler::handleBlpop(const Args& aArgs) {
+  return handleBlockingPop(aArgs, "blpop", /*aFront=*/true);
+}
+
+std::optional<std::string>
+RespHandler::handleBrpop(const Args& aArgs) {
+  return handleBlockingPop(aArgs, "brpop", /*aFront=*/false);
+}
+
+// Common path for BLPOP / BRPOP. Single-key for v1; multi-key support
+// (BLPOP key1 key2 ... timeout) is a follow-up because it requires
+// registering a waiter on each key and atomically cancelling the
+// others on first wake.
+//
+// Wire format: BLPOP key timeout
+//   - timeout is a float (seconds). 0 means wait forever.
+//   - Reply on hit: *2\r\n$<keylen>\r\n<key>\r\n$<vallen>\r\n<val>\r\n
+//   - Reply on timeout: *-1\r\n
+std::optional<std::string>
+RespHandler::handleBlockingPop(const Args&     aArgs,
+                               std::string_view aCommand,
+                               bool             aFront) {
+  auto myErr = validateMinArgs(aArgs, 3, aCommand);
+  if (!myErr.empty()) return myErr;
+
+  if (aArgs.size() > 3) {
+    return RespParser::formatError(
+        std::string("ERR ") + std::string(aCommand) +
+        " supports only single-key form in this build");
+  }
+
+  // Last arg = timeout in seconds (float). 0 means wait indefinitely.
+  double myTimeoutSecs = 0.0;
+  try {
+    size_t myConsumed = 0;
+    myTimeoutSecs = std::stod(aArgs[2], &myConsumed);
+    if (myConsumed != aArgs[2].size()) {
+      throw std::invalid_argument("trailing garbage");
+    }
+  } catch (...) {
+    return RespParser::formatError("ERR timeout is not a float or out of range");
+  }
+  if (myTimeoutSecs < 0) {
+    return RespParser::formatError("ERR timeout is negative");
+  }
+
+  if (theIo == nullptr || !theSink) {
+    // No async context (unit tests instantiate the handler without
+    // wiring a deferred sink). Behave as a non-blocking pop only.
+    return RespParser::formatError(
+        "ERR blocking commands require an async connection context");
+  }
+
+  const std::string& myKey = aArgs[1];
+
+  // The wake closure: invoked exactly once, either by a producer
+  // transferring a value (storage drain) or by our own timeout
+  // handler. It pushes the formatted reply at the deferred sink,
+  // which posts it back onto the connection's io_context for the
+  // socket write.
+  auto mySink    = theSink;       // copy — sink may outlive this handler
+  auto myKeyCopy = myKey;
+  auto myOnWake  = [mySink, myKeyCopy](std::optional<std::string> aValue) {
+    if (aValue) {
+      mySink(formatBlpopReply(myKeyCopy, *aValue));
+    } else {
+      mySink(formatBlpopNilReply());
+    }
+  };
+
+  okts::stor::WaiterId myId = 0;
+  auto myImmediate =
+      aFront
+          ? theStorage.lists.tryPopFrontOrWait(myKey, myOnWake, &myId)
+          : theStorage.lists.tryPopBackOrWait(myKey, myOnWake, &myId);
+
+  if (myImmediate) {
+    // Got a value inline — no waiter registered, no timer needed.
+    return formatBlpopReply(myKey, *myImmediate);
+  }
+
+  // Suspended on a waiter. If there's a finite timeout, race a timer
+  // against the producer wake.
+  if (myTimeoutSecs > 0) {
+    auto myTimer = std::make_shared<boost::asio::steady_timer>(*theIo);
+    myTimer->expires_after(std::chrono::milliseconds(
+        static_cast<long>(myTimeoutSecs * 1000)));
+    auto& myStore = theStorage.lists;
+    myTimer->async_wait(
+        [myId, myKeyCopy, mySink, &myStore, myTimer](
+            const boost::system::error_code& aEc) {
+          if (aEc == boost::asio::error::operation_aborted) {
+            return; // wake fired first; nothing to do
+          }
+          // Race: producer might have woken us already. cancelWaiter
+          // returns true only if we still own the wake-side; in that
+          // case we deliver nil.
+          if (myStore.cancelWaiter(myKeyCopy, myId)) {
+            mySink(formatBlpopNilReply());
+          }
+        });
+  }
+
+  return std::nullopt; // suspended
 }
 
 } // namespace okts::resp

@@ -106,6 +106,36 @@ class SequenceContainer : public GenericContainer<CONTAINER>
               Direction                       aDirection,
               uint64_t                        aCount);
 
+  // ---- Blocking pop (BLPOP / BRPOP) -------------------------------------
+  //
+  // Single-key blocking pop. Tries the non-blocking pop first (under
+  // the per-key lock). If the list has elements, returns the popped
+  // value immediately and `*aWaiterId` is left at 0 — no waiter
+  // registered, no cancellation needed.
+  //
+  // If the list is empty (or the key doesn't exist), registers
+  // `aOnWake` as a waiter on the key, sets `*aWaiterId` to the new
+  // waiter's id, and returns std::nullopt. The caller MUST track the
+  // id and call cancelWaiter() if their timeout fires before the
+  // producer wakes the waiter.
+  std::optional<std::string>
+  tryPopFrontOrWait(const std::string&  aName,
+                    BlockingWaiter::OnWake aOnWake,
+                    okts::stor::WaiterId*  aWaiterId);
+
+  std::optional<std::string>
+  tryPopBackOrWait(const std::string&     aName,
+                   BlockingWaiter::OnWake aOnWake,
+                   okts::stor::WaiterId*  aWaiterId);
+
+  // Cancel a previously registered waiter (timeout / disconnect).
+  // Returns true if the caller still owns the wake side (must invoke
+  // its own onWake with std::nullopt), false if the producer beat us
+  // to it (waiter already woken — onWake already invoked).
+  bool cancelWaiter(const std::string& aName, okts::stor::WaiterId aId) {
+    return Base::theApplyer.cancelWaiter(aName, aId);
+  }
+
  private:
   using MoveMutex = std::mutex;
   // Serialises every cross-key move() to avoid the L1<->L2 deadlock
@@ -140,13 +170,37 @@ template <class CONTAINER>
 size_t SequenceContainer<CONTAINER>::pushFront(
     const std::string& aName, const std::vector<std::string_view>& aValues) {
 
-  size_t myRet;
+  size_t myRet = 0;
 
-  Base::theApplyer.performOnNew(
-      aName, [&myRet, &aValues](Container& aContainer) {
+  Base::theApplyer.performAndDrainWaiters(
+      aName,
+      [&aValues](Container& aContainer) {
         for (const auto& myString : aValues) {
           aContainer.push_front(std::string(myString));
         }
+      },
+      // Drain helpers: pop preferred end, return value (or nullopt
+      // if container is now empty). Called once per waiter.
+      [](Container& aContainer) -> std::optional<std::string> {
+        if (aContainer.empty()) return std::nullopt;
+        if constexpr (requires { aContainer.pop_front(); }) {
+          std::string myValue = std::move(aContainer.front());
+          aContainer.pop_front();
+          return myValue;
+        } else {
+          // Containers without pop_front (e.g. std::vector) never
+          // host BLPOP-style waiters anyway; return nullopt so the
+          // drain loop is a no-op.
+          return std::nullopt;
+        }
+      },
+      [](Container& aContainer) -> std::optional<std::string> {
+        if (aContainer.empty()) return std::nullopt;
+        std::string myValue = std::move(aContainer.back());
+        aContainer.pop_back();
+        return myValue;
+      },
+      [&myRet](const Container& aContainer) {
         myRet = aContainer.size();
       });
 
@@ -201,15 +255,37 @@ template <class CONTAINER>
 size_t SequenceContainer<CONTAINER>::pushBack(
     const std::string& aName, const std::vector<std::string_view>& aValues) {
 
-  size_t myRet;
+  size_t myRet = 0;
 
-  Base::theApplyer.performOnNew(aName,
-                                [&myRet, &aValues](Container& aContainer) {
-                                  for (const auto& myString : aValues) {
-                                    aContainer.push_back(std::string(myString));
-                                  }
-                                  myRet = aContainer.size();
-                                });
+  Base::theApplyer.performAndDrainWaiters(
+      aName,
+      [&aValues](Container& aContainer) {
+        for (const auto& myString : aValues) {
+          aContainer.push_back(std::string(myString));
+        }
+      },
+      [](Container& aContainer) -> std::optional<std::string> {
+        if (aContainer.empty()) return std::nullopt;
+        if constexpr (requires { aContainer.pop_front(); }) {
+          std::string myValue = std::move(aContainer.front());
+          aContainer.pop_front();
+          return myValue;
+        } else {
+          // Containers without pop_front (e.g. std::vector) never
+          // host BLPOP-style waiters anyway; return nullopt so the
+          // drain loop is a no-op.
+          return std::nullopt;
+        }
+      },
+      [](Container& aContainer) -> std::optional<std::string> {
+        if (aContainer.empty()) return std::nullopt;
+        std::string myValue = std::move(aContainer.back());
+        aContainer.pop_back();
+        return myValue;
+      },
+      [&myRet](const Container& aContainer) {
+        myRet = aContainer.size();
+      });
 
   return myRet;
 }
@@ -688,6 +764,48 @@ size_t SequenceContainer<CONTAINER>::pushBackExist(
       });
 
   return myRet;
+}
+
+template <class CONTAINER>
+std::optional<std::string>
+SequenceContainer<CONTAINER>::tryPopFrontOrWait(
+    const std::string&     aName,
+    BlockingWaiter::OnWake aOnWake,
+    okts::stor::WaiterId*  aWaiterId) {
+  okts::stor::BlockingWaiter myWaiter;
+  myWaiter.onWake     = std::move(aOnWake);
+  myWaiter.wantsFront = true;
+  return Base::theApplyer.tryPopOrRegisterWaiter(
+      aName,
+      [](Container& aContainer) -> std::optional<std::string> {
+        if (aContainer.empty()) return std::nullopt;
+        std::string myValue = std::move(aContainer.front());
+        aContainer.pop_front();
+        return myValue;
+      },
+      std::move(myWaiter),
+      aWaiterId);
+}
+
+template <class CONTAINER>
+std::optional<std::string>
+SequenceContainer<CONTAINER>::tryPopBackOrWait(
+    const std::string&     aName,
+    BlockingWaiter::OnWake aOnWake,
+    okts::stor::WaiterId*  aWaiterId) {
+  okts::stor::BlockingWaiter myWaiter;
+  myWaiter.onWake     = std::move(aOnWake);
+  myWaiter.wantsFront = false;
+  return Base::theApplyer.tryPopOrRegisterWaiter(
+      aName,
+      [](Container& aContainer) -> std::optional<std::string> {
+        if (aContainer.empty()) return std::nullopt;
+        std::string myValue = std::move(aContainer.back());
+        aContainer.pop_back();
+        return myValue;
+      },
+      std::move(myWaiter),
+      aWaiterId);
 }
 
 template <class CONTAINER>

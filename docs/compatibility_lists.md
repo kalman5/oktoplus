@@ -4,8 +4,8 @@
 |----------------------|:------:|:--------------:|
 | _                    | _      | BLMOVE         |
 | _                    | _      | BLMPOP         |
-| _                    | _      | BLPOP          |
-| _                    | _      | BRPOP          |
+| _                    | BLPOP  | BLPOP          |
+| _                    | BRPOP  | BRPOP          |
 | _                    | _      | BRPOPLPUSH     |
 | listIndex            | LINDEX | LINDEX         |
 | listInsert           | LINSERT | LINSERT       |

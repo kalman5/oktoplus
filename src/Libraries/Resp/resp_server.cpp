@@ -65,6 +65,27 @@ class Connection : public std::enable_shared_from_this<Connection>
   }
 
   void start() {
+    // Wire the deferred-reply sink the handler uses for blocking
+    // commands. Captured by value: a copy lives in every waiter
+    // closure registered through this connection. The closure must
+    // post onto this io_context (the connection's worker thread) so
+    // the actual socket write happens on the right thread.
+    auto mySelfWeak = std::weak_ptr<Connection>(shared_from_this());
+    auto& myIo = theIo;
+    theHandler.setDeferredContext(
+        theIo,
+        [mySelfWeak, &myIo](std::string aReply) {
+          if (auto mySelf = mySelfWeak.lock()) {
+            boost::asio::dispatch(
+                myIo,
+                [mySelf, r = std::move(aReply)]() mutable {
+                  mySelf->onDeferredReply(std::move(r));
+                });
+          }
+          // else: connection already gone. The reply is discarded;
+          // the storage-side waiter has already been removed.
+        });
+
     boost::asio::dispatch(theIo,
                           [self = shared_from_this()]() { self->doRead(); });
   }
@@ -99,7 +120,28 @@ class Connection : public std::enable_shared_from_this<Connection>
     }
     theReadBuffer.commit(aN);
 
-    bool myQuit = false;
+    // While we're blocked on a deferred reply, do NOT parse/dispatch
+    // any new commands — they have to wait until the blocking command
+    // returns. Keep an async_read_some pending though, both so we
+    // detect a client disconnect (EOF cleans up the Connection) and
+    // so we keep at least one shared_ptr ref alive on this object
+    // while the deferred reply machinery is in flight.
+    if (theBlocked) {
+      doRead();
+      return;
+    }
+
+    drainAndMaybeWrite();
+  }
+
+  // Parse and dispatch as many commands as the read buffer holds.
+  // Stops early if a blocking command suspends — leaves remaining
+  // bytes in the buffer for the next round. Issues a write if any
+  // replies accumulated. Decides whether to schedule the next read
+  // based on whether we're now suspended or not.
+  void drainAndMaybeWrite() {
+    bool myQuit     = false;
+    bool mySuspend  = false;
     for (;;) {
       auto myParse = RespParser::tryParseCommand(theReadBuffer);
       if (myParse.status == RespParser::ParseStatus::NeedMore) {
@@ -112,17 +154,24 @@ class Connection : public std::enable_shared_from_this<Connection>
         theSocket.close(myEc);
         return;
       }
+      std::string myReply;
       try {
-        theBatchedReply.append(theHandler.handle(myParse.args));
+        myReply = theHandler.handle(myParse.args);
       } catch (const std::exception& e) {
-        // RespHandler::handle catches command exceptions internally;
-        // anything that escapes is a bug. Log and close cleanly so
-        // we don't terminate the io thread.
         LOG(ERROR) << "RESP handler threw: " << e.what();
         boost::system::error_code myEc;
         theSocket.close(myEc);
         return;
       }
+      if (myReply.empty()) {
+        // Sentinel: blocking command suspended. Whatever we've
+        // batched up to this point can still go out; the next
+        // command in the buffer (if any) waits until the deferred
+        // reply fires and resumes the loop.
+        mySuspend = true;
+        break;
+      }
+      theBatchedReply.append(myReply);
       if (isQuit(myParse.args)) {
         myQuit = true;
         break;
@@ -130,7 +179,13 @@ class Connection : public std::enable_shared_from_this<Connection>
     }
 
     if (theBatchedReply.empty()) {
-      // Only had a partial frame — keep reading, no write needed.
+      if (mySuspend) {
+        theBlocked = true;
+      }
+      // Either way, keep an async_read_some in flight: it's our only
+      // signal for client disconnect (EOF) and the only thing keeping
+      // a shared_ptr ref alive on this Connection. While blocked the
+      // read callback is a no-op other than re-arming.
       doRead();
       return;
     }
@@ -142,6 +197,10 @@ class Connection : public std::enable_shared_from_this<Connection>
     theInFlightReply = std::move(theBatchedReply);
     theBatchedReply  = {};
     theBatchedReply.reserve(1024);
+
+    if (mySuspend) {
+      theBlocked = true;
+    }
 
     boost::asio::async_write(
         theSocket,
@@ -159,7 +218,29 @@ class Connection : public std::enable_shared_from_this<Connection>
       theSocket.close(myEc);
       return;
     }
+    // Re-arm the read so we both detect client disconnect and keep a
+    // shared_ptr ref alive on this Connection. While blocked the
+    // read callback is a no-op until the deferred sink fires
+    // onDeferredReply().
     doRead();
+  }
+
+  // Called (on this io_context's thread) when a blocking command's
+  // deferred reply fires — either a producer transferred a value or
+  // the BLPOP timeout expired. Writes the deferred reply, drains any
+  // commands buffered behind the blocker, then resumes reading.
+  void onDeferredReply(std::string aReply) {
+    if (!theBlocked) {
+      // Should not happen — defensive in case a stale wake fires
+      // after the connection already moved on (e.g. client closed).
+      return;
+    }
+    theBlocked = false;
+    theBatchedReply.append(std::move(aReply));
+    // Continue draining any pipelined commands that were buffered
+    // while we were blocked. drainAndMaybeWrite() handles the rest:
+    // partial-frame, write, possibly re-enter blocked state.
+    drainAndMaybeWrite();
   }
 
   boost::asio::io_context&     theIo;
@@ -173,6 +254,10 @@ class Connection : public std::enable_shared_from_this<Connection>
   std::string theBatchedReply;
   std::string theInFlightReply;
   RespHandler theHandler;
+  // True while the connection is parked on a blocking command's
+  // deferred reply. While true the read loop does not run; the next
+  // wake comes from onDeferredReply().
+  bool        theBlocked = false;
 };
 
 RespServer::IoSlot::IoSlot()
