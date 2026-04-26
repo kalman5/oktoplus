@@ -642,3 +642,55 @@ TYPED_TEST(TestSequenceContainer, position) {
             myContainer.position("l2", "a", -1, 1, 0));
   ASSERT_EQ(std::list<uint64_t>({0}), myContainer.position("l2", "a", 1, 1, 0));
 }
+
+// Regression: INT64_MIN signed-negation UB in range/trim/index/set
+// (fixed in 4ca43f5). Bare `-aStart` and `std::abs(aIndex+1)` overflow
+// when a wire client passes the literal `-9223372036854775808`. Each
+// of the four entry points must (a) not crash and (b) produce a
+// well-defined result. detail::safeAbs is the underlying fix.
+TYPED_TEST(TestSequenceContainer, int64_min_indices_dont_UB) {
+  using Container = oktss::SequenceContainer<TypeParam>;
+  constexpr int64_t kMin = std::numeric_limits<int64_t>::min();
+
+  Container myContainer;
+  ASSERT_EQ(1u, myContainer.pushBack("l1", {"a"}));
+  ASSERT_EQ(2u, myContainer.pushBack("l1", {"b"}));
+  ASSERT_EQ(3u, myContainer.pushBack("l1", {"c"}));
+
+  // index() with INT64_MIN: well-defined out-of-range, returns nullopt.
+  ASSERT_FALSE(myContainer.index("l1", kMin));
+
+  // set() with INT64_MIN: returns OUT_OF_RANGE, doesn't mutate the list.
+  ASSERT_EQ(Container::Status::OUT_OF_RANGE,
+            myContainer.set("l1", kMin, "X"));
+  ASSERT_EQ("a", myContainer.index("l1", 0).value());
+  ASSERT_EQ("b", myContainer.index("l1", 1).value());
+  ASSERT_EQ("c", myContainer.index("l1", 2).value());
+
+  // range() with INT64_MIN start: clamped to 0; range(min, 0) -> [a].
+  ASSERT_EQ(std::vector<std::string>({"a"}),
+            myContainer.range("l1", kMin, 0));
+  // range() with INT64_MIN stop: empty (stop is below any index).
+  ASSERT_EQ(std::vector<std::string>{},
+            myContainer.range("l1", 0, kMin));
+  // range() with INT64_MIN on both: degenerate → empty.
+  ASSERT_EQ(std::vector<std::string>{},
+            myContainer.range("l1", kMin, kMin));
+
+  // trim() with INT64_MIN start: clamps start to 0, stop stays 0,
+  // keeps the first element only.
+  myContainer.trim("l1", kMin, 0);
+  ASSERT_EQ(1u, myContainer.size("l1"));
+  ASSERT_EQ("a", myContainer.index("l1", 0).value());
+
+  // trim() with INT64_MIN stop: well-defined no-op in the current
+  // implementation (stop is negative-and-larger-than-size →
+  // early return without mutating). The point of this regression
+  // test is "no UB"; the precise post-trim contents are an
+  // unrelated semantic decision.
+  ASSERT_EQ(2u, myContainer.pushBack("l1", {"b"}));
+  ASSERT_EQ(3u, myContainer.pushBack("l1", {"c"}));
+  const auto mySizeBefore = myContainer.size("l1");
+  myContainer.trim("l1", 0, kMin);
+  ASSERT_EQ(mySizeBefore, myContainer.size("l1"));
+}

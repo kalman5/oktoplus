@@ -4,6 +4,8 @@
 
 #include <glog/logging.h>
 
+#include <limits>
+
 namespace oktss = okts::stor;
 
 class TestSets : public ::testing::Test
@@ -247,4 +249,43 @@ TEST_F(TestSets, unionStore_overwrites_destination_when_empty) {
   EXPECT_EQ(0u, mySize);
   EXPECT_EQ(0u, mySets.cardinality("dest"));
   EXPECT_FALSE(mySets.isMember("dest", "stale"));
+}
+
+// Regression: INT64_MIN signed-negation UB in randMember (fixed in
+// aad49f3). The "with replacement" branch did `static_cast<size_t>
+// (-aCount)` which overflows int64_t when a wire client passes
+// `-9223372036854775808`. The fix routes through detail::safeAbs.
+//
+// We can't actually allocate ~9 quintillion picks, so the test
+// verifies (a) the call returns rather than crashing the process,
+// and (b) it either yields a (truncated) result or throws a
+// recoverable std::length_error -- both are well-defined whereas
+// the pre-fix behaviour was UB.
+TEST_F(TestSets, randMember_INT64_MIN_does_not_UB) {
+  oktss::Sets mySets;
+  mySets.add("s", {"a", "b", "c", "d", "e"});
+
+  constexpr int64_t kMin = std::numeric_limits<int64_t>::min();
+  bool myCompleted = false;
+  try {
+    auto myPicks = mySets.randMember("s", kMin);
+    // If reserve happened to succeed (e.g. on a tiny set the
+    // allocation went through), every pick must be from "s".
+    for (const auto& myPick : myPicks) {
+      EXPECT_TRUE(mySets.isMember("s", myPick));
+    }
+    myCompleted = true;
+  } catch (const std::length_error&) {
+    // The 9-quintillion-element reserve trips the allocator's
+    // length check. Acceptable -- the point of the regression test
+    // is that we never enter UB territory; throwing a typed C++
+    // exception is well-defined behaviour.
+    myCompleted = true;
+  } catch (const std::bad_alloc&) {
+    myCompleted = true;
+  }
+  EXPECT_TRUE(myCompleted);
+
+  // The set is unchanged after the call.
+  EXPECT_EQ(5u, mySets.cardinality("s"));
 }
