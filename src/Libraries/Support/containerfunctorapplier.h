@@ -50,14 +50,17 @@ class ContainerFunctorApplier
   // Drop every container. Intended for FLUSHDB / FLUSHALL and test
   // resets, not the hot request path.
   //
-  // WARNING: takes the outer mutex of every shard sequentially, and
-  // for each shard takes the inner per-key mutex of every container
-  // before clearing. While running, no other operation on any key
-  // can make progress (every shard outer is locked, then each inner
-  // is taken). RESP exposes this via FLUSHDB / FLUSHALL with no rate
-  // limit — a malicious client can wedge all worker threads. Acceptable
-  // today because FLUSHDB is intentionally heavy (it is in Redis too),
-  // but worth knowing if exposing to untrusted networks.
+  // Per-shard wedge is bounded: we take the shard's outer spinlock
+  // only long enough to move the map's contents into a local, then
+  // release. Container destruction (string moves, devector chunk
+  // frees) happens off the shard lock. The shard becomes available
+  // for new ops the moment we release; we then take + release each
+  // evicted container's inner mutex as a barrier against any in-
+  // flight functor that grabbed the inner before we took the shard.
+  //
+  // RESP still exposes FLUSHALL with no rate limit, but the
+  // bottleneck is now allocator throughput, not exclusive ownership
+  // of the shard.
   void clear();
 
   // Apply aFunctor to a "possibly" new container (created on demand).
@@ -269,12 +272,36 @@ size_t ContainerFunctorApplier<CONTAINER>::hostedKeys() const {
 template <class CONTAINER>
 void ContainerFunctorApplier<CONTAINER>::clear() {
   for (auto& myShard : theShards) {
-    std::lock_guard<ShardMutex> myLock(myShard.mutex);
-    for (auto& myEntry : myShard.storage) {
-      std::lock_guard<ContainerMutex> myInner(myEntry.second->mutex);
-      myEntry.second->storage.clear();
+    // Swap the entire shard map out under a single short lock
+    // acquisition. After this scope releases the shard mutex the
+    // shard is immediately available for new operations -- the rest
+    // of the cleanup runs off the critical path.
+    //
+    // We use swap rather than move-then-clear: a moved-from
+    // flat_hash_map is "valid but unspecified", and although clear()
+    // has no preconditions and would be defined, swap makes the
+    // post-condition (shard.storage is a known-empty map, myEvicted
+    // owns the prior contents) explicit and contract-free.
+    Storage myEvicted;
+    {
+      std::lock_guard<ShardMutex> myLock(myShard.mutex);
+      myEvicted.swap(myShard.storage);
     }
-    myShard.storage.clear();
+
+    // A thread that passed find() and acquired its inner mutex BEFORE
+    // we took the shard lock still owns a raw pointer to one of the
+    // ProtectedContainers we just moved out. Take + immediately
+    // release each inner mutex as a barrier so any such in-flight
+    // functor finishes before the ProtectedContainer (and its
+    // embedded mutex) is destructed by myEvicted's destructor.
+    //
+    // No new in-flight functor can appear: new lookups under the
+    // shard lock find an empty map, so they can't reach these PCs.
+    for (auto& myEntry : myEvicted) {
+      std::lock_guard<ContainerMutex> myInner(myEntry.second->mutex);
+    }
+    // myEvicted destructs at scope exit, freeing every PC and its
+    // storage off the shard critical path.
   }
 }
 
