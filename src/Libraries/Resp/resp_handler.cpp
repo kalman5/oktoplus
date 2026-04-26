@@ -306,11 +306,7 @@ const Entry kHandlers[] = {
         return h.sets().unionSets(k);
       });
     }},
-    {"SMEMBERS",     [](RespHandler& h, const Args& a) {
-      return h.handleSetOp(a, "smembers", 1, [&h](const std::vector<std::string_view>& k) {
-        return h.sets().members(std::string(k[0]));
-      });
-    }},
+    {"SMEMBERS",     [](RespHandler& h, const Args& a) { return h.handleSmembers(a); }},
 
     // Set pop/random (generic)
     {"SPOP",         [](RespHandler& h, const Args& a) {
@@ -819,6 +815,35 @@ std::string RespHandler::handleSunionstore(const Args& aArgs) {
   auto myKeys = extractValues(aArgs, 2);
   auto mySize = theStorage.sets.unionStore(aArgs[1], myKeys);
   return RespParser::formatInteger(static_cast<int64_t>(mySize));
+}
+
+std::string RespHandler::handleSmembers(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 2, "smembers");
+  if (!myErr.empty()) return myErr;
+
+  // Stream the set directly into the reply string. The cardinality
+  // callback runs first under the per-key lock and pre-reserves the
+  // reply buffer based on the *exact* size the iteration will emit
+  // (no race with concurrent SADD/SREM, no stale `*N\r\n` header).
+  // Old path went through Sets::members() (full flat_hash_set copy
+  // under the lock) plus formatBulkStringArray() (two iterations
+  // over the result), both unnecessary for SMEMBERS.
+  std::string myReply;
+  theStorage.sets.forEachMember(
+      aArgs[1],
+      [&myReply](size_t aCardinality) {
+        // RESP overhead per element ~= "$LLLL\r\nDATA\r\n" -- the
+        // 16-byte fudge covers small members and amortises across
+        // the set; for very long values reserve will undershoot by
+        // a small constant per element which std::string handles
+        // with one geometric realloc at most.
+        myReply.reserve(16 + aCardinality * 16);
+        RespParser::appendArrayHeader(myReply, aCardinality);
+      },
+      [&myReply](std::string_view aMember) {
+        RespParser::appendBulkString(myReply, aMember);
+      });
+  return myReply;
 }
 
 // ---- Blocking list commands -------------------------------------------

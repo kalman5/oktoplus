@@ -156,6 +156,12 @@ class RespHandler
   std::string handleSrem(const Args& aArgs);
   std::string handleSunionstore(const Args& aArgs);
 
+  // Streaming SMEMBERS: avoids the intermediate flat_hash_set copy
+  // and the double iteration in the generic handleSetOp path. Reply
+  // string is reserved exactly once based on the cardinality
+  // observed under the same per-key lock the iteration uses.
+  std::string handleSmembers(const Args& aArgs);
+
   // Storage accessors: dispatch-table lambdas live at file scope
   // (anonymous namespace) so they reach the storage through these
   // public references rather than poking at theStorage directly.

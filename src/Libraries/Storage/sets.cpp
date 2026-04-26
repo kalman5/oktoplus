@@ -192,6 +192,30 @@ Sets::Container Sets::members(const std::string& aName) const {
   return myRet;
 }
 
+size_t Sets::forEachMember(
+    const std::string&                    aName,
+    std::function<void(size_t)>           aOnCardinality,
+    std::function<void(std::string_view)> aOnMember) const {
+  size_t myCount = 0;
+  theApplyer.performOnExisting(
+      aName, [&](const Container& aContainer) {
+        myCount = aContainer.size();
+        if (aOnCardinality) {
+          aOnCardinality(myCount);
+        }
+        for (const auto& myMember : aContainer) {
+          aOnMember(std::string_view(myMember));
+        }
+      });
+  // Missing key: treat as empty set (Redis-compatible). Still notify
+  // the cardinality sink so callers reserving output don't end up
+  // emitting "*N\r\n" with a stale N.
+  if (myCount == 0 && aOnCardinality) {
+    aOnCardinality(0);
+  }
+  return myCount;
+}
+
 bool Sets::moveMember(const std::string& aSource,
                       const std::string& aDestination,
                       const std::string& aValue) {

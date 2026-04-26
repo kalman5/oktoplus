@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <absl/container/flat_hash_set.h>
@@ -43,6 +45,25 @@ class Sets : public GenericContainer<absl::flat_hash_set<std::string>>
                               const std::vector<std::string>& aValues) const;
 
   Container members(const std::string& aName) const;
+
+  // Streaming variant of members(): invokes
+  //
+  //   aOnCardinality(size)   exactly once, with the size the
+  //                          following iteration will yield, and
+  //   aOnMember(string_view) once per member,
+  //
+  // both under the per-key lock so the caller can pre-size an
+  // output buffer (SMEMBERS' RESP reply, mainly) against a
+  // cardinality that matches the iteration -- no race with
+  // concurrent SADD/SREM, no intermediate Container copy. Returns
+  // the cardinality.
+  //
+  // Both callbacks run while the per-key inner mutex is held, so
+  // they must not block on storage or take other long-held locks.
+  // Treat them like hot-path callbacks.
+  size_t forEachMember(const std::string&                    aName,
+                       std::function<void(size_t)>           aOnCardinality,
+                       std::function<void(std::string_view)> aOnMember) const;
 
   bool moveMember(const std::string& aSource,
                   const std::string& aDestination,
