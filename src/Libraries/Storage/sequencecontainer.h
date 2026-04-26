@@ -341,7 +341,9 @@ SequenceContainer<CONTAINER>::index(const std::string& aName,
             myRet = *myIt;
           }
         } else {
-          auto myReverseIndex = size_t(std::abs(aIndex + 1));
+          // detail::safeAbs over int64 is defined for every input
+          // including INT64_MIN; std::abs(INT64_MIN) is UB.
+          auto myReverseIndex = static_cast<size_t>(detail::safeAbs(aIndex + 1));
           if (myReverseIndex < aContainer.size()) {
             auto myIt = aContainer.rbegin();
             std::advance(myIt, myReverseIndex);
@@ -566,7 +568,9 @@ std::vector<std::string> SequenceContainer<CONTAINER>::range(
         if (aStart > 0 and size_t(aStart) >= aContainer.size()) {
           return;
         } else if (aStart < 0) {
-          if (size_t(-aStart) > aContainer.size()) {
+          // detail::safeAbs avoids the signed-negation UB when a
+          // client passes INT64_MIN -- bare `-aStart` overflows.
+          if (detail::safeAbs(aStart) > aContainer.size()) {
             myStart = 0;
           } else {
             myStart = aContainer.size() + aStart;
@@ -576,7 +580,8 @@ std::vector<std::string> SequenceContainer<CONTAINER>::range(
         if (aStop > 0 and size_t(aStop) >= aContainer.size()) {
           myStop = aContainer.size() - 1;
         } else if (aStop < 0) {
-          if (size_t(-aStop) > aContainer.size()) {
+          // detail::safeAbs avoids INT64_MIN signed-negation UB.
+          if (detail::safeAbs(aStop) > aContainer.size()) {
             return;
           } else {
             myStop = aContainer.size() + aStop;
@@ -681,7 +686,9 @@ typename SequenceContainer<CONTAINER>::Status SequenceContainer<CONTAINER>::set(
             myRet = Status::OUT_OF_RANGE;
           }
         } else {
-          auto myReverseIndex = size_t(std::abs(aIndex + 1));
+          // detail::safeAbs over int64 is defined for every input
+          // including INT64_MIN; std::abs(INT64_MIN) is UB.
+          auto myReverseIndex = static_cast<size_t>(detail::safeAbs(aIndex + 1));
           if (myReverseIndex < aContainer.size()) {
             auto myIt = aContainer.rbegin();
             std::advance(myIt, myReverseIndex);
@@ -713,7 +720,9 @@ void SequenceContainer<CONTAINER>::trim(const std::string& aName,
           aContainer.clear();
           return;
         } else if (aStart < 0) {
-          if (size_t(-aStart) > aContainer.size()) {
+          // detail::safeAbs avoids the signed-negation UB when a
+          // client passes INT64_MIN -- bare `-aStart` overflows.
+          if (detail::safeAbs(aStart) > aContainer.size()) {
             myStart = 0;
           } else {
             myStart = aContainer.size() + aStart;
@@ -723,7 +732,8 @@ void SequenceContainer<CONTAINER>::trim(const std::string& aName,
         if (aStop > 0 and size_t(aStop) >= aContainer.size()) {
           myStop = aContainer.size() - 1;
         } else if (aStop < 0) {
-          if (size_t(-aStop) > aContainer.size()) {
+          // detail::safeAbs avoids INT64_MIN signed-negation UB.
+          if (detail::safeAbs(aStop) > aContainer.size()) {
             return;
           } else {
             myStop = aContainer.size() + aStop;
