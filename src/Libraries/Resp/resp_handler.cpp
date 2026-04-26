@@ -1,6 +1,8 @@
 #include "Resp/resp_handler.h"
 #include "Resp/resp_parser.h"
 
+#include "Storage/release_memory.h"
+
 #include <absl/container/flat_hash_map.h>
 
 #include <glog/logging.h>
@@ -397,6 +399,7 @@ std::string RespHandler::handleFlush(const Args&) {
   theStorage.deques.clear();
   theStorage.vectors.clear();
   theStorage.sets.clear();
+  stor::releaseMemoryToOs();
   return RespParser::formatSimpleString("OK");
 }
 

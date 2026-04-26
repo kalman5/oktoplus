@@ -554,24 +554,29 @@ def main() -> int:
         },
     )
 
-    # Memory footprint chart (only emit if run_memory.sh has produced
-    # raw/memory.csv). One line per server; we average over key-count
-    # for each value-size since per-key cost is independent of N.
+    # Memory charts (only emit if run_memory.sh has produced raw/memory.csv).
+    #   chart_memory.svg          : steady-state bytes/key per value size
+    #   chart_memory_residual.svg : residual RSS (KiB) after FLUSHALL,
+    #                               per (N, value-size) — shows the
+    #                               allocator-retention behaviour
     mem_csv = RAW / "memory.csv"
     extra_lines = []
     if mem_csv.exists():
         import csv as _csv
         from collections import defaultdict
-        per_server = defaultdict(lambda: defaultdict(list))
+        per_server_bpk = defaultdict(lambda: defaultdict(list))
+        per_server_rows = defaultdict(list)
         with mem_csv.open() as fh:
             for row in _csv.DictReader(fh):
                 vs = int(row["value_size_b"])
-                per_server[row["server"]][vs].append(float(row["bytes_per_key"]))
-        sizes = sorted({vs for d in per_server.values() for vs in d})
-        if sizes and "oktoplus" in per_server and "redis" in per_server:
-            okto_bpk = [sum(per_server["oktoplus"][s]) / len(per_server["oktoplus"][s])
+                per_server_bpk[row["server"]][vs].append(float(row["bytes_per_key"]))
+                per_server_rows[row["server"]].append(row)
+
+        sizes = sorted({vs for d in per_server_bpk.values() for vs in d})
+        if sizes and "oktoplus" in per_server_bpk and "redis" in per_server_bpk:
+            okto_bpk = [sum(per_server_bpk["oktoplus"][s]) / len(per_server_bpk["oktoplus"][s])
                         for s in sizes]
-            redis_bpk = [sum(per_server["redis"][s]) / len(per_server["redis"][s])
+            redis_bpk = [sum(per_server_bpk["redis"][s]) / len(per_server_bpk["redis"][s])
                          for s in sizes]
             line_chart(
                 title="Memory footprint — bytes per key (lower is better)",
@@ -585,6 +590,37 @@ def main() -> int:
                 out_path=HERE / "chart_memory.svg",
             )
             extra_lines.append("chart_memory.svg")
+
+        # Residual chart: index trials by (n_keys, value_size) so the
+        # two servers line up per case. Only emit if both servers have
+        # at least one trial per case.
+        def _label(n: int, size: int) -> str:
+            n_lbl = f"{n // 1000}k" if n < 1_000_000 else f"{n // 1_000_000}M"
+            return f"{n_lbl}/{size}B"
+
+        cases = {}  # (n, size) -> {server: residual_kib}
+        for server, rows in per_server_rows.items():
+            for r in rows:
+                key = (int(r["n_keys"]), int(r["value_size_b"]))
+                cases.setdefault(key, {})[server] = float(r["residual_rss_kib"])
+        complete_cases = sorted(
+            k for k, v in cases.items() if "oktoplus" in v and "redis" in v
+        )
+        if complete_cases:
+            cats = [_label(n, s) for (n, s) in complete_cases]
+            okto_residual = [cases[k]["oktoplus"] for k in complete_cases]
+            redis_residual = [cases[k]["redis"] for k in complete_cases]
+            grouped_bar_chart(
+                title="Residual RSS after FLUSHALL — KiB (lower is better)",
+                series=[
+                    ("Oktoplus", okto_residual, "#3fb950"),
+                    ("Redis",    redis_residual, "#f85149"),
+                ],
+                categories=cats,
+                y_max=max(max(okto_residual), max(redis_residual)) * 1.10,
+                out_path=HERE / "chart_memory_residual.svg",
+            )
+            extra_lines.append("chart_memory_residual.svg")
 
     print(
         "wrote chart_p1.svg, chart_p16.svg, chart_p16_d256.svg, "

@@ -1,5 +1,7 @@
 #include "Commands/commands_admin.h"
 
+#include "Storage/release_memory.h"
+
 namespace okts::cmds {
 
 CommandsAdmin::CommandsAdmin(stor::StorageContext& aStorage)
@@ -13,6 +15,7 @@ void flushAllStorage(stor::StorageContext& aStorage) {
   aStorage.deques.clear();
   aStorage.vectors.clear();
   aStorage.sets.clear();
+  stor::releaseMemoryToOs();
 }
 
 } // namespace

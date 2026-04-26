@@ -4,15 +4,15 @@
 <line x1="70" y1="320.0" x2="860" y2="320.0" stroke="#d0d7de" stroke-width="1"/>
 <text x="62" y="324.0" text-anchor="end" fill="#24292f">0</text>
 <line x1="70" y1="268.0" x2="860" y2="268.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="272.0" text-anchor="end" fill="#24292f">236,559</text>
+<text x="62" y="272.0" text-anchor="end" fill="#24292f">231,578</text>
 <line x1="70" y1="216.0" x2="860" y2="216.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="220.0" text-anchor="end" fill="#24292f">473,118</text>
+<text x="62" y="220.0" text-anchor="end" fill="#24292f">463,157</text>
 <line x1="70" y1="164.0" x2="860" y2="164.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="168.0" text-anchor="end" fill="#24292f">709,677</text>
+<text x="62" y="168.0" text-anchor="end" fill="#24292f">694,736</text>
 <line x1="70" y1="112.0" x2="860" y2="112.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="116.0" text-anchor="end" fill="#24292f">946,236</text>
+<text x="62" y="116.0" text-anchor="end" fill="#24292f">926,315</text>
 <line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="64.0" text-anchor="end" fill="#24292f">1,182,795</text>
+<text x="62" y="64.0" text-anchor="end" fill="#24292f">1,157,894</text>
 <line x1="70" y1="60" x2="70" y2="320" stroke="#57606a" stroke-width="1"/>
 <line x1="70" y1="320" x2="860" y2="320" stroke="#57606a" stroke-width="1"/>
 <text x="70.0" y="338" text-anchor="middle" fill="#24292f">10</text>
@@ -20,16 +20,16 @@
 <text x="596.6666666666666" y="338" text-anchor="middle" fill="#24292f">100</text>
 <text x="860.0" y="338" text-anchor="middle" fill="#24292f">200</text>
 <text x="440.0" y="352" text-anchor="middle" fill="#24292f">concurrent clients</text>
-<polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,88.6 333.3,83.6 596.7,86.2 860.0,88.6"/>
-<circle cx="70.0" cy="88.6" r="3.5" fill="#3fb950"/>
+<polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,86.1 333.3,83.6 596.7,93.2 860.0,86.1"/>
+<circle cx="70.0" cy="86.1" r="3.5" fill="#3fb950"/>
 <circle cx="333.3" cy="83.6" r="3.5" fill="#3fb950"/>
-<circle cx="596.7" cy="86.2" r="3.5" fill="#3fb950"/>
-<circle cx="860.0" cy="88.6" r="3.5" fill="#3fb950"/>
-<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,133.7 333.3,118.3 596.7,110.6 860.0,128.9"/>
-<circle cx="70.0" cy="133.7" r="3.5" fill="#f85149"/>
-<circle cx="333.3" cy="118.3" r="3.5" fill="#f85149"/>
-<circle cx="596.7" cy="110.6" r="3.5" fill="#f85149"/>
-<circle cx="860.0" cy="128.9" r="3.5" fill="#f85149"/>
+<circle cx="596.7" cy="93.2" r="3.5" fill="#3fb950"/>
+<circle cx="860.0" cy="86.1" r="3.5" fill="#3fb950"/>
+<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,115.9 333.3,99.9 596.7,108.2 860.0,131.3"/>
+<circle cx="70.0" cy="115.9" r="3.5" fill="#f85149"/>
+<circle cx="333.3" cy="99.9" r="3.5" fill="#f85149"/>
+<circle cx="596.7" cy="108.2" r="3.5" fill="#f85149"/>
+<circle cx="860.0" cy="131.3" r="3.5" fill="#f85149"/>
 <rect x="70" y="361" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="372" fill="#24292f">Oktoplus</text>
 <rect x="230" y="361" width="14" height="14" fill="#f85149"/>
