@@ -78,16 +78,34 @@ class Connection : public std::enable_shared_from_this<Connection>
     auto& myIo = theIo;
     theHandler.setDeferredContext(
         theIo,
-        [mySelfWeak, &myIo](std::string aReply) {
+        [mySelfWeak, &myIo](std::string aReply,
+                            RespHandler::DeferredOnDead aOnDead) {
           if (auto mySelf = mySelfWeak.lock()) {
+            // Connection still alive at this moment. Dispatch the
+            // reply onto its owning io_context. Inside the
+            // dispatched lambda we re-check theClosed because the
+            // socket may have terminated between weak.lock() and
+            // the lambda landing -- in that case we must NOT write
+            // (silent failure) and instead invoke the recovery
+            // callable so the value the wake transferred out of
+            // storage gets put back.
             boost::asio::dispatch(
                 myIo,
-                [mySelf, r = std::move(aReply)]() mutable {
-                  mySelf->onDeferredReply(std::move(r));
+                [mySelf, r = std::move(aReply),
+                 d = std::move(aOnDead)]() mutable {
+                  if (mySelf->theClosed.load(std::memory_order_acquire)) {
+                    if (d) d();
+                  } else {
+                    mySelf->onDeferredReply(std::move(r));
+                  }
                 });
+          } else if (aOnDead) {
+            // Connection has already been destroyed. Run the
+            // recovery synchronously on whatever thread we are on
+            // (the storage drain thread): it just calls back into
+            // storage to push the value back.
+            aOnDead();
           }
-          // else: connection already gone. The reply is discarded;
-          // the storage-side waiter has already been removed.
         });
 
     boost::asio::dispatch(theIo,
@@ -98,6 +116,7 @@ class Connection : public std::enable_shared_from_this<Connection>
   // io_context so it doesn't race with an in-flight callback.
   void close() {
     boost::asio::dispatch(theIo, [self = shared_from_this()]() {
+      self->theClosed.store(true, std::memory_order_release);
       boost::system::error_code myEc;
       self->theSocket.shutdown(boost::asio::ip::tcp::socket::shutdown_both,
                                myEc);
@@ -119,7 +138,11 @@ class Connection : public std::enable_shared_from_this<Connection>
   void onRead(const boost::system::error_code& aEc, size_t aN) {
     if (aEc) {
       // EOF / cancelled / network error — drop. Last shared_from_this
-      // ref goes away when this lambda chain unwinds.
+      // ref goes away when this lambda chain unwinds. Latch
+      // theClosed so any in-flight BLPOP waiter wakes find the conn
+      // dead and run their put-back recovery instead of dispatching
+      // a write into a torn-down socket.
+      theClosed.store(true, std::memory_order_release);
       return;
     }
     theReadBuffer.commit(aN);
@@ -154,6 +177,7 @@ class Connection : public std::enable_shared_from_this<Connection>
       if (myParse.status == RespParser::ParseStatus::Error) {
         // Malformed framing — close the connection. Matches Redis's
         // behaviour on a protocol error: drop, no reply.
+        theClosed.store(true, std::memory_order_release);
         boost::system::error_code myEc;
         theSocket.close(myEc);
         return;
@@ -163,6 +187,7 @@ class Connection : public std::enable_shared_from_this<Connection>
         myReply = theHandler.handle(myParse.args);
       } catch (const std::exception& e) {
         LOG(ERROR) << "RESP handler threw: " << e.what();
+        theClosed.store(true, std::memory_order_release);
         boost::system::error_code myEc;
         theSocket.close(myEc);
         return;
@@ -218,6 +243,7 @@ class Connection : public std::enable_shared_from_this<Connection>
   void onWrite(const boost::system::error_code& aEc, bool aQuit) {
     theInFlightReply.clear();
     if (aEc || aQuit) {
+      theClosed.store(true, std::memory_order_release);
       boost::system::error_code myEc;
       theSocket.close(myEc);
       return;
@@ -262,6 +288,22 @@ class Connection : public std::enable_shared_from_this<Connection>
   // deferred reply. While true the read loop does not run; the next
   // wake comes from onDeferredReply().
   bool        theBlocked = false;
+  // Latched true the first time we tear down the socket (peer EOF,
+  // network error, protocol error, server shutdown). Read by the
+  // deferred-reply path (different thread for handler-side wake
+  // dispatch) so a wake that lands AFTER the socket is closed
+  // doesn't try to write into a dead fd -- it runs the recovery
+  // callable instead, which puts the value back into the source
+  // list. atomic because it is set on the connection's io thread
+  // and observed on the storage drain thread.
+  std::atomic<bool> theClosed{false};
+
+ public:
+  // Public marker so the deferred-reply sink lambda (defined inline
+  // in start()) can read theClosed without needing a friend dance.
+  bool isClosed() const { return theClosed.load(std::memory_order_acquire); }
+
+ private:
 };
 
 RespServer::IoSlot::IoSlot()

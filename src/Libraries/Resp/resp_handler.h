@@ -21,9 +21,18 @@ class RespHandler
   // Sink the connection installs once at construction so blocking
   // commands can deliver a reply asynchronously after the handle()
   // call has already returned. The sink is responsible for posting
-  // the reply onto the connection's owning io_context (so the actual
-  // socket write happens on the right thread).
-  using DeferredReplySink = std::function<void(std::string)>;
+  // the reply onto the connection's owning io_context (so the
+  // actual socket write happens on the right thread).
+  //
+  // The second argument is a recovery callable invoked iff the
+  // connection / socket is gone by the time the dispatched lambda
+  // runs (or already gone when the sink itself is called). It owns
+  // putting any value the wake transferred out of storage back into
+  // the source list, so a client disconnect mid-BLPOP does not
+  // silently lose the pushed data. May be nullptr (e.g. for nil
+  // BLPOP timeout replies, where there is nothing to recover).
+  using DeferredOnDead    = std::function<void()>;
+  using DeferredReplySink = std::function<void(std::string, DeferredOnDead)>;
 
   // Wire the connection-side context the handler needs for blocking
   // commands. `aIo` is used to construct steady_timers for BLPOP

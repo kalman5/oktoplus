@@ -52,10 +52,11 @@ CONFIG=$(mktemp /tmp/oktoplus_smoke_XXXXXX.json)
 LOG=$(mktemp /tmp/oktoplus_smoke_XXXXXX.log)
 trap 'rm -f "$CONFIG" "$LOG"' EXIT
 
+GRPC_PORT="${GRPC_PORT:-50191}"
 cat > "$CONFIG" <<EOF
 {
   "service": {
-    "endpoint": "0.0.0.0:50091",
+    "endpoint": "0.0.0.0:$GRPC_PORT",
     "numcqs": 4,
     "minpollers": 4,
     "maxpollers": 16,

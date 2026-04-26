@@ -897,18 +897,48 @@ RespHandler::handleBlockingPop(const Args&     aArgs,
 
   // The wake closure: invoked exactly once, either by a producer
   // transferring a value (storage drain) or by our own timeout
-  // handler. It pushes the formatted reply at the deferred sink,
-  // which posts it back onto the connection's io_context for the
-  // socket write.
-  auto mySink    = theSink;       // copy — sink may outlive this handler
+  // handler.
+  //
+  // Recovery: if the connection has disconnected by the time the
+  // wake fires (or is already dead when the dispatched lambda
+  // lands), the value the storage drain transferred out of the
+  // list MUST be put back -- otherwise a client that disconnects
+  // mid-BLPOP silently loses a pushed item. We pass an OnDead
+  // recovery callable down through the sink so both layers (sink-
+  // synchronous "weak ptr already expired" and dispatch-lambda
+  // "socket closed before we got around to writing") can run it.
+  auto mySink    = theSink;     // copy — sink may outlive this handler
   auto myKeyCopy = myKey;
-  auto myOnWake  = [mySink, myKeyCopy](std::optional<std::string> aValue) {
-    if (aValue) {
-      mySink(formatBlpopReply(myKeyCopy, *aValue));
-    } else {
-      mySink(formatBlpopNilReply());
-    }
-  };
+  auto* myStorePtr = &theStorage.lists;
+  auto myOnWake  =
+      [mySink, myKeyCopy, myStorePtr, aFront](
+          std::optional<std::string> aValue) {
+        if (!aValue) {
+          // Cancellation / timeout. Nothing was popped; nothing to
+          // recover. Sink writes nil if the connection is alive,
+          // no-op otherwise.
+          mySink(formatBlpopNilReply(), nullptr);
+          return;
+        }
+        // Got a value. Build the recovery callable that puts it
+        // back into the source list if the dispatched lambda finds
+        // the connection dead. Capture the value by copy so the
+        // recovery survives the move into the sink.
+        auto myValueCopy = *aValue;
+        auto myOnDead =
+            [myStorePtr, myKeyCopy, myValueCopy, aFront]() {
+              // Re-establish the value at the side the producer
+              // originally pushed it to: BLPOP wakes from LPUSH
+              // (front), BRPOP from RPUSH (back).
+              std::vector<std::string_view> myValues{myValueCopy};
+              if (aFront) {
+                myStorePtr->pushFront(myKeyCopy, myValues);
+              } else {
+                myStorePtr->pushBack(myKeyCopy, myValues);
+              }
+            };
+        mySink(formatBlpopReply(myKeyCopy, *aValue), std::move(myOnDead));
+      };
 
   okts::stor::WaiterId myId = 0;
   auto myImmediate =
@@ -936,9 +966,10 @@ RespHandler::handleBlockingPop(const Args&     aArgs,
           }
           // Race: producer might have woken us already. cancelWaiter
           // returns true only if we still own the wake-side; in that
-          // case we deliver nil.
+          // case we deliver nil. No recovery needed (timeout means
+          // no value was popped).
           if (myStore.cancelWaiter(myKeyCopy, myId)) {
-            mySink(formatBlpopNilReply());
+            mySink(formatBlpopNilReply(), nullptr);
           }
         });
   }
