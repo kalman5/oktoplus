@@ -176,7 +176,7 @@ size_t SequenceContainer<CONTAINER>::pushFront(
       aName,
       [&aValues](Container& aContainer) {
         for (const auto& myString : aValues) {
-          aContainer.push_front(std::string(myString));
+          aContainer.emplace_front(myString);
         }
       },
       // Drain helpers: pop preferred end, return value (or nullopt
@@ -243,7 +243,7 @@ size_t SequenceContainer<CONTAINER>::pushFrontExist(
   Base::theApplyer.performOnExisting(
       aName, [&myRet, &aValues](Container& aContainer) {
         for (const auto& myString : aValues) {
-          aContainer.push_front(std::string(myString));
+          aContainer.emplace_front(myString);
         }
         myRet = aContainer.size();
       });
@@ -261,7 +261,7 @@ size_t SequenceContainer<CONTAINER>::pushBack(
       aName,
       [&aValues](Container& aContainer) {
         for (const auto& myString : aValues) {
-          aContainer.push_back(std::string(myString));
+          aContainer.emplace_back(myString);
         }
       },
       [](Container& aContainer) -> std::optional<std::string> {
@@ -768,7 +768,7 @@ size_t SequenceContainer<CONTAINER>::pushBackExist(
   Base::theApplyer.performOnExisting(
       aName, [&myRet, &aValues](Container& aContainer) {
         for (const auto& myString : aValues) {
-          aContainer.push_back(std::string(myString));
+          aContainer.emplace_back(myString);
         }
         myRet = aContainer.size();
       });
