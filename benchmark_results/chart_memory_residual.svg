@@ -4,41 +4,41 @@
 <line x1="70" y1="350.0" x2="860" y2="350.0" stroke="#d0d7de" stroke-width="1"/>
 <text x="62" y="354.0" text-anchor="end" fill="#24292f">0</text>
 <line x1="70" y1="292.0" x2="860" y2="292.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="296.0" text-anchor="end" fill="#24292f">8,541</text>
+<text x="62" y="296.0" text-anchor="end" fill="#24292f">8,550</text>
 <line x1="70" y1="234.0" x2="860" y2="234.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="238.0" text-anchor="end" fill="#24292f">17,082</text>
-<line x1="70" y1="175.99999999999997" x2="860" y2="175.99999999999997" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="179.99999999999997" text-anchor="end" fill="#24292f">25,623</text>
+<text x="62" y="238.0" text-anchor="end" fill="#24292f">17,101</text>
+<line x1="70" y1="176.0" x2="860" y2="176.0" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="180.0" text-anchor="end" fill="#24292f">25,652</text>
 <line x1="70" y1="118.0" x2="860" y2="118.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="122.0" text-anchor="end" fill="#24292f">34,165</text>
+<text x="62" y="122.0" text-anchor="end" fill="#24292f">34,203</text>
 <line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="64.0" text-anchor="end" fill="#24292f">42,706</text>
+<text x="62" y="64.0" text-anchor="end" fill="#24292f">42,754</text>
 <line x1="70" y1="60" x2="70" y2="350" stroke="#57606a" stroke-width="1"/>
 <line x1="70" y1="350" x2="860" y2="350" stroke="#57606a" stroke-width="1"/>
 <text x="119.375" y="368" text-anchor="middle" fill="#24292f">100k/3B</text>
-<rect x="81.4" y="167.3" width="35.5" height="182.7" fill="#3fb950"/>
-<rect x="121.8" y="284.3" width="35.5" height="65.7" fill="#f85149"/>
+<rect x="81.4" y="167.9" width="35.5" height="182.1" fill="#3fb950"/>
+<rect x="121.8" y="283.7" width="35.5" height="66.3" fill="#f85149"/>
 <text x="218.125" y="368" text-anchor="middle" fill="#24292f">100k/64B</text>
-<rect x="180.1" y="162.9" width="35.5" height="187.1" fill="#3fb950"/>
-<rect x="220.6" y="281.8" width="35.5" height="68.2" fill="#f85149"/>
+<rect x="180.1" y="162.1" width="35.5" height="187.9" fill="#3fb950"/>
+<rect x="220.6" y="282.3" width="35.5" height="67.7" fill="#f85149"/>
 <text x="316.875" y="368" text-anchor="middle" fill="#24292f">100k/256B</text>
-<rect x="278.9" y="155.8" width="35.5" height="194.2" fill="#3fb950"/>
-<rect x="319.3" y="279.5" width="35.5" height="70.5" fill="#f85149"/>
+<rect x="278.9" y="155.7" width="35.5" height="194.3" fill="#3fb950"/>
+<rect x="319.3" y="281.6" width="35.5" height="68.4" fill="#f85149"/>
 <text x="415.625" y="368" text-anchor="middle" fill="#24292f">100k/1024B</text>
-<rect x="377.6" y="160.6" width="35.5" height="189.4" fill="#3fb950"/>
-<rect x="418.1" y="275.3" width="35.5" height="74.7" fill="#f85149"/>
+<rect x="377.6" y="160.5" width="35.5" height="189.5" fill="#3fb950"/>
+<rect x="418.1" y="275.6" width="35.5" height="74.4" fill="#f85149"/>
 <text x="514.375" y="368" text-anchor="middle" fill="#24292f">1M/3B</text>
-<rect x="476.4" y="147.3" width="35.5" height="202.7" fill="#3fb950"/>
+<rect x="476.4" y="146.7" width="35.5" height="203.3" fill="#3fb950"/>
 <rect x="516.8" y="271.6" width="35.5" height="78.4" fill="#f85149"/>
 <text x="613.125" y="368" text-anchor="middle" fill="#24292f">1M/64B</text>
-<rect x="575.1" y="144.2" width="35.5" height="205.8" fill="#3fb950"/>
-<rect x="615.6" y="269.9" width="35.5" height="80.1" fill="#f85149"/>
+<rect x="575.1" y="143.1" width="35.5" height="206.9" fill="#3fb950"/>
+<rect x="615.6" y="269.7" width="35.5" height="80.3" fill="#f85149"/>
 <text x="711.875" y="368" text-anchor="middle" fill="#24292f">1M/256B</text>
-<rect x="673.9" y="135.4" width="35.5" height="214.6" fill="#3fb950"/>
-<rect x="714.3" y="253.6" width="35.5" height="96.4" fill="#f85149"/>
+<rect x="673.9" y="134.7" width="35.5" height="215.3" fill="#3fb950"/>
+<rect x="714.3" y="253.7" width="35.5" height="96.3" fill="#f85149"/>
 <text x="810.625" y="368" text-anchor="middle" fill="#24292f">1M/1024B</text>
 <rect x="772.6" y="86.4" width="35.5" height="263.6" fill="#3fb950"/>
-<rect x="813.1" y="188.9" width="35.5" height="161.1" fill="#f85149"/>
+<rect x="813.1" y="189.2" width="35.5" height="160.8" fill="#f85149"/>
 <rect x="70" y="391" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="402" fill="#24292f">Oktoplus</text>
 <rect x="230" y="391" width="14" height="14" fill="#f85149"/>
