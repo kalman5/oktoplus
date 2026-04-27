@@ -2,6 +2,7 @@
 
 #include <dlfcn.h>
 #include <cstddef>
+#include <cstdint>
 
 namespace okts::stor {
 
@@ -23,7 +24,38 @@ inline void releaseMemoryToOs() {
   if (sMallctl == nullptr) {
     return;
   }
+  // Tell jemalloc to refresh its cached stats counters (so a follow-up
+  // `stats.allocated` query reflects the post-purge reality), then
+  // purge every arena's dirty pages back to the OS.
+  std::uint64_t myEpoch = 0;
+  std::size_t   myEpochSz = sizeof(myEpoch);
+  sMallctl("epoch", &myEpoch, &myEpochSz, &myEpoch, sizeof(myEpoch));
   sMallctl("arena.4096.purge", nullptr, nullptr, nullptr, 0);
+}
+
+// Returns the number of bytes jemalloc currently believes are
+// allocated (`stats.allocated`) — i.e. live application allocations
+// not yet free()'d. Returns 0 when jemalloc isn't linked. Useful for
+// leak hunting: stable across "load + flush + purge" cycles iff the
+// application doesn't leak.
+inline std::size_t allocatedBytes() {
+  using MallctlFn = int (*)(const char*, void*, std::size_t*, void*, std::size_t);
+  static auto sMallctl =
+      reinterpret_cast<MallctlFn>(dlsym(RTLD_DEFAULT, "mallctl"));
+  if (sMallctl == nullptr) {
+    return 0;
+  }
+  // Refresh stats first; jemalloc caches them between epoch bumps.
+  std::uint64_t myEpoch = 0;
+  std::size_t   myEpochSz = sizeof(myEpoch);
+  sMallctl("epoch", &myEpoch, &myEpochSz, &myEpoch, sizeof(myEpoch));
+
+  std::size_t myAllocated = 0;
+  std::size_t mySz        = sizeof(myAllocated);
+  if (sMallctl("stats.allocated", &myAllocated, &mySz, nullptr, 0) != 0) {
+    return 0;
+  }
+  return myAllocated;
 }
 
 } // namespace okts::stor

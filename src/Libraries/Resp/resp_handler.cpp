@@ -482,6 +482,15 @@ std::string RespHandler::handleMemory(const Args& aArgs) {
     return RespParser::formatSimpleString("OK");
   }
 
+  if (iequalsToUpper(aArgs[1], "STATS")) {
+    // Diagnostic: bytes jemalloc currently considers live (not yet
+    // free()'d). Stable across load+flush+purge cycles iff the
+    // process isn't leaking. Returned as a RESP integer so it's easy
+    // to script.
+    return RespParser::formatInteger(
+        static_cast<int64_t>(stor::allocatedBytes()));
+  }
+
   return RespParser::formatError(
       "ERR Unknown MEMORY subcommand or wrong number of arguments for '" +
       aArgs[1] + "'");

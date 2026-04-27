@@ -187,16 +187,16 @@ Per-key fixed overhead (extrapolated from the 3-byte rows where the value cost i
 
 | N keys     | value | Oktoplus residual (KiB) | Redis residual (KiB) |
 |-----------:|------:|------------------------:|---------------------:|
-|   100,000  |    3B |                  14,984 |                9,676 |
-|   100,000  |   64B |                  13,808 |               10,040 |
-|   100,000  |  256B |                  18,000 |               10,332 |
-|   100,000  | 1024B |                  16,004 |               11,008 |
-| 1,000,000  |    3B |                  18,084 |               11,568 |
-| 1,000,000  |   64B |                  15,960 |               11,764 |
-| 1,000,000  |  256B |                  21,344 |               14,140 |
-| 1,000,000  | 1024B |                  28,100 |               23,720 |
+|   100,000  |    3B |                  13,564 |               10,204 |
+|   100,000  |   64B |                  12,064 |               10,004 |
+|   100,000  |  256B |                  16,124 |               10,052 |
+|   100,000  | 1024B |                  14,168 |               10,976 |
+| 1,000,000  |    3B |                  16,320 |               11,548 |
+| 1,000,000  |   64B |                  14,196 |               11,744 |
+| 1,000,000  |  256B |                  19,604 |               14,160 |
+| 1,000,000  | 1024B |                  26,408 |               23,756 |
 
-Baseline RSS is now **~9.5 MiB for Oktoplus vs ~9.3 MiB for Redis — essentially at parity** (down from ~17.6 MiB before gRPC was made a build-time opt-in via `-DOKTOPLUS_WITH_GRPC=OFF`, the new default; the old default also disabled gRPC at runtime, but the protobuf/grpc/abseil-flow shared-library mappings still pinned ~8 MiB of RSS at process start). *Delta over baseline* (truly retained allocator memory) is ~4–19 MiB on Oktoplus vs ~0.4–14 MiB on Redis across the workload sweep.
+Baseline RSS is now **~9.5 MiB for Oktoplus vs ~9.3 MiB for Redis — essentially at parity** (down from ~17.6 MiB before gRPC was made a build-time opt-in via `-DOKTOPLUS_WITH_GRPC=OFF`, the new default; the old default also disabled gRPC at runtime, but the protobuf/grpc/abseil-flow shared-library mappings still pinned ~8 MiB of RSS at process start). The Oktoplus binary also bakes in jemalloc tuning via a `__malloc_conf` weak symbol (`narenas:1,muzzy_decay_ms:0`) — collapsing jemalloc's default `4 × CPU` arenas down to one shaved ~1.7 MiB of metadata fan-out off every residual cell at zero throughput cost (LPUSH/RPUSH at -c 50 -P 16 unchanged in measurement, because jemalloc's per-thread tcache absorbs almost every allocation before it touches the arena mutex). *Delta over baseline* (truly retained allocator memory) is ~3–17 MiB on Oktoplus vs ~0.5–14 MiB on Redis across the workload sweep — and on the worst case (1M × 1024B) we're within 2.7 MiB of Redis.
 
 #### Where Oktoplus wins
 

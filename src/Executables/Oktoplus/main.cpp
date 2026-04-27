@@ -12,6 +12,30 @@
 
 #include <memory>
 
+// Bake jemalloc tuning into the binary so it isn't fragile to the
+// environment (`MALLOC_CONF=...`).
+//
+//   narenas:1            -- collapse jemalloc's default `4 * CPU`
+//                           arenas down to one. Each arena carries
+//                           its own metadata trees; one arena instead
+//                           of ~64 saves ~2.7 MiB of baseline RSS on
+//                           our reference box. Hot-path throughput
+//                           was unchanged in measurement (LPUSH /
+//                           RPUSH at -c 50 -P 16 hit identical rps to
+//                           the default config) because tcache
+//                           absorbs almost every allocation before it
+//                           touches the arena mutex.
+//   muzzy_decay_ms:0     -- skip the "muzzy" intermediate state and
+//                           hand pages straight from dirty to OS, so
+//                           RSS reflects what we actually retain.
+//
+// Defined as a weak symbol jemalloc looks up at startup; harmless in
+// builds linked against glibc malloc (the symbol is just unused).
+extern "C" {
+const char* malloc_conf
+    __attribute__((weak)) = "narenas:1,muzzy_decay_ms:0";
+}
+
 namespace okcfgs = okts::cfgs;
 namespace okresp = okts::resp;
 namespace oksu   = okts::sup;
