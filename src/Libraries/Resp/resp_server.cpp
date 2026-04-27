@@ -362,6 +362,20 @@ RespServer::~RespServer() {
   shutdown();
 }
 
+void RespServer::wait() {
+  // Each io_context is held alive by a work_guard, so workers run
+  // until shutdown() releases the guards. Joining here therefore
+  // blocks the caller for the full lifetime of the server, matching
+  // grpc::Server::Wait()'s contract. shutdown() (called by another
+  // thread, or by ~RespServer) is safe to interleave: it joins under
+  // the same `joinable()` check we use here.
+  for (auto& mySlot : theIoSlots) {
+    if (mySlot->thread.joinable()) {
+      mySlot->thread.join();
+    }
+  }
+}
+
 void RespServer::shutdown() {
   if (!theRunning.exchange(false)) {
     return;

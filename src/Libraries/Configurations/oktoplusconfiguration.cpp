@@ -5,11 +5,15 @@
 namespace okts::cfgs {
 
 OktoplusConfiguration::OktoplusConfiguration()
-    : theEndpoint("127.0.0.1:6666")
+    // gRPC is now opt-in: empty endpoint means "do not bind a gRPC
+    // server". Set `service.endpoint` in the JSON config to enable it.
+    : theEndpoint()
     , theNumCQS(10)
     , theMinPollers(10)
     , theMaxPollers(20)
-    , theRespEndpoint() {
+    // RESP is the default wire protocol. Always-on at 6379 unless the
+    // user overrides `service.resp_endpoint` in the JSON config.
+    , theRespEndpoint("127.0.0.1:6379") {
 }
 
 const std::string& OktoplusConfiguration::endpoint() const {
@@ -28,6 +32,10 @@ int OktoplusConfiguration::maxPollers() const {
 
 bool OktoplusConfiguration::hasRespEndpoint() const {
   return !theRespEndpoint.empty();
+}
+
+bool OktoplusConfiguration::hasGrpcEndpoint() const {
+  return !theEndpoint.empty();
 }
 
 const std::string& OktoplusConfiguration::respEndpoint() const {

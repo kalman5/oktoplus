@@ -22,6 +22,10 @@ class OktoplusConfiguration
   bool               hasRespEndpoint() const;
   const std::string& respEndpoint() const;
 
+  // gRPC is opt-in (empty endpoint = disabled). RESP is always-on with
+  // a default of 127.0.0.1:6379 unless the JSON overrides it.
+  bool               hasGrpcEndpoint() const;
+
  protected:
   std::string theEndpoint;
   int         theNumCQS;

@@ -36,30 +36,27 @@ JsonConfiguration::JsonConfiguration(const std::string& aConfigurationFile)
 
   auto myServiceConfiguration = myRoot["service"];
 
+  // gRPC is opt-in: omitting `endpoint` disables it. The poller knobs
+  // are only meaningful when gRPC is enabled, but they're allowed
+  // either way (we just keep the defaults if they're absent).
   if (myServiceConfiguration.isMember("endpoint")) {
     theEndpoint = myServiceConfiguration["endpoint"].asString();
-  } else {
-    throw std::runtime_error("endpoint not found.");
   }
 
   if (myServiceConfiguration.isMember("numcqs")) {
     theNumCQS = myServiceConfiguration["numcqs"].asInt();
-  } else {
-    throw std::runtime_error("numcqs not found.");
   }
 
   if (myServiceConfiguration.isMember("minpollers")) {
     theMinPollers = myServiceConfiguration["minpollers"].asInt();
-  } else {
-    throw std::runtime_error("minpollers not found.");
   }
 
   if (myServiceConfiguration.isMember("maxpollers")) {
     theMaxPollers = myServiceConfiguration["maxpollers"].asInt();
-  } else {
-    throw std::runtime_error("maxpollers not found.");
   }
 
+  // RESP is always-on. Absence of `resp_endpoint` keeps the built-in
+  // default (127.0.0.1:6379); presence overrides it.
   if (myServiceConfiguration.isMember("resp_endpoint")) {
     theRespEndpoint = myServiceConfiguration["resp_endpoint"].asString();
   }
@@ -89,10 +86,16 @@ void JsonConfiguration::dump(const std::string& aConfigurationFile) {
 
   Json::Value myRoot;
 
-  myRoot["service"]["endpoint"]   = theEndpoint;
-  myRoot["service"]["numcqs"]     = theNumCQS;
-  myRoot["service"]["minpollers"] = theMinPollers;
-  myRoot["service"]["maxpollers"] = theMaxPollers;
+  // gRPC fields only round-trip when gRPC is enabled. Writing
+  // `endpoint: ""` would round-trip to "still disabled" on load but
+  // bloats the file with unused poller knobs, so we skip the whole
+  // block when gRPC is off.
+  if (!theEndpoint.empty()) {
+    myRoot["service"]["endpoint"]   = theEndpoint;
+    myRoot["service"]["numcqs"]     = theNumCQS;
+    myRoot["service"]["minpollers"] = theMinPollers;
+    myRoot["service"]["maxpollers"] = theMaxPollers;
+  }
 
   if (!theRespEndpoint.empty()) {
     myRoot["service"]["resp_endpoint"] = theRespEndpoint;

@@ -44,20 +44,39 @@ int main(int argc, char** argv) {
 
     okstor::StorageContext myStorage;
 
-    okcmds::CommandsServer myServer(myStorage,
-                                    myOktoplusConfiguration->endpoint(),
-                                    myOktoplusConfiguration->numCqs(),
-                                    myOktoplusConfiguration->minPollers(),
-                                    myOktoplusConfiguration->maxPollers());
-
+    // RESP is the primary wire protocol and always runs. gRPC is now
+    // opt-in: omit `service.endpoint` from the config to disable it.
     std::unique_ptr<okresp::RespServer> myRespServer;
-
     if (myOktoplusConfiguration->hasRespEndpoint()) {
       myRespServer = std::make_unique<okresp::RespServer>(
           myStorage, myOktoplusConfiguration->respEndpoint());
     }
 
-    myServer.wait();
+    std::unique_ptr<okcmds::CommandsServer> myGrpcServer;
+    if (myOktoplusConfiguration->hasGrpcEndpoint()) {
+      myGrpcServer = std::make_unique<okcmds::CommandsServer>(
+          myStorage,
+          myOktoplusConfiguration->endpoint(),
+          myOktoplusConfiguration->numCqs(),
+          myOktoplusConfiguration->minPollers(),
+          myOktoplusConfiguration->maxPollers());
+    }
+
+    if (!myGrpcServer && !myRespServer) {
+      throw std::runtime_error(
+          "no wire protocol configured -- set `service.resp_endpoint` "
+          "and/or `service.endpoint` in the config");
+    }
+
+    // Block on whichever server is configured. Both `wait()`s have the
+    // same contract: they return only when the server is shut down
+    // (currently only via process termination -- ~Server is invoked by
+    // stack unwind on signal-driven exit).
+    if (myGrpcServer) {
+      myGrpcServer->wait();
+    } else {
+      myRespServer->wait();
+    }
 
     return EXIT_SUCCESS;
 

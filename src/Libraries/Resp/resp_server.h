@@ -40,6 +40,12 @@ class RespServer
 
   ~RespServer();
 
+  // Block the calling thread until shutdown() is invoked (typically
+  // from a signal handler or the destructor). Mirrors
+  // grpc::Server::Wait() so main() can use the same wait-for-server
+  // pattern when gRPC is disabled.
+  void wait();
+
   void shutdown();
 
  private:
