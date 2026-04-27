@@ -1,7 +1,5 @@
 #include "Commands/commands_admin.h"
 
-#include "Storage/release_memory.h"
-
 namespace okts::cmds {
 
 CommandsAdmin::CommandsAdmin(stor::StorageContext& aStorage)
@@ -10,12 +8,16 @@ CommandsAdmin::CommandsAdmin(stor::StorageContext& aStorage)
 
 namespace {
 
+// Drop every container; do NOT call jemalloc's purge. Asking the
+// allocator to give pages back to the OS is a separate concern; the
+// RESP path exposes it as `MEMORY PURGE`. The gRPC interface has no
+// equivalent today -- callers that need it should issue MEMORY PURGE
+// over RESP, or wait for jemalloc's background dirty-page decay.
 void flushAllStorage(stor::StorageContext& aStorage) {
   aStorage.lists.clear();
   aStorage.deques.clear();
   aStorage.vectors.clear();
   aStorage.sets.clear();
-  stor::releaseMemoryToOs();
 }
 
 } // namespace

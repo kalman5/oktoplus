@@ -454,11 +454,17 @@ std::string RespHandler::handleFlush(const Args&) {
   // FLUSHDB / FLUSHALL: Oktoplus has a single global namespace and
   // ignores SELECT, so both drop every container in every storage type.
   // Trailing options (ASYNC / SYNC) are accepted and ignored.
+  //
+  // Does NOT call jemalloc's purge -- that's a separate concern handled
+  // by `MEMORY PURGE` (Redis-compatible). Bundling the purge into
+  // FLUSHALL was convenient but coupled two concerns and made
+  // benchmark comparisons against Redis asymmetric. Clients that want
+  // the OS to reclaim pages immediately can issue `MEMORY PURGE`
+  // after `FLUSHALL`.
   theStorage.lists.clear();
   theStorage.deques.clear();
   theStorage.vectors.clear();
   theStorage.sets.clear();
-  stor::releaseMemoryToOs();
   return RespParser::formatSimpleString("OK");
 }
 
