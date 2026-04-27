@@ -1,19 +1,24 @@
-#include "Commands/commands_server.h"
 #include "Configurations/commandlineconfiguration.h"
 #include "Configurations/jsonconfiguration.h"
 #include "Resp/resp_server.h"
 #include "Storage/storage_context.h"
 #include "Support/googleraii.h"
 
+#ifdef OKTOPLUS_WITH_GRPC
+#include "Commands/commands_server.h"
+#endif
+
 #include <glog/logging.h>
 
 #include <memory>
 
-namespace okcmds = okts::cmds;
 namespace okcfgs = okts::cfgs;
 namespace okresp = okts::resp;
 namespace oksu   = okts::sup;
 namespace okstor = okts::stor;
+#ifdef OKTOPLUS_WITH_GRPC
+namespace okcmds = okts::cmds;
+#endif
 
 int main(int argc, char** argv) {
 
@@ -52,6 +57,7 @@ int main(int argc, char** argv) {
           myStorage, myOktoplusConfiguration->respEndpoint());
     }
 
+#ifdef OKTOPLUS_WITH_GRPC
     std::unique_ptr<okcmds::CommandsServer> myGrpcServer;
     if (myOktoplusConfiguration->hasGrpcEndpoint()) {
       myGrpcServer = std::make_unique<okcmds::CommandsServer>(
@@ -60,23 +66,37 @@ int main(int argc, char** argv) {
           myOktoplusConfiguration->numCqs(),
           myOktoplusConfiguration->minPollers(),
           myOktoplusConfiguration->maxPollers());
-    }
-
-    if (!myGrpcServer && !myRespServer) {
+    } else if (!myRespServer) {
       throw std::runtime_error(
           "no wire protocol configured -- set `service.resp_endpoint` "
           "and/or `service.endpoint` in the config");
     }
+#else
+    if (myOktoplusConfiguration->hasGrpcEndpoint()) {
+      LOG(WARNING) << "service.endpoint is set but this oktoplus build "
+                      "was compiled with OKTOPLUS_WITH_GRPC=OFF; "
+                      "ignoring and serving RESP only.";
+    }
+    if (!myRespServer) {
+      throw std::runtime_error(
+          "no wire protocol configured -- set `service.resp_endpoint` "
+          "in the config (this build has no gRPC server)");
+    }
+#endif
 
     // Block on whichever server is configured. Both `wait()`s have the
     // same contract: they return only when the server is shut down
     // (currently only via process termination -- ~Server is invoked by
     // stack unwind on signal-driven exit).
+#ifdef OKTOPLUS_WITH_GRPC
     if (myGrpcServer) {
       myGrpcServer->wait();
     } else {
       myRespServer->wait();
     }
+#else
+    myRespServer->wait();
+#endif
 
     return EXIT_SUCCESS;
 

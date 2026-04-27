@@ -43,10 +43,22 @@ message("***************************")
 link_directories(${Boost_LIBRARY_DIR})
 include_directories(${Boost_INCLUDE_DIR})
 
-# Protobuf libraries
-find_package(Protobuf REQUIRED)
-include_directories(${PROTOBUF_INCLUDE_DIRS})
-find_package(GRPC REQUIRED)
+# gRPC is opt-in at runtime (no `service.endpoint` => no gRPC server)
+# AND at build time. With OKTOPLUS_WITH_GRPC=OFF we skip the whole
+# Commands library, drop the protobuf/grpc/abseil-flow dependency
+# chain, and the resulting binary trims ~6-7 MiB of baseline RSS
+# (libgrpc/libprotobuf/libcrypto/libicui18n .so text+rodata mappings
+# that we'd otherwise pay for whether or not gRPC ever served a
+# request). Keep ON by default for backward compat; turn OFF for
+# RESP-only deployments that want the smallest footprint.
+option(OKTOPLUS_WITH_GRPC "Build the gRPC server interface" OFF)
+
+if(OKTOPLUS_WITH_GRPC)
+  find_package(Protobuf REQUIRED)
+  include_directories(${PROTOBUF_INCLUDE_DIRS})
+  find_package(GRPC REQUIRED)
+  add_compile_definitions(OKTOPLUS_WITH_GRPC=1)
+endif()
 
 # c++20
 set (CMAKE_CXX_STANDARD 20)
@@ -71,9 +83,12 @@ message("CMAKE_BUILD_TYPE:        ${CMAKE_BUILD_TYPE}"      )
 message("Boost Libraries Path:    ${Boost_LIBRARY_DIRS}"    )
 message("Boost Includes Path:     ${Boost_INCLUDE_DIRS}"    )
 message("Boost version is:        ${Boost_VERSION}"         )
-message("Protobuf Library:        ${PROTOBUF_LIBRARIES}"    )
-message("Protobuf Includes Path:  ${PROTOBUF_INCLUDE_DIRS}" )
-message("Grpc Library:            ${GRPC_LIBRARIES}"        )
+message("OKTOPLUS_WITH_GRPC:      ${OKTOPLUS_WITH_GRPC}"     )
+if(OKTOPLUS_WITH_GRPC)
+  message("Protobuf Library:        ${PROTOBUF_LIBRARIES}"    )
+  message("Protobuf Includes Path:  ${PROTOBUF_INCLUDE_DIRS}" )
+  message("Grpc Library:            ${GRPC_LIBRARIES}"        )
+endif()
 message("==================================================")
 message("")
 message("")

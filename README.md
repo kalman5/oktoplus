@@ -28,7 +28,7 @@ Redis Commands Compatibility (RESP)
 The server exposes the same data through two interfaces:
 
   - **RESP2** (default port `6379`, always on) — primary wire protocol, wire-compatible with Redis using the RESP2 framing (`+` `-` `:` `$` `*` types, `$-1\r\n` / `*-1\r\n` nulls), so existing tooling like `redis-cli` and `redis-benchmark` works out of the box. Override the bind address via `service.resp_endpoint` in the JSON config. Includes the admin commands `FLUSHDB` / `FLUSHALL`. RESP3 (`HELLO`-negotiated, native maps/sets/push, unified `_\r\n` null) is on the roadmap — see TODO below.
-  - **gRPC** (optional) — see `src/Libraries/Commands/commands.proto`. Use it to generate a client in your favourite language. Includes admin RPCs `flushAll` / `flushDb` plus all the list / set / deque / vector commands. Disabled by default; opt in by setting `service.endpoint` in the JSON config.
+  - **gRPC** (optional) — see `src/Libraries/Commands/commands.proto`. Use it to generate a client in your favourite language. Includes admin RPCs `flushAll` / `flushDb` plus all the list / set / deque / vector commands. **Disabled by default at build time** to keep baseline RSS at Redis-parity (~9 MiB) — pass `-DOKTOPLUS_WITH_GRPC=ON` to cmake to compile it in, then enable at runtime by setting `service.endpoint` in the JSON config.
 
 The per-family compatibility tables ([LISTS](docs/compatibility_lists.md), [SETS](docs/compatibility_sets.md), [STRINGS](docs/compatibility_strings.md)) include a column showing which Redis commands are wired to gRPC and to RESP today.
 
@@ -176,16 +176,16 @@ Per-key fixed overhead (extrapolated from the 3-byte rows where the value cost i
 
 | N keys     | value | Oktoplus residual (KiB) | Redis residual (KiB) |
 |-----------:|------:|------------------------:|---------------------:|
-|   100,000  |    3B |                  23,188 |               10,292 |
-|   100,000  |   64B |                  21,856 |               10,124 |
-|   100,000  |  256B |                  25,984 |               10,092 |
-|   100,000  | 1024B |                  24,264 |               11,004 |
-| 1,000,000  |    3B |                  26,280 |               11,580 |
-| 1,000,000  |   64B |                  24,120 |               11,780 |
-| 1,000,000  |  256B |                  29,528 |               14,168 |
-| 1,000,000  | 1024B |                  36,256 |               23,708 |
+|   100,000  |    3B |                  14,984 |                9,676 |
+|   100,000  |   64B |                  13,808 |               10,040 |
+|   100,000  |  256B |                  18,000 |               10,332 |
+|   100,000  | 1024B |                  16,004 |               11,008 |
+| 1,000,000  |    3B |                  18,084 |               11,568 |
+| 1,000,000  |   64B |                  15,960 |               11,764 |
+| 1,000,000  |  256B |                  21,344 |               14,140 |
+| 1,000,000  | 1024B |                  28,100 |               23,720 |
 
-Baseline RSS is ~17.6 MiB for Oktoplus (down from ~21.4 MiB once gRPC became opt-in) and ~9.3 MiB for Redis; *delta over baseline* (truly retained allocator memory) is ~4–19 MiB on Oktoplus vs ~0.5–14 MiB on Redis across the workload sweep.
+Baseline RSS is now **~9.5 MiB for Oktoplus vs ~9.3 MiB for Redis — essentially at parity** (down from ~17.6 MiB before gRPC was made a build-time opt-in via `-DOKTOPLUS_WITH_GRPC=OFF`, the new default; the old default also disabled gRPC at runtime, but the protobuf/grpc/abseil-flow shared-library mappings still pinned ~8 MiB of RSS at process start). *Delta over baseline* (truly retained allocator memory) is ~4–19 MiB on Oktoplus vs ~0.4–14 MiB on Redis across the workload sweep.
 
 #### Where Oktoplus wins
 

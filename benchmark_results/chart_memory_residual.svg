@@ -4,49 +4,49 @@
 <line x1="70" y1="350.0" x2="860" y2="350.0" stroke="#d0d7de" stroke-width="1"/>
 <text x="62" y="354.0" text-anchor="end" fill="#24292f">0</text>
 <line x1="70" y1="292.0" x2="860" y2="292.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="296.0" text-anchor="end" fill="#24292f">7,976</text>
+<text x="62" y="296.0" text-anchor="end" fill="#24292f">6,182</text>
 <line x1="70" y1="234.0" x2="860" y2="234.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="238.0" text-anchor="end" fill="#24292f">15,952</text>
-<line x1="70" y1="176.0" x2="860" y2="176.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="180.0" text-anchor="end" fill="#24292f">23,928</text>
+<text x="62" y="238.0" text-anchor="end" fill="#24292f">12,364</text>
+<line x1="70" y1="175.99999999999997" x2="860" y2="175.99999999999997" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="179.99999999999997" text-anchor="end" fill="#24292f">18,546</text>
 <line x1="70" y1="118.0" x2="860" y2="118.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="122.0" text-anchor="end" fill="#24292f">31,905</text>
-<line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="64.0" text-anchor="end" fill="#24292f">39,881</text>
+<text x="62" y="122.0" text-anchor="end" fill="#24292f">24,728</text>
+<line x1="70" y1="59.99999999999994" x2="860" y2="59.99999999999994" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="63.99999999999994" text-anchor="end" fill="#24292f">30,910</text>
 <line x1="70" y1="60" x2="70" y2="350" stroke="#57606a" stroke-width="1"/>
 <line x1="70" y1="350" x2="860" y2="350" stroke="#57606a" stroke-width="1"/>
 <text x="119.375" y="368" text-anchor="middle" fill="#24292f">100k/3B</text>
-<rect x="81.4" y="181.4" width="35.5" height="168.6" fill="#3fb950"/>
-<rect x="121.8" y="275.2" width="35.5" height="74.8" fill="#f85149"/>
+<rect x="81.4" y="209.4" width="35.5" height="140.6" fill="#3fb950"/>
+<rect x="121.8" y="259.2" width="35.5" height="90.8" fill="#f85149"/>
 <text x="218.125" y="368" text-anchor="middle" fill="#24292f">100k/64B</text>
-<rect x="180.1" y="191.1" width="35.5" height="158.9" fill="#3fb950"/>
-<rect x="220.6" y="276.4" width="35.5" height="73.6" fill="#f85149"/>
+<rect x="180.1" y="220.5" width="35.5" height="129.5" fill="#3fb950"/>
+<rect x="220.6" y="255.8" width="35.5" height="94.2" fill="#f85149"/>
 <text x="316.875" y="368" text-anchor="middle" fill="#24292f">100k/256B</text>
-<rect x="278.9" y="161.1" width="35.5" height="188.9" fill="#3fb950"/>
-<rect x="319.3" y="276.6" width="35.5" height="73.4" fill="#f85149"/>
+<rect x="278.9" y="181.1" width="35.5" height="168.9" fill="#3fb950"/>
+<rect x="319.3" y="253.1" width="35.5" height="96.9" fill="#f85149"/>
 <text x="415.625" y="368" text-anchor="middle" fill="#24292f">100k/1024B</text>
-<rect x="377.6" y="173.6" width="35.5" height="176.4" fill="#3fb950"/>
-<rect x="418.1" y="270.0" width="35.5" height="80.0" fill="#f85149"/>
+<rect x="377.6" y="199.8" width="35.5" height="150.2" fill="#3fb950"/>
+<rect x="418.1" y="246.7" width="35.5" height="103.3" fill="#f85149"/>
 <text x="514.375" y="368" text-anchor="middle" fill="#24292f">1M/3B</text>
-<rect x="476.4" y="158.9" width="35.5" height="191.1" fill="#3fb950"/>
-<rect x="516.8" y="265.8" width="35.5" height="84.2" fill="#f85149"/>
+<rect x="476.4" y="180.3" width="35.5" height="169.7" fill="#3fb950"/>
+<rect x="516.8" y="241.5" width="35.5" height="108.5" fill="#f85149"/>
 <text x="613.125" y="368" text-anchor="middle" fill="#24292f">1M/64B</text>
-<rect x="575.1" y="174.6" width="35.5" height="175.4" fill="#3fb950"/>
-<rect x="615.6" y="264.3" width="35.5" height="85.7" fill="#f85149"/>
+<rect x="575.1" y="200.3" width="35.5" height="149.7" fill="#3fb950"/>
+<rect x="615.6" y="239.6" width="35.5" height="110.4" fill="#f85149"/>
 <text x="711.875" y="368" text-anchor="middle" fill="#24292f">1M/256B</text>
-<rect x="673.9" y="135.3" width="35.5" height="214.7" fill="#3fb950"/>
-<rect x="714.3" y="247.0" width="35.5" height="103.0" fill="#f85149"/>
+<rect x="673.9" y="149.7" width="35.5" height="200.3" fill="#3fb950"/>
+<rect x="714.3" y="217.3" width="35.5" height="132.7" fill="#f85149"/>
 <text x="810.625" y="368" text-anchor="middle" fill="#24292f">1M/1024B</text>
 <rect x="772.6" y="86.4" width="35.5" height="263.6" fill="#3fb950"/>
-<rect x="813.1" y="177.6" width="35.5" height="172.4" fill="#f85149"/>
-<line x1="70" y1="222.0" x2="860" y2="222.0" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="6,4"/>
-<line x1="70" y1="282.1" x2="860" y2="282.1" stroke="#f85149" stroke-width="1.5" stroke-dasharray="6,4"/>
+<rect x="813.1" y="127.5" width="35.5" height="222.5" fill="#f85149"/>
+<line x1="70" y1="260.6" x2="860" y2="260.6" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="6,4"/>
+<line x1="70" y1="262.6" x2="860" y2="262.6" stroke="#f85149" stroke-width="1.5" stroke-dasharray="6,4"/>
 <rect x="70" y="391" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="402" fill="#24292f">Oktoplus</text>
 <rect x="270" y="391" width="14" height="14" fill="#f85149"/>
 <text x="290" y="402" fill="#24292f">Redis</text>
 <line x1="470" y1="398" x2="484" y2="398" stroke="#3fb950" stroke-width="2" stroke-dasharray="4,3"/>
-<text x="490" y="402" fill="#24292f">Oktoplus baseline (17.2 MiB)</text>
+<text x="490" y="402" fill="#24292f">Oktoplus baseline (9.3 MiB)</text>
 <line x1="670" y1="398" x2="684" y2="398" stroke="#f85149" stroke-width="2" stroke-dasharray="4,3"/>
 <text x="690" y="402" fill="#24292f">Redis baseline (9.1 MiB)</text>
 </svg>

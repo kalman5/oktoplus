@@ -1,4 +1,6 @@
-add_subdirectory(Commands)
+if(OKTOPLUS_WITH_GRPC)
+  add_subdirectory(Commands)
+endif()
 add_subdirectory(Configurations)
 add_subdirectory(Resp)
 add_subdirectory(Storage)

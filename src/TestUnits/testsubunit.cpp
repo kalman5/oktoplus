@@ -5,7 +5,9 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#ifdef OKTOPLUS_WITH_GRPC
 #include <google/protobuf/stubs/common.h>
+#endif
 
 namespace oksu = okts::sup;
 
