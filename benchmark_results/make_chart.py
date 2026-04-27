@@ -91,6 +91,11 @@ def grouped_bar_chart(
     categories: list[str],
     y_max: float,
     out_path: pathlib.Path,
+    # Optional horizontal reference lines (e.g. baseline RSS). Each
+    # entry is (legend label, y value, hex color). Drawn as dashed
+    # lines spanning the plot area; labelled in the legend so the
+    # reader knows what each line means.
+    reference_lines: list[tuple[str, float, str]] | None = None,
 ) -> None:
     width, height = 880, 420
     margin_l, margin_r, margin_t, margin_b = 70, 20, 60, 70
@@ -149,14 +154,41 @@ def grouped_bar_chart(
                 f'height="{bar_h:.1f}" fill="{color}"/>'
             )
 
+    # Reference lines (e.g. baseline RSS). Drawn after bars so they
+    # sit on top, dashed so they're visually distinct from the axes.
+    if reference_lines:
+        for label, val, color in reference_lines:
+            if val > y_max or val < 0:
+                continue
+            y = margin_t + plot_h - (val / y_max) * plot_h
+            parts.append(
+                f'<line x1="{margin_l}" y1="{y:.1f}" '
+                f'x2="{width - margin_r}" y2="{y:.1f}" '
+                f'stroke="{color}" stroke-width="1.5" '
+                f'stroke-dasharray="6,4"/>'
+            )
+
     # Legend
     legend_y = height - 18
-    for si, (label, _, color) in enumerate(series):
-        sx = margin_l + si * 160
-        parts.append(
-            f'<rect x="{sx}" y="{legend_y - 11}" width="14" height="14" '
-            f'fill="{color}"/>'
-        )
+    legend_entries = list(series) + [
+        (lbl, None, col) for (lbl, _v, col) in (reference_lines or [])
+    ]
+    for si, (label, _v, color) in enumerate(legend_entries):
+        sx = margin_l + si * 200
+        # Bars get a filled swatch, reference lines a dashed line so the
+        # legend matches what's drawn in the plot.
+        if _v is None:
+            parts.append(
+                f'<line x1="{sx}" y1="{legend_y - 4}" '
+                f'x2="{sx + 14}" y2="{legend_y - 4}" '
+                f'stroke="{color}" stroke-width="2" '
+                f'stroke-dasharray="4,3"/>'
+            )
+        else:
+            parts.append(
+                f'<rect x="{sx}" y="{legend_y - 11}" width="14" height="14" '
+                f'fill="{color}"/>'
+            )
         parts.append(
             f'<text x="{sx + 20}" y="{legend_y}" fill="{TEXT}">{label}</text>'
         )
@@ -610,15 +642,32 @@ def main() -> int:
             cats = [_label(n, s) for (n, s) in complete_cases]
             okto_residual = [cases[k]["oktoplus"] for k in complete_cases]
             redis_residual = [cases[k]["redis"] for k in complete_cases]
+            # Mean baseline RSS per server across the sweep. Baselines
+            # are essentially constant per server (server framework
+            # cost, no payload), so the mean is a reasonable summary.
+            # Drawn as horizontal reference lines so the reader can see
+            # "residual is X above baseline" at a glance.
+            def _baseline(server: str) -> float:
+                xs = [float(r["baseline_rss_kib"])
+                      for r in per_server_rows[server]]
+                return sum(xs) / len(xs) if xs else 0.0
+            okto_baseline  = _baseline("oktoplus")
+            redis_baseline = _baseline("redis")
             grouped_bar_chart(
                 title="Residual RSS after FLUSHALL — KiB (lower is better)",
                 series=[
-                    ("Oktoplus", okto_residual, "#3fb950"),
-                    ("Redis",    redis_residual, "#f85149"),
+                    ("Oktoplus",          okto_residual, "#3fb950"),
+                    ("Redis",             redis_residual, "#f85149"),
                 ],
                 categories=cats,
                 y_max=max(max(okto_residual), max(redis_residual)) * 1.10,
                 out_path=HERE / "chart_memory_residual.svg",
+                reference_lines=[
+                    (f"Oktoplus baseline ({okto_baseline/1024:.1f} MiB)",
+                     okto_baseline,  "#3fb950"),
+                    (f"Redis baseline ({redis_baseline/1024:.1f} MiB)",
+                     redis_baseline, "#f85149"),
+                ],
             )
             extra_lines.append("chart_memory_residual.svg")
 

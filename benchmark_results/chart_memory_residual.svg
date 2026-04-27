@@ -39,8 +39,14 @@
 <text x="810.625" y="368" text-anchor="middle" fill="#24292f">1M/1024B</text>
 <rect x="772.6" y="86.4" width="35.5" height="263.6" fill="#3fb950"/>
 <rect x="813.1" y="177.6" width="35.5" height="172.4" fill="#f85149"/>
+<line x1="70" y1="222.0" x2="860" y2="222.0" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="6,4"/>
+<line x1="70" y1="282.1" x2="860" y2="282.1" stroke="#f85149" stroke-width="1.5" stroke-dasharray="6,4"/>
 <rect x="70" y="391" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="402" fill="#24292f">Oktoplus</text>
-<rect x="230" y="391" width="14" height="14" fill="#f85149"/>
-<text x="250" y="402" fill="#24292f">Redis</text>
+<rect x="270" y="391" width="14" height="14" fill="#f85149"/>
+<text x="290" y="402" fill="#24292f">Redis</text>
+<line x1="470" y1="398" x2="484" y2="398" stroke="#3fb950" stroke-width="2" stroke-dasharray="4,3"/>
+<text x="490" y="402" fill="#24292f">Oktoplus baseline (17.2 MiB)</text>
+<line x1="670" y1="398" x2="684" y2="398" stroke="#f85149" stroke-width="2" stroke-dasharray="4,3"/>
+<text x="690" y="402" fill="#24292f">Redis baseline (9.1 MiB)</text>
 </svg>
