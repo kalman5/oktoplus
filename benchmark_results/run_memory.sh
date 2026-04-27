@@ -131,8 +131,14 @@ load_keys() {
 }
 
 flush_keys() {
+    # FLUSHALL drops every key. Follow with MEMORY PURGE so we measure
+    # post-explicit-purge residual on both servers (apples-to-apples):
+    # without it, Redis's residual reflects "FLUSHALL + jemalloc lazy
+    # decay over ~10s" while Oktoplus would purge inside FLUSHALL and
+    # land lower for asymmetric reasons.
     local port=$1
-    $CLI -p "$port" FLUSHALL >/dev/null 2>&1 || true
+    $CLI -p "$port" FLUSHALL     >/dev/null 2>&1 || true
+    $CLI -p "$port" MEMORY PURGE >/dev/null 2>&1 || true
 }
 
 # One trial: start fresh, baseline, load, steady, flush, residual.

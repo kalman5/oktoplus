@@ -256,6 +256,7 @@ const Entry kHandlers[] = {
     {"FLUSHDB",      [](RespHandler& h, const Args& a) { return h.handleFlush(a); }},
     {"FLUSHALL",     [](RespHandler& h, const Args& a) { return h.handleFlush(a); }},
     {"DBSIZE",       [](RespHandler& h, const Args& a) { return h.handleDbsize(a); }},
+    {"MEMORY",       [](RespHandler& h, const Args& a) { return h.handleMemory(a); }},
 
     // List push (generic)
     {"LPUSH",        [](RespHandler& h, const Args& a) { return h.handlePush(a, "lpush",  &stor::Lists::pushFront); }},
@@ -459,6 +460,25 @@ std::string RespHandler::handleFlush(const Args&) {
   theStorage.sets.clear();
   stor::releaseMemoryToOs();
   return RespParser::formatSimpleString("OK");
+}
+
+// MEMORY <subcommand>. Only PURGE is implemented today; other Redis
+// subcommands (USAGE / STATS / MALLOC-STATS / DOCTOR) return an
+// unknown-subcommand error in the same shape Redis uses.
+std::string RespHandler::handleMemory(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 2, "memory");
+  if (!myErr.empty()) return myErr;
+
+  if (iequalsToUpper(aArgs[1], "PURGE")) {
+    // Same hook FLUSHDB / FLUSHALL run; safe to call when there's
+    // nothing to purge (jemalloc no-op) and idempotent across calls.
+    stor::releaseMemoryToOs();
+    return RespParser::formatSimpleString("OK");
+  }
+
+  return RespParser::formatError(
+      "ERR Unknown MEMORY subcommand or wrong number of arguments for '" +
+      aArgs[1] + "'");
 }
 
 std::string RespHandler::handleDbsize(const Args&) {

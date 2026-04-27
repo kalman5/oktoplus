@@ -170,22 +170,22 @@ Per-key fixed overhead (extrapolated from the 3-byte rows where the value cost i
 
 ##### Residual memory after FLUSHALL
 
-`FLUSHALL` and `FLUSHDB` clear every container and then call jemalloc's `mallctl("arena.<all>.purge")` to return dirty pages to the OS, so post-flush RSS lands close to baseline instead of stalling at the steady-state high-water mark.
+`FLUSHALL` and `FLUSHDB` clear every container and then call jemalloc's `mallctl("arena.<all>.purge")` to return dirty pages to the OS, so post-flush RSS lands close to baseline instead of stalling at the steady-state high-water mark. Oktoplus exposes the same purge as a standalone `MEMORY PURGE` command (Redis-compatible), and the benchmark issues `FLUSHALL` + `MEMORY PURGE` on both servers so the residual column is an apples-to-apples post-purge measurement.
 
 ![Residual RSS after FLUSHALL](benchmark_results/chart_memory_residual.svg)
 
 | N keys     | value | Oktoplus residual (KiB) | Redis residual (KiB) |
 |-----------:|------:|------------------------:|---------------------:|
-|   100,000  |    3B |                  22,996 |                9,724 |
-|   100,000  |   64B |                  21,824 |               10,092 |
-|   100,000  |  256B |                  25,800 |               10,052 |
-|   100,000  | 1024B |                  23,900 |               11,004 |
-| 1,000,000  |    3B |                  26,212 |               11,536 |
-| 1,000,000  |   64B |                  23,968 |               11,744 |
-| 1,000,000  |  256B |                  29,360 |               14,176 |
-| 1,000,000  | 1024B |                  36,316 |               23,680 |
+|   100,000  |    3B |                  23,232 |               10,196 |
+|   100,000  |   64B |                  21,992 |               10,144 |
+|   100,000  |  256B |                  26,480 |               10,120 |
+|   100,000  | 1024B |                  24,004 |               10,976 |
+| 1,000,000  |    3B |                  26,228 |               11,672 |
+| 1,000,000  |   64B |                  24,068 |               11,772 |
+| 1,000,000  |  256B |                  29,468 |               14,160 |
+| 1,000,000  | 1024B |                  36,224 |               23,812 |
 
-Baseline RSS is ~17.6 MiB for Oktoplus (down from ~21.4 MiB once gRPC became opt-in) and ~9.3 MiB for Redis; *delta over baseline* (truly retained allocator memory) is ~4–19 MiB on Oktoplus vs ~0.4–14 MiB on Redis across the workload sweep.
+Baseline RSS is ~17.6 MiB for Oktoplus (down from ~21.4 MiB once gRPC became opt-in) and ~9.3 MiB for Redis; *delta over baseline* (truly retained allocator memory) is ~4–19 MiB on Oktoplus vs ~0.5–14 MiB on Redis across the workload sweep.
 
 #### Where Oktoplus wins
 
