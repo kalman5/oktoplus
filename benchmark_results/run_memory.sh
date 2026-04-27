@@ -36,19 +36,17 @@ mkdir -p "$RAW_DIR" "$LOG_DIR"
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
 
 ensure_okto_config() {
-    if [ ! -f "$OKTO_CONFIG" ]; then
-        cat > "$OKTO_CONFIG" <<EOF
+    # Always (re)write the config so a stale cache from an older run
+    # (e.g. one that enabled gRPC) does not contaminate the measurement.
+    # gRPC is omitted on purpose: this benchmark targets the RESP-only
+    # deployment, which is the default since oktoplus made gRPC opt-in.
+    cat > "$OKTO_CONFIG" <<EOF
 {
   "service": {
-    "endpoint": "0.0.0.0:50051",
-    "numcqs": 4,
-    "minpollers": 4,
-    "maxpollers": 16,
     "resp_endpoint": "0.0.0.0:$OKTO_PORT"
   }
 }
 EOF
-    fi
 }
 
 wait_for_port() {

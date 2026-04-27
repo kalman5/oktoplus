@@ -176,16 +176,16 @@ Per-key fixed overhead (extrapolated from the 3-byte rows where the value cost i
 
 | N keys     | value | Oktoplus residual (KiB) | Redis residual (KiB) |
 |-----------:|------:|------------------------:|---------------------:|
-|   100,000  |    3B |                  26,852 |                9,780 |
-|   100,000  |   64B |                  27,708 |                9,988 |
-|   100,000  |  256B |                  28,648 |               10,080 |
-|   100,000  | 1024B |                  27,944 |               10,976 |
-| 1,000,000  |    3B |                  29,968 |               11,556 |
-| 1,000,000  |   64B |                  30,496 |               11,832 |
-| 1,000,000  |  256B |                  31,740 |               14,192 |
-| 1,000,000  | 1024B |                  38,868 |               23,700 |
+|   100,000  |    3B |                  22,996 |                9,724 |
+|   100,000  |   64B |                  21,824 |               10,092 |
+|   100,000  |  256B |                  25,800 |               10,052 |
+|   100,000  | 1024B |                  23,900 |               11,004 |
+| 1,000,000  |    3B |                  26,212 |               11,536 |
+| 1,000,000  |   64B |                  23,968 |               11,744 |
+| 1,000,000  |  256B |                  29,360 |               14,176 |
+| 1,000,000  | 1024B |                  36,316 |               23,680 |
 
-Baseline RSS is ~21 MiB for Oktoplus and ~9 MiB for Redis; *delta over baseline* (truly retained allocator memory) is ~6–17 MiB on Oktoplus vs ~1–14 MiB on Redis across the workload sweep.
+Baseline RSS is ~17.6 MiB for Oktoplus (down from ~21.4 MiB once gRPC became opt-in) and ~9.3 MiB for Redis; *delta over baseline* (truly retained allocator memory) is ~4–19 MiB on Oktoplus vs ~0.4–14 MiB on Redis across the workload sweep.
 
 #### Where Oktoplus wins
 
