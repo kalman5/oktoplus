@@ -387,18 +387,32 @@ std::string RespHandler::handle(const Args& aArgs) {
   // the command suspended (the eventual reply is delivered via the
   // deferred sink). Match case-insensitively against the raw arg
   // (the table miss above didn't normalize for us if the cmd isn't
-  // in the table).
-  const bool myIsBlpop = iequalsToUpper(aArgs[0], "BLPOP");
-  const bool myIsBrpop = !myIsBlpop && iequalsToUpper(aArgs[0], "BRPOP");
-  if (myIsBlpop || myIsBrpop) {
-    try {
-      auto myBlocking = myIsBlpop ? handleBlpop(aArgs) : handleBrpop(aArgs);
-      // Empty optional means the handler accepted and suspended --
-      // the sentinel empty string is what the Connection's read loop
-      // checks to decide whether to enter the blocked state.
-      return myBlocking ? *myBlocking : std::string{};
-    } catch (const std::exception& e) {
-      return RespParser::formatError(std::string("ERR ") + e.what());
+  // in the table). Linear scan is fine — only four entries. Same
+  // captureless-lambda shape as kHandlers above, so the table lives
+  // in rodata and no per-call allocation happens.
+  using BlockingFn = std::optional<std::string> (*)(RespHandler&, const Args&);
+  struct BlockingEntry {
+    std::string_view name;
+    BlockingFn       fn;
+  };
+  static constexpr BlockingEntry kBlocking[] = {
+      {"BLPOP",      [](RespHandler& h, const Args& a) { return h.handleBlpop(a); }},
+      {"BRPOP",      [](RespHandler& h, const Args& a) { return h.handleBrpop(a); }},
+      {"BLMOVE",     [](RespHandler& h, const Args& a) { return h.handleBlmove(a); }},
+      {"BLMPOP",     [](RespHandler& h, const Args& a) { return h.handleBlmpop(a); }},
+      {"BRPOPLPUSH", [](RespHandler& h, const Args& a) { return h.handleBrpoplpush(a); }},
+  };
+  for (const auto& myEntry : kBlocking) {
+    if (iequalsToUpper(aArgs[0], myEntry.name)) {
+      try {
+        auto myBlocking = myEntry.fn(*this, aArgs);
+        // Empty optional means the handler accepted and suspended --
+        // the sentinel empty string is what the Connection's read loop
+        // checks to decide whether to enter the blocked state.
+        return myBlocking ? *myBlocking : std::string{};
+      } catch (const std::exception& e) {
+        return RespParser::formatError(std::string("ERR ") + e.what());
+      }
     }
   }
 
@@ -996,6 +1010,469 @@ RespHandler::handleBlockingPop(const Args&     aArgs,
           if (myStore.cancelWaiter(myKeyCopy, myId)) {
             mySink(formatBlpopNilReply(), nullptr);
           }
+        });
+  }
+
+  return std::nullopt; // suspended
+}
+
+// BRPOPLPUSH source destination timeout
+//
+// Deprecated since Redis 6.2 in favour of BLMOVE; kept for clients
+// that still issue it. Semantically identical to:
+//   BLMOVE source destination RIGHT LEFT timeout
+// so we just rewrite the args and dispatch into handleBlmove rather
+// than duplicate the wake / timer / recovery scaffolding.
+std::optional<std::string>
+RespHandler::handleBrpoplpush(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 4, "brpoplpush");
+  if (!myErr.empty()) return myErr;
+  if (aArgs.size() > 4) {
+    return RespParser::formatError("ERR syntax error");
+  }
+  Args myRewritten;
+  myRewritten.reserve(6);
+  myRewritten.emplace_back("BLMOVE");
+  myRewritten.emplace_back(aArgs[1]);
+  myRewritten.emplace_back(aArgs[2]);
+  myRewritten.emplace_back("RIGHT");
+  myRewritten.emplace_back("LEFT");
+  myRewritten.emplace_back(aArgs[3]);
+  return handleBlmove(myRewritten);
+}
+
+// LMPOP / BLMPOP successful reply: 2-element array of (key, [values]).
+std::string RespHandler::formatLmpopReply(
+    const std::string& aKey, const std::vector<std::string>& aValues) {
+  size_t myReserved = 16 + aKey.size();
+  for (const auto& myVal : aValues) {
+    myReserved += 8 + myVal.size();
+  }
+  std::string myReply;
+  myReply.reserve(myReserved);
+  RespParser::appendArrayHeader(myReply, 2);
+  RespParser::appendBulkString(myReply, aKey);
+  RespParser::appendArrayHeader(myReply, aValues.size());
+  for (const auto& myVal : aValues) {
+    RespParser::appendBulkString(myReply, myVal);
+  }
+  return myReply;
+}
+
+// Wire format: BLMOVE source destination LEFT|RIGHT LEFT|RIGHT timeout
+//   - timeout is a float (seconds). 0 means wait indefinitely.
+//   - Reply on hit: $<vlen>\r\n<value>\r\n  (the moved value)
+//   - Reply on timeout: $-1\r\n               (null bulk string)
+//
+// If the source list is non-empty when the call lands, this collapses
+// to plain LMOVE under the same per-key lock and replies inline.
+// Otherwise we register a BLPOP-style waiter on `source` (preferred
+// side determined by aSrcDir) and complete the move in the wake
+// callback by pushing the popped value into `destination`. The
+// destination-side push and the source-side pop are NOT performed
+// under a single lock acquisition (Redis is single-threaded so it
+// gets atomicity for free; we don't), but no value is ever lost: the
+// producer's drain has already removed the value from source before
+// the wake fires, so the wake either successfully commits the move
+// to destination or — if the connection is gone — leaves the value
+// in destination as a side effect. That mirrors the LMOVE semantic
+// where a successful move stays committed even if the network reply
+// is lost mid-flight.
+std::optional<std::string>
+RespHandler::handleBlmove(const Args& aArgs) {
+  auto myErr = validateMinArgs(aArgs, 6, "blmove");
+  if (!myErr.empty()) return myErr;
+  if (aArgs.size() > 6) {
+    return RespParser::formatError("ERR syntax error");
+  }
+
+  auto mySrcDir  = parseDirection(aArgs[3]);
+  auto myDestDir = parseDirection(aArgs[4]);
+  if (!mySrcDir || !myDestDir) {
+    return RespParser::formatError("ERR syntax error");
+  }
+
+  double myTimeoutSecs = 0.0;
+  try {
+    size_t myConsumed = 0;
+    myTimeoutSecs = std::stod(aArgs[5], &myConsumed);
+    if (myConsumed != aArgs[5].size()) {
+      throw std::invalid_argument("trailing garbage");
+    }
+  } catch (...) {
+    return RespParser::formatError("ERR timeout is not a float or out of range");
+  }
+  if (myTimeoutSecs < 0) {
+    return RespParser::formatError("ERR timeout is negative");
+  }
+
+  // Try inline LMOVE first. The same-key case (source == destination)
+  // is handled atomically inside Lists::move under a single inner lock.
+  auto myInline =
+      theStorage.lists.move(aArgs[1], aArgs[2], *mySrcDir, *myDestDir);
+  if (myInline) {
+    return RespParser::formatBulkString(*myInline);
+  }
+
+  if (theIo == nullptr || !theSink) {
+    return RespParser::formatError(
+        "ERR blocking commands require an async connection context");
+  }
+
+  const std::string& mySrc      = aArgs[1];
+  const std::string& myDest     = aArgs[2];
+  const bool         mySrcFront = (*mySrcDir == stor::Lists::Direction::LEFT);
+  const bool         myDstFront = (*myDestDir == stor::Lists::Direction::LEFT);
+
+  auto mySink     = theSink;
+  auto myStorePtr = &theStorage.lists;
+  auto mySrcCopy  = mySrc;
+  auto myDestCopy = myDest;
+
+  auto myOnWake =
+      [mySink, mySrcCopy, myDestCopy, myStorePtr, mySrcFront, myDstFront](
+          std::optional<std::string> aValue) {
+        if (!aValue) {
+          // Cancellation / timeout. No value transferred; reply nil
+          // (BLMOVE timeout is a null bulk string, not the BLPOP-style
+          // null array).
+          mySink(RespParser::formatNullBulkString(), nullptr);
+          return;
+        }
+        // Producer transferred a value out of the source list. Commit
+        // the move by pushing into the destination list. pushFront /
+        // pushBack take their own per-key locks; safe to call from this
+        // wake callback (we hold no locks here).
+        std::vector<std::string_view> myValues{*aValue};
+        if (myDstFront) {
+          myStorePtr->pushFront(myDestCopy, myValues);
+        } else {
+          myStorePtr->pushBack(myDestCopy, myValues);
+        }
+        // Reply with the moved value. No OnDead recovery: the move has
+        // already committed server-side; if the connection is gone the
+        // value stays in the destination list (matches Redis semantics
+        // for a reply-lost-in-flight LMOVE).
+        mySink(RespParser::formatBulkString(*aValue), nullptr);
+
+        // Suppress unused-capture warnings on the no-recovery path.
+        (void)mySrcCopy;
+        (void)mySrcFront;
+      };
+
+  okts::stor::WaiterId myId = 0;
+  auto myImmediate =
+      mySrcFront
+          ? theStorage.lists.tryPopFrontOrWait(mySrc, myOnWake, &myId)
+          : theStorage.lists.tryPopBackOrWait(mySrc, myOnWake, &myId);
+
+  if (myImmediate) {
+    // Source got data between the move() attempt above and tryPop.
+    // Apply the move semantics inline (push to dest, return value).
+    std::vector<std::string_view> myValues{*myImmediate};
+    if (myDstFront) {
+      theStorage.lists.pushFront(myDest, myValues);
+    } else {
+      theStorage.lists.pushBack(myDest, myValues);
+    }
+    return RespParser::formatBulkString(*myImmediate);
+  }
+
+  // Suspended. Race a timer against the producer wake if requested.
+  if (myTimeoutSecs > 0) {
+    auto myTimer = std::make_shared<boost::asio::steady_timer>(*theIo);
+    myTimer->expires_after(std::chrono::milliseconds(
+        static_cast<long>(myTimeoutSecs * 1000)));
+    auto& myStore = theStorage.lists;
+    myTimer->async_wait(
+        [myId, mySrcCopy, mySink, &myStore, myTimer](
+            const boost::system::error_code& aEc) {
+          if (aEc == boost::asio::error::operation_aborted) {
+            return; // wake fired first
+          }
+          if (myStore.cancelWaiter(mySrcCopy, myId)) {
+            mySink(RespParser::formatNullBulkString(), nullptr);
+          }
+        });
+  }
+
+  return std::nullopt; // suspended
+}
+
+namespace {
+
+// Shared first-wake-wins coordination state for BLMPOP. Multi-key
+// blocking pops register one waiter per key; whichever fires first
+// (producer wake on any key, or the global timeout) cancels the
+// rest and delivers the reply. Late wakes / inline pops that lose
+// the CAS push their value back to its source key so no data is
+// silently lost.
+struct BlmpopState {
+  std::atomic<bool>                                          fired{false};
+  std::mutex                                                 mu;
+  std::vector<std::pair<std::string, okts::stor::WaiterId>>  regs;
+  // Held so the timer object outlives any in-flight async_wait. Set
+  // before the timer is armed; nullptr when there's no timeout.
+  std::shared_ptr<boost::asio::steady_timer>                 timer;
+};
+
+} // namespace
+
+// Wire format:
+//   BLMPOP timeout numkeys key [key ...] LEFT|RIGHT [COUNT count]
+//
+// Try-immediate pass mirrors LMPOP: walk the keys in order and pop
+// from the first non-empty one. If none has data, register one
+// waiter per key on a shared BlmpopState; the first wake (producer
+// or timeout) wins via CAS, cancels the others, and replies. The
+// loser of the CAS path pushes its transferred value back so no
+// data is dropped.
+std::optional<std::string>
+RespHandler::handleBlmpop(const Args& aArgs) {
+  // Minimum: BLMPOP timeout numkeys key1 LEFT|RIGHT  -> 5 args.
+  auto myErr = validateMinArgs(aArgs, 5, "blmpop");
+  if (!myErr.empty()) return myErr;
+
+  double myTimeoutSecs = 0.0;
+  try {
+    size_t myConsumed = 0;
+    myTimeoutSecs = std::stod(aArgs[1], &myConsumed);
+    if (myConsumed != aArgs[1].size()) {
+      throw std::invalid_argument("trailing garbage");
+    }
+  } catch (...) {
+    return RespParser::formatError("ERR timeout is not a float or out of range");
+  }
+  if (myTimeoutSecs < 0) {
+    return RespParser::formatError("ERR timeout is negative");
+  }
+
+  auto myNumKeysOpt = parseUnsignedInt(aArgs[2]);
+  if (!myNumKeysOpt) {
+    return RespParser::formatError(std::string(kErrNotInt));
+  }
+  // Bound numKeys: same OOB-arithmetic guard as handleLmpop.
+  if (*myNumKeysOpt == 0 || *myNumKeysOpt > aArgs.size() ||
+      *myNumKeysOpt > aArgs.size() - 4) {
+    return RespParser::formatError("ERR syntax error");
+  }
+  const uint64_t myNumKeys = *myNumKeysOpt;
+
+  auto myDirection = parseDirection(aArgs[3 + myNumKeys]);
+  if (!myDirection) {
+    return RespParser::formatError("ERR syntax error");
+  }
+  const bool myFront = (*myDirection == stor::Lists::Direction::LEFT);
+
+  uint64_t myCount = 1;
+  size_t   myIdx   = 4 + myNumKeys;
+  if (myIdx + 1 < aArgs.size() && iequalsToUpper(aArgs[myIdx], "COUNT")) {
+    auto myParsed = parseUnsignedInt(aArgs[myIdx + 1]);
+    if (!myParsed || *myParsed == 0) {
+      return RespParser::formatError(std::string(kErrNotInt));
+    }
+    myCount = *myParsed;
+    myIdx += 2;
+  }
+  if (myIdx != aArgs.size()) {
+    return RespParser::formatError("ERR syntax error");
+  }
+
+  // Try-immediate pass: walk keys in order, return on the first hit.
+  for (uint64_t i = 0; i < myNumKeys; ++i) {
+    const auto& myKey = aArgs[3 + i];
+    auto        myValues = myFront
+                               ? theStorage.lists.popFront(myKey, myCount)
+                               : theStorage.lists.popBack(myKey, myCount);
+    if (!myValues.empty()) {
+      return formatLmpopReply(myKey, myValues);
+    }
+  }
+
+  // All empty — block. Need an async context.
+  if (theIo == nullptr || !theSink) {
+    return RespParser::formatError(
+        "ERR blocking commands require an async connection context");
+  }
+
+  auto myState     = std::make_shared<BlmpopState>();
+  auto mySink      = theSink;
+  auto myStorePtr  = &theStorage.lists;
+
+  // Build the per-key wake closure. Captured-by-value so each waiter
+  // owns its key. Shared state goes through `myState` (shared_ptr).
+  auto myMakeWake = [myState, myStorePtr, mySink, myFront, myCount](
+                        std::string aKey) {
+    return [myState, myStorePtr, mySink, myFront, myCount,
+            aKey = std::move(aKey)](std::optional<std::string> aValue) {
+      bool myExpected = false;
+      if (!myState->fired.compare_exchange_strong(myExpected, true,
+                                                  std::memory_order_acq_rel)) {
+        // Late wake. Recovery: if the producer transferred a value to
+        // us, push it back so no data is lost. The actual winner has
+        // already (or will shortly) deliver its own reply.
+        if (aValue) {
+          std::vector<std::string_view> myV{*aValue};
+          if (myFront) myStorePtr->pushFront(aKey, myV);
+          else         myStorePtr->pushBack(aKey, myV);
+        }
+        return;
+      }
+
+      // Won the race. Cancel the timer and any sibling waiters.
+      // Self-cancel is a no-op (the waiter's already drained off the
+      // shard's waiter list by the producer), so we don't bother
+      // skipping our own id.
+      if (myState->timer) {
+        boost::system::error_code myEc;
+        myState->timer->cancel(myEc);
+      }
+      {
+        std::lock_guard<std::mutex> myLock(myState->mu);
+        for (auto& myReg : myState->regs) {
+          myStorePtr->cancelWaiter(myReg.first, myReg.second);
+        }
+      }
+
+      if (!aValue) {
+        mySink(formatBlpopNilReply(), nullptr);
+        return;
+      }
+
+      // Got one value from the producer drain. Opportunistically pop
+      // up to COUNT-1 more from the same key (LMPOP-style).
+      std::vector<std::string> myPopped;
+      myPopped.reserve(myCount);
+      myPopped.emplace_back(std::move(*aValue));
+      if (myCount > 1) {
+        auto myExtras = myFront
+                            ? myStorePtr->popFront(aKey, myCount - 1)
+                            : myStorePtr->popBack(aKey, myCount - 1);
+        for (auto& myV : myExtras) {
+          myPopped.emplace_back(std::move(myV));
+        }
+      }
+
+      // Recovery: if the connection is gone by the time the dispatched
+      // lambda runs, push every popped value back so the BLMPOP
+      // disconnect doesn't silently swallow data.
+      auto myRecoveryKey    = aKey;
+      auto myRecoveryValues = myPopped;
+      auto myOnDead = [myStorePtr, myRecoveryKey,
+                       myRecoveryValues, myFront]() {
+        std::vector<std::string_view> myV;
+        myV.reserve(myRecoveryValues.size());
+        for (const auto& myS : myRecoveryValues) {
+          myV.emplace_back(myS);
+        }
+        if (myFront) myStorePtr->pushFront(myRecoveryKey, myV);
+        else         myStorePtr->pushBack(myRecoveryKey, myV);
+      };
+
+      mySink(formatLmpopReply(aKey, myPopped), std::move(myOnDead));
+    };
+  };
+
+  // Registration loop. A wake on an earlier key can fire while we're
+  // still registering later ones — the BlmpopState CAS handles that
+  // case (the wake wins, cancel-others races with our late record,
+  // and the post-tryPop "fired?" check self-cancels any waiter we
+  // managed to add after the wake fired).
+  for (uint64_t i = 0; i < myNumKeys; ++i) {
+    if (myState->fired.load(std::memory_order_acquire)) {
+      // A wake on an earlier key already won. Don't register more.
+      break;
+    }
+
+    const std::string& myKey = aArgs[3 + i];
+    okts::stor::WaiterId myId = 0;
+    auto myImmediate = myFront
+        ? theStorage.lists.tryPopFrontOrWait(myKey, myMakeWake(myKey), &myId)
+        : theStorage.lists.tryPopBackOrWait(myKey, myMakeWake(myKey), &myId);
+
+    if (myImmediate) {
+      // Producer pushed to this key between the try-immediate pass
+      // above and tryPopOrWait. Try to be the wake winner.
+      bool myExpected = false;
+      if (!myState->fired.compare_exchange_strong(myExpected, true,
+                                                  std::memory_order_acq_rel)) {
+        // A wake on an earlier key beat us. Push our value back; the
+        // earlier wake delivers the actual reply.
+        std::vector<std::string_view> myV{*myImmediate};
+        if (myFront) theStorage.lists.pushFront(myKey, myV);
+        else         theStorage.lists.pushBack(myKey, myV);
+        return std::nullopt; // suspended (the wake winner replies)
+      }
+
+      // We won inline. Cancel any waiters we registered on prior keys.
+      {
+        std::lock_guard<std::mutex> myLock(myState->mu);
+        for (auto& myReg : myState->regs) {
+          theStorage.lists.cancelWaiter(myReg.first, myReg.second);
+        }
+      }
+
+      std::vector<std::string> myPopped;
+      myPopped.reserve(myCount);
+      myPopped.emplace_back(std::move(*myImmediate));
+      if (myCount > 1) {
+        auto myExtras = myFront
+                            ? theStorage.lists.popFront(myKey, myCount - 1)
+                            : theStorage.lists.popBack(myKey, myCount - 1);
+        for (auto& myV : myExtras) {
+          myPopped.emplace_back(std::move(myV));
+        }
+      }
+      return formatLmpopReply(myKey, myPopped);
+    }
+
+    // Registered. Record the id under the state lock; if a wake fired
+    // between tryPop returning and this record, self-cancel.
+    std::lock_guard<std::mutex> myLock(myState->mu);
+    if (myState->fired.load(std::memory_order_acquire)) {
+      theStorage.lists.cancelWaiter(myKey, myId);
+      break;
+    }
+    myState->regs.emplace_back(myKey, myId);
+  }
+
+  // If a wake already won during registration, the wake closure is
+  // responsible for delivering the reply — we just suspend.
+  if (myState->fired.load(std::memory_order_acquire)) {
+    return std::nullopt;
+  }
+
+  // Arm the global timeout. Stored on the state so the wake-winner
+  // can cancel it; held in `myTimer` capture so the timer object
+  // outlives the async_wait if the state ref drops first.
+  if (myTimeoutSecs > 0) {
+    auto myTimer = std::make_shared<boost::asio::steady_timer>(*theIo);
+    myTimer->expires_after(std::chrono::milliseconds(
+        static_cast<long>(myTimeoutSecs * 1000)));
+    {
+      // Publish the timer before arming so the wake-winner sees it
+      // (the wake reads myState->timer to cancel it).
+      std::lock_guard<std::mutex> myLock(myState->mu);
+      myState->timer = myTimer;
+    }
+    myTimer->async_wait(
+        [myState, myStorePtr, mySink, myTimer](
+            const boost::system::error_code& aEc) {
+          if (aEc == boost::asio::error::operation_aborted) {
+            return; // a wake beat us
+          }
+          bool myExpected = false;
+          if (!myState->fired.compare_exchange_strong(
+                  myExpected, true, std::memory_order_acq_rel)) {
+            return; // a wake beat us (race with the abort check above)
+          }
+          {
+            std::lock_guard<std::mutex> myLock(myState->mu);
+            for (auto& myReg : myState->regs) {
+              myStorePtr->cancelWaiter(myReg.first, myReg.second);
+            }
+          }
+          mySink(formatBlpopNilReply(), nullptr);
         });
   }
 

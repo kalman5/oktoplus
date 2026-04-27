@@ -135,6 +135,9 @@ class RespHandler
   // producer wakes the waiter or the timeout expires.
   std::optional<std::string> handleBlpop(const Args& aArgs);
   std::optional<std::string> handleBrpop(const Args& aArgs);
+  std::optional<std::string> handleBlmove(const Args& aArgs);
+  std::optional<std::string> handleBlmpop(const Args& aArgs);
+  std::optional<std::string> handleBrpoplpush(const Args& aArgs);
 
   // Helpers for blocking commands
   std::optional<std::string> handleBlockingPop(const Args&     aArgs,
@@ -143,6 +146,8 @@ class RespHandler
   static std::string formatBlpopReply(const std::string& aKey,
                                       const std::string& aValue);
   static std::string formatBlpopNilReply();
+  static std::string formatLmpopReply(const std::string&              aKey,
+                                      const std::vector<std::string>& aValues);
 
   // Set commands
   std::string handleSadd(const Args& aArgs);

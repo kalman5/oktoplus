@@ -19,7 +19,6 @@ class CommandsList : virtual public Interface::Service
   // BLMPOP
   // BLPOP
   // BRPOP
-  // BRPOPLPUSH
 
   grpc::Status
   listIndex(grpc::ServerContext*, const IndexRequest*, GetValueReply*) final;

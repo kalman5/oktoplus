@@ -2,11 +2,11 @@
 
 | gRPC Interface       | RESP   | REDIS command  |
 |----------------------|:------:|:--------------:|
-| _                    | _      | BLMOVE         |
-| _                    | _      | BLMPOP         |
+| _                    | BLMOVE | BLMOVE         |
+| _                    | BLMPOP | BLMPOP         |
 | _                    | BLPOP  | BLPOP          |
 | _                    | BRPOP  | BRPOP          |
-| _                    | _      | BRPOPLPUSH     |
+| _                    | BRPOPLPUSH | BRPOPLPUSH (deprecated since 6.2; alias for BLMOVE src dst RIGHT LEFT) |
 | listIndex            | LINDEX | LINDEX         |
 | listInsert           | LINSERT | LINSERT       |
 | listLength           | LLEN   | LLEN           |

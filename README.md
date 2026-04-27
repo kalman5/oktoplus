@@ -12,11 +12,11 @@ If this reminds you of REDIS then you are right, I was inspired by it, however:
  - For instance the Redis command LINDEX is O(n), so if you need to access a value with an index would be better to use a Vector style container
   - There is no analogue of multi-set in Redis
 
-Redis Commands Compatibility (gRPC / RESP)
+Redis Commands Compatibility (RESP)
 
-  - [LISTS](docs/compatibility_lists.md) — 76% / 86% (16 / 18 of 21; BLMPOP / BLMOVE / BRPOPLPUSH TBD)
-  - [SETS](docs/compatibility_sets.md) — 18% / 94% (3 gRPC, 16 RESP of 17)
-  - [STRINGS](docs/compatibility_strings.md) — 0% / 0%
+  - [LISTS](docs/compatibility_lists.md) — 100% (21 / 21)
+  - [SETS](docs/compatibility_sets.md) — 94% (16 / 17)
+  - [STRINGS](docs/compatibility_strings.md) — 0%
 
 **Oktoplus** specific containers (already implemented, see specific documentation)
 
