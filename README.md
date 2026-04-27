@@ -36,6 +36,17 @@ The per-family compatibility tables ([LISTS](docs/compatibility_lists.md), [SETS
 
   - **RESP3 protocol support**: implement `HELLO` for protocol negotiation, gate the per-connection encoder on the negotiated version, swap to the unified `_\r\n` null, and add the new type tags (`#` boolean, `,` double, `(` big number, `=` verbatim string, `~` set, `%` map, `>` push, `|` attribute). Today the server speaks RESP2 only; RESP3-capable clients (e.g. `redis-cli -3`) fall back to RESP2 because `HELLO` returns `ERR unknown command`.
 
+  Memory-footprint roadmap — Redis applies these tricks today and they explain the per-entry overhead gap (3.1× at 3-byte values, shrinking to 1.13× at 1 KiB):
+
+  - **SDS-style strings**: replace `std::string` with a packed length-prefixed buffer (1-byte header for short strings, contiguous with content in one allocation). Cuts the per-value overhead from ~24-32 B (`std::string` header) + separate heap alloc to ~3 B + one alloc.
+  - **embstr encoding**: when a value is ≤44 B, store the `redisObject` header and the SDS in the *same* allocation. One alloc instead of two on the hot path for small values.
+  - **listpack encoding** for small lists / hashes / sets: a single contiguous packed buffer of `[backlen, encoding, content]` entries, no per-entry pointer or header overhead. A 1-element small-value list collapses to a single ~25 B allocation vs our `ProtectedContainer + devector + std::string` chain.
+  - **Quicklist** for large lists: linked list of listpack nodes; per-element overhead amortizes to a few bytes inside a node instead of one heap alloc per element.
+  - **Shared integer objects**: Redis interns the integers 0..9999 as global singletons. `RPUSH foo 42` doesn't allocate; it stores a pointer to the shared "42" object. Big win on numeric workloads.
+  - **Compact dict**: replace `absl::flat_hash_map`'s control-byte + slot layout (fast but high per-bucket overhead) with a 24-byte `dictEntry`-style separate-chaining hash, possibly with incremental rehashing to bound worst-case stalls.
+  - **jemalloc tuning**: set `MALLOC_CONF=narenas:1,oversize_threshold:0,muzzy_decay_ms:0,...` (or bake into a `__malloc_conf` symbol). Default is `narenas = 4 × CPU` so we have ~64 arenas of metadata fan-out vs Redis's one. Directly attacks the post-purge residual we measured for million-allocation workloads.
+  - **Lazy-free + activedefrag**: offload deallocation to a background thread (`UNLINK`, `FLUSHDB ASYNC`) and periodically walk the heap using jemalloc's `je_get_defrag_hint` to migrate live objects out of fragmented slabs. Cuts steady-state retained metadata over time.
+
 Server is multithread, two different clients working on different containers (type or name) have a minimal interaction. For example multiple clients performing a parallel batch insert on different keys can procede in parallel without blocking each other.
 
 #### Benchmarks
