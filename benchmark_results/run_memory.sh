@@ -28,12 +28,16 @@ RAW_DIR=$RESULTS_DIR/raw
 REDIS_PORT=6380
 OKTO_PORT=6379
 
+# Defaults reproduce the PUBLISHED README numbers out of the box.
 KEY_COUNTS=${KEY_COUNTS:-"100000 1000000"}
 VALUE_SIZES=${VALUE_SIZES:-"3 64 256 1024"}
 
 mkdir -p "$RAW_DIR" "$LOG_DIR"
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+CONFIG_LINE="KEY_COUNTS=\"$KEY_COUNTS\" VALUE_SIZES=\"$VALUE_SIZES\""
+log "Config: $CONFIG_LINE"
 
 ensure_okto_config() {
     # Always (re)write the config so a stale cache from an older run
@@ -174,6 +178,7 @@ OUT_CSV="$RAW_DIR/memory.csv"
 OUT_MD="$RESULTS_DIR/memory_results.md"
 
 echo "server,n_keys,value_size_b,baseline_rss_kib,steady_rss_kib,residual_rss_kib,bytes_per_key" > "$OUT_CSV"
+echo "$CONFIG_LINE" > "${OUT_CSV%.csv}.config"
 
 log "Memory footprint sweep — key counts: $KEY_COUNTS, value sizes: $VALUE_SIZES"
 

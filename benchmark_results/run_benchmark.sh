@@ -26,6 +26,13 @@ OKTO_PID=
 
 mkdir -p "$RESULTS_DIR/raw" "$LOG_DIR"
 
+# Effective config -- echoed at startup and stamped next to each CSV
+# so a stray output file is self-describing. Note: the published
+# numbers in the README were generated with the defaults below; if
+# you override anything you are running a different workload.
+CONFIG_LINE="ITERATIONS=$ITERATIONS KEYSPACE=$KEYSPACE LARGE_VALUE_SIZE=$LARGE_VALUE_SIZE"
+echo "[$(date '+%H:%M:%S')] Config: $CONFIG_LINE"
+
 ensure_okto_config() {
     if [ ! -f "$OKTO_CONFIG" ]; then
         cat > "$OKTO_CONFIG" <<EOF
@@ -223,6 +230,7 @@ run_speed_test() {
     log "Speed test: $server_name pipeline=$pipeline"
 
     echo "$CSV_HEADER" > "$outfile"
+    echo "$CONFIG_LINE" > "${outfile%.csv}.config"
 
     flush_server "$port"
 
@@ -258,6 +266,7 @@ run_parallel_test() {
     log "Parallelism test: $server_name clients=$clients"
 
     echo "$CSV_HEADER" > "$outfile"
+    echo "$CONFIG_LINE" > "${outfile%.csv}.config"
 
     flush_server "$port"
 
@@ -301,6 +310,7 @@ run_speed_test_large() {
 
     log "Speed test (large $LARGE_VALUE_SIZE-byte values): $server_name pipeline=$pipeline"
     echo "$CSV_HEADER" > "$outfile"
+    echo "$CONFIG_LINE" > "${outfile%.csv}.config"
 
     flush_server "$port"
 
@@ -349,6 +359,7 @@ run_concurrent_random_test() {
 
     log "Concurrent random-key test: $server_name clients=$clients pipeline=16"
     echo "$CSV_HEADER" > "$outfile"
+    echo "$CONFIG_LINE" > "${outfile%.csv}.config"
 
     flush_server "$port"
 

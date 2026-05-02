@@ -26,17 +26,27 @@ RAW_DIR=$RESULTS_DIR/raw
 REDIS_PORT=6380
 OKTO_PORT=6379
 
-# Sweep parameters.
+# Sweep parameters. Defaults reproduce the PUBLISHED README numbers
+# out of the box -- if you change them, you are running a different
+# workload than what's plotted in the parallelism chart. Override via
+# env vars for variations (e.g. `PIPELINE=1 bash ...` to measure pure
+# concurrency with no batching).
 KEY_COUNTS=${KEY_COUNTS:-"1000"}
-ELEM_COUNTS=${ELEM_COUNTS:-"100 1000"}
+ELEM_COUNTS=${ELEM_COUNTS:-"1000 10000"}
 CONCURRENCIES=${CONCURRENCIES:-"1 4 16 64 128"}
 QUERY_OPS=${QUERY_OPS:-50000}
-PIPELINE=${PIPELINE:-1}            # pure concurrency, no pipelining
+PIPELINE=${PIPELINE:-16}           # 16 batches per round-trip; matches README
 ITERATIONS=${ITERATIONS:-3}
 
 mkdir -p "$RAW_DIR" "$LOG_DIR"
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+# Echo the effective config up front so anyone reading the log sees
+# what was actually measured. Same string also gets stamped into the
+# CSV header so a stray output file is self-describing.
+CONFIG_LINE="KEY_COUNTS=\"$KEY_COUNTS\" ELEM_COUNTS=\"$ELEM_COUNTS\" CONCURRENCIES=\"$CONCURRENCIES\" QUERY_OPS=$QUERY_OPS PIPELINE=$PIPELINE ITERATIONS=$ITERATIONS"
+log "Config: $CONFIG_LINE"
 
 ensure_okto_config() {
     if [ ! -f "$OKTO_CONFIG" ]; then
@@ -154,6 +164,11 @@ run_parallelism_test() {
     start_server "$server"
 
     echo 'K_keys,N_elements,clients,test,rps,avg_latency_ms,min_latency_ms,p50_latency_ms,p95_latency_ms,p99_latency_ms,max_latency_ms' > "$outfile"
+    # Sidecar config stamp -- a stray .csv is always paired with a
+    # .config file describing the workload it came from. Keeps the
+    # CSV itself parseable by csv.DictReader (no leading comment
+    # lines).
+    echo "$CONFIG_LINE" > "${outfile%.csv}.config"
 
     for K in $KEY_COUNTS; do
         for N in $ELEM_COUNTS; do

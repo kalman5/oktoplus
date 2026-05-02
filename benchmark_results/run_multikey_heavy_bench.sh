@@ -24,7 +24,9 @@ RAW_DIR=$RESULTS_DIR/raw
 REDIS_PORT=6380
 OKTO_PORT=6379
 
-# Sweep parameters. Defaults aim for runtimes in the few-minutes range.
+# Sweep parameters. Defaults reproduce the PUBLISHED README numbers
+# out of the box; runtimes land in the few-minutes range. Override
+# via env vars for variations.
 KEY_COUNTS=${KEY_COUNTS:-"10000"}
 ELEM_COUNTS=${ELEM_COUNTS:-"100 1000"}
 CONCURRENCIES=${CONCURRENCIES:-"1 16 64 128"}
@@ -35,6 +37,10 @@ ITERATIONS=${ITERATIONS:-3}
 mkdir -p "$RAW_DIR" "$LOG_DIR"
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+# Effective config -- echoed at startup and stamped next to each CSV.
+CONFIG_LINE="KEY_COUNTS=\"$KEY_COUNTS\" ELEM_COUNTS=\"$ELEM_COUNTS\" CONCURRENCIES=\"$CONCURRENCIES\" QUERY_OPS=$QUERY_OPS PIPELINE=$PIPELINE ITERATIONS=$ITERATIONS"
+log "Config: $CONFIG_LINE"
 
 ensure_okto_config() {
     if [ ! -f "$OKTO_CONFIG" ]; then
@@ -158,6 +164,7 @@ run_multikey_test() {
     start_server "$server"
 
     echo 'K_keys,N_elements,clients,test,rps,avg_latency_ms,min_latency_ms,p50_latency_ms,p95_latency_ms,p99_latency_ms,max_latency_ms' > "$outfile"
+    echo "$CONFIG_LINE" > "${outfile%.csv}.config"
 
     for K in $KEY_COUNTS; do
         for N in $ELEM_COUNTS; do

@@ -24,6 +24,8 @@ RAW_DIR=$RESULTS_DIR/raw
 REDIS_PORT=6380
 OKTO_PORT=6379
 
+# Defaults reproduce the PUBLISHED README numbers out of the box.
+# Override via env vars for variations.
 PLATEAUS=${PLATEAUS:-"1000 10000 100000 1000000"}
 QUERY_OPS=${QUERY_OPS:-50000}     # ops per query test
 ITERATIONS=${ITERATIONS:-3}       # median-of-N for each query test
@@ -32,6 +34,11 @@ PIPELINE=${PIPELINE:-16}
 mkdir -p "$RAW_DIR" "$LOG_DIR"
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+# Effective config -- echoed at startup and stamped next to each CSV
+# so a stray output file is self-describing.
+CONFIG_LINE="PLATEAUS=\"$PLATEAUS\" QUERY_OPS=$QUERY_OPS ITERATIONS=$ITERATIONS PIPELINE=$PIPELINE"
+log "Config: $CONFIG_LINE"
 
 ensure_okto_config() {
     if [ ! -f "$OKTO_CONFIG" ]; then
@@ -143,6 +150,7 @@ run_growth_test() {
     start_server "$server"
 
     echo 'list_size,test,rps,avg_latency_ms,min_latency_ms,p50_latency_ms,p95_latency_ms,p99_latency_ms,max_latency_ms' > "$outfile"
+    echo "$CONFIG_LINE" > "${outfile%.csv}.config"
 
     for plateau in $PLATEAUS; do
         log "  plateau N=$plateau"
