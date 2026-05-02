@@ -1,18 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="880" height="380" viewBox="0 0 880 380" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12">
 <rect width="880" height="380" fill="#ffffff"/>
-<text x="440.0" y="22" text-anchor="middle" fill="#24292f" font-size="15" font-weight="600">LPOS scan on 10K-element lists, multi-key, varying clients (-P 16) — rps (higher is better)</text>
+<text x="440.0" y="22" text-anchor="middle" fill="#24292f" font-size="15" font-weight="600">Server cores saturated during LPOS scan (server_cpu_pct / 100, higher = more parallelism)</text>
 <line x1="70" y1="320.0" x2="860" y2="320.0" stroke="#d0d7de" stroke-width="1"/>
 <text x="62" y="324.0" text-anchor="end" fill="#24292f">0</text>
 <line x1="70" y1="268.0" x2="860" y2="268.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="272.0" text-anchor="end" fill="#24292f">154,929</text>
+<text x="62" y="272.0" text-anchor="end" fill="#24292f">2</text>
 <line x1="70" y1="216.0" x2="860" y2="216.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="220.0" text-anchor="end" fill="#24292f">309,859</text>
+<text x="62" y="220.0" text-anchor="end" fill="#24292f">5</text>
 <line x1="70" y1="163.99999999999997" x2="860" y2="163.99999999999997" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="167.99999999999997" text-anchor="end" fill="#24292f">464,788</text>
-<line x1="70" y1="112.0" x2="860" y2="112.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="116.0" text-anchor="end" fill="#24292f">619,718</text>
+<text x="62" y="167.99999999999997" text-anchor="end" fill="#24292f">8</text>
+<line x1="70" y1="112.00000000000003" x2="860" y2="112.00000000000003" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="116.00000000000003" text-anchor="end" fill="#24292f">11</text>
 <line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="64.0" text-anchor="end" fill="#24292f">774,647</text>
+<text x="62" y="64.0" text-anchor="end" fill="#24292f">13</text>
 <line x1="70" y1="60" x2="70" y2="320" stroke="#57606a" stroke-width="1"/>
 <line x1="70" y1="320" x2="860" y2="320" stroke="#57606a" stroke-width="1"/>
 <text x="70.0" y="338" text-anchor="middle" fill="#24292f">1</text>
@@ -21,18 +21,18 @@
 <text x="662.5" y="338" text-anchor="middle" fill="#24292f">64</text>
 <text x="860.0" y="338" text-anchor="middle" fill="#24292f">128</text>
 <text x="440.0" y="352" text-anchor="middle" fill="#24292f">concurrent clients</text>
-<polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,299.1 267.5,243.0 465.0,99.2 662.5,83.6 860.0,93.2"/>
-<circle cx="70.0" cy="299.1" r="3.5" fill="#3fb950"/>
-<circle cx="267.5" cy="243.0" r="3.5" fill="#3fb950"/>
-<circle cx="465.0" cy="99.2" r="3.5" fill="#3fb950"/>
+<polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,303.2 267.5,255.8 465.0,103.5 662.5,83.6 860.0,170.7"/>
+<circle cx="70.0" cy="303.2" r="3.5" fill="#3fb950"/>
+<circle cx="267.5" cy="255.8" r="3.5" fill="#3fb950"/>
+<circle cx="465.0" cy="103.5" r="3.5" fill="#3fb950"/>
 <circle cx="662.5" cy="83.6" r="3.5" fill="#3fb950"/>
-<circle cx="860.0" cy="93.2" r="3.5" fill="#3fb950"/>
-<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,317.2 267.5,317.1 465.0,317.2 662.5,317.1 860.0,317.1"/>
-<circle cx="70.0" cy="317.2" r="3.5" fill="#f85149"/>
-<circle cx="267.5" cy="317.1" r="3.5" fill="#f85149"/>
-<circle cx="465.0" cy="317.2" r="3.5" fill="#f85149"/>
-<circle cx="662.5" cy="317.1" r="3.5" fill="#f85149"/>
-<circle cx="860.0" cy="317.1" r="3.5" fill="#f85149"/>
+<circle cx="860.0" cy="170.7" r="3.5" fill="#3fb950"/>
+<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,301.5 267.5,301.1 465.0,301.1 662.5,301.1 860.0,301.3"/>
+<circle cx="70.0" cy="301.5" r="3.5" fill="#f85149"/>
+<circle cx="267.5" cy="301.1" r="3.5" fill="#f85149"/>
+<circle cx="465.0" cy="301.1" r="3.5" fill="#f85149"/>
+<circle cx="662.5" cy="301.1" r="3.5" fill="#f85149"/>
+<circle cx="860.0" cy="301.3" r="3.5" fill="#f85149"/>
 <rect x="70" y="361" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="372" fill="#24292f">Oktoplus</text>
 <rect x="230" y="361" width="14" height="14" fill="#f85149"/>

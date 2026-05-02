@@ -681,6 +681,10 @@ def main() -> int:
     if par_okto.exists() and par_redis.exists():
         import csv as _csv
         def _load_par(path):
+            # Returns clients -> (rps, cpu_cores) where cpu_cores =
+            # server_cpu_pct / 100 (i.e. how many full cores were
+            # saturated on average). cpu column is optional -- older
+            # CSVs without it just yield 0.0.
             out = {}
             with path.open() as fh:
                 for row in _csv.DictReader(fh):
@@ -688,14 +692,16 @@ def main() -> int:
                         continue
                     if int(row["N_elements"]) != 10000:
                         continue
-                    out[int(row["clients"])] = float(row["rps"])
+                    cpu_pct = float(row.get("server_cpu_pct") or 0)
+                    out[int(row["clients"])] = (float(row["rps"]),
+                                                cpu_pct / 100.0)
             return out
         po = _load_par(par_okto)
         pr = _load_par(par_redis)
         clients = sorted(set(po) & set(pr))
         if clients:
-            okto_par  = [po[c] for c in clients]
-            redis_par = [pr[c] for c in clients]
+            okto_par  = [po[c][0] for c in clients]
+            redis_par = [pr[c][0] for c in clients]
             line_chart(
                 title=("LPOS scan on 10K-element lists, multi-key, varying "
                        "clients (-P 16) — rps (higher is better)"),
@@ -709,6 +715,30 @@ def main() -> int:
                 out_path=HERE / "chart_parallelism.svg",
             )
             extra_lines.append("chart_parallelism.svg")
+
+            # Companion chart: cores-saturated per concurrency. Same
+            # workload, same axis, but plots `server_cpu_pct / 100`
+            # so the architectural story is visible on a hardware-
+            # independent metric (cores used scales with the design,
+            # not with the host's clock speed). Redis caps near 1
+            # (single-thread); Oktoplus scales with -c.
+            okto_cores  = [po[c][1] for c in clients]
+            redis_cores = [pr[c][1] for c in clients]
+            cores_max = max(max(okto_cores), max(redis_cores)) * 1.10
+            if cores_max > 0:
+                line_chart(
+                    title=("Server cores saturated during LPOS scan "
+                           "(server_cpu_pct / 100, higher = more parallelism)"),
+                    x_values=clients,
+                    series=[
+                        ("Oktoplus", okto_cores,  "#3fb950"),
+                        ("Redis",    redis_cores, "#f85149"),
+                    ],
+                    x_label="concurrent clients",
+                    y_max=cores_max,
+                    out_path=HERE / "chart_parallelism_cpu.svg",
+                )
+                extra_lines.append("chart_parallelism_cpu.svg")
 
     print(
         "wrote chart_p1.svg, chart_p16.svg, chart_p16_d256.svg, "

@@ -55,6 +55,8 @@ A scripted comparison against Redis on the same machine lives at `benchmark_resu
 
 Each `redis-benchmark` invocation runs **N iterations** (env var `ITERATIONS`, default 1; the published numbers below use **N=5**) and the published cell is the **median rps** across them. The harness flags any test whose `max/min > 1.5×` to separate signal from noise: single-run measurements understate random-key throughput because the first iteration pays cold-start costs.
 
+Each per-cell CSV row also carries a trailing **`server_cpu_pct`** column — the average percent CPU the server consumed across the cell's wall-clock window (read from `/proc/<pid>/stat` utime+stime, divided by the cell duration). Values >100% mean multi-core utilisation: e.g. 1300% = 13 full cores saturated. The companion `chart_parallelism_cpu.svg` plots cores-saturated vs concurrency directly so the architectural "Redis pinned at 1 core; Oktoplus scales with -c" story is visible on a hardware-independent metric. Each CSV is also paired with a `*.config` sidecar describing the exact env-var values that produced it (defaults reproduce the published numbers).
+
 Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffast-math -fno-semantic-interposition -funroll-loops`, linked against `jemalloc` (see `OKTOPLUS_WITH_JEMALLOC` in CMake). Workload: 100k ops/iteration, 100k key-space, single client unless stated otherwise.
 
 > Charts are generated from `benchmark_results/raw/*.csv` by `benchmark_results/make_chart.py` (no dependencies — pure-stdlib Python emitting SVG + HTML).
@@ -128,15 +130,19 @@ Random-key push/pop workloads at `-c 100 -P 16` saturate around ~1M rps for both
 
 ![LPOS scan on 10K-element lists, varying clients (-P 16)](benchmark_results/chart_parallelism.svg)
 
-`LPOS key:__rand_int__ NEVER_PRESENT` against 1000 pre-populated keys, each holding 10,000 distinct elements (`-P 16`):
+`LPOS key:__rand_int__ NEVER_PRESENT` against 1000 pre-populated keys, each holding 10,000 distinct elements (`-P 16`). The `cores` columns are `server_cpu_pct / 100` averaged over the cell — i.e. how many full CPU cores the server saturated:
 
-| Clients | Oktoplus rps | Redis rps | Okto / Redis |
-|--------:|-------------:|----------:|-------------:|
-|       1 |       62,893 |     8,396 |    **7.5×**  |
-|       4 |      238,095 |     8,624 |   **27.6×**  |
-|      16 |      555,556 |     8,780 |   **63.3×**  |
-|      64 |      540,541 |     8,692 |   **62.2×**  |
-|     128 |      645,161 |     8,493 |   **76.0×**  |
+| Clients | Oktoplus rps | Okto cores | Redis rps | Redis cores | Okto / Redis |
+|--------:|-------------:|-----------:|----------:|------------:|-------------:|
+|       1 |       62,893 |       0.9  |     8,396 |        1.0  |    **7.5×**  |
+|       4 |      238,095 |       3.4  |     8,624 |        1.0  |   **27.6×**  |
+|      16 |      555,556 |      12.3  |     8,780 |        1.0  |   **63.3×**  |
+|      64 |      540,541 |      13.2  |     8,692 |        1.0  |   **62.2×**  |
+|     128 |      645,161 |       8.6  |     8,493 |        1.0  |   **76.0×**  |
+
+The cores column makes the architectural difference unambiguous on a hardware-independent metric: Redis is pinned at one core (single-threaded execution), Oktoplus scales with `-c` until it saturates the available cores. The `cores`-vs-clients curve is plotted separately at `chart_parallelism_cpu.svg` so the architecture story is visible without needing the absolute throughput axis:
+
+![Server cores saturated during LPOS scan](benchmark_results/chart_parallelism_cpu.svg)
 
 Bench script: `benchmark_results/run_parallelism_advantage_bench.sh`. The same workload at smaller `N=1000` (10× shorter scans) reaches ~13× at `-c 128`; at smaller `-P 1` the network RTT eats most of the per-command CPU advantage and the ratio collapses to ~1.5×.
 
