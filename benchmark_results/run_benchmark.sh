@@ -171,7 +171,39 @@ aggregate() {
     python3 "$RESULTS_DIR/bench_aggregate.py"
 }
 
-run_bench() {
+# Resolve a TCP port to the owning PID. We need this because run_*
+# helpers below take a port (the server they hit) and then need the
+# server's PID to sample its CPU during the bench.
+CLK_TCK=$(getconf CLK_TCK)
+pid_for_port() {
+    case $1 in
+      "$REDIS_PORT") echo "$REDIS_PID" ;;
+      "$OKTO_PORT")  echo "$OKTO_PID" ;;
+      *) echo "" ;;
+    esac
+}
+cpu_ticks() {
+    [ -n "$1" ] && [ -e "/proc/$1/stat" ] || { echo 0; return; }
+    awk '{print $14 + $15}' "/proc/$1/stat" 2>/dev/null || echo 0
+}
+# Wrap any bench command with CPU sampling around it. The wrapped
+# command must emit ONE CSV line on stdout; the wrapper appends the
+# server's avg %CPU during the call window as a trailing column.
+sample_cpu() {
+    local port=$1; shift
+    local pid cb ws result we ca cpu
+    pid=$(pid_for_port "$port")
+    cb=$(cpu_ticks "$pid")
+    ws=$(date +%s.%N)
+    result=$("$@")
+    we=$(date +%s.%N)
+    ca=$(cpu_ticks "$pid")
+    cpu=$(awk -v cb="$cb" -v ca="$ca" -v ws="$ws" -v we="$we" -v t="$CLK_TCK" \
+              'BEGIN { dt = we - ws; if (dt > 0 && t > 0) printf "%.0f", (ca - cb) / t / dt * 100; else print 0 }')
+    echo "$result" | tr -d '\r' | awk -v cpu="$cpu" -F',' '{print $0 "," cpu}'
+}
+
+_run_bench() {
     local port=$1
     local clients=$2
     local pipeline=$3
@@ -183,8 +215,11 @@ run_bench() {
         done
     } | aggregate
 }
+run_bench() {
+    sample_cpu "$1" _run_bench "$@"
+}
 
-run_builtin_bench() {
+_run_builtin_bench() {
     local port=$1
     local clients=$2
     local pipeline=$3
@@ -196,10 +231,13 @@ run_builtin_bench() {
         done
     } | aggregate
 }
+run_builtin_bench() {
+    sample_cpu "$1" _run_builtin_bench "$@"
+}
 
 # Same as run_builtin_bench but with -d <size>, which tells redis-benchmark
 # to pad the built-in test value to <size> bytes.
-run_builtin_bench_d() {
+_run_builtin_bench_d() {
     local port=$1
     local clients=$2
     local pipeline=$3
@@ -212,8 +250,11 @@ run_builtin_bench_d() {
         done
     } | aggregate
 }
+run_builtin_bench_d() {
+    sample_cpu "$1" _run_builtin_bench_d "$@"
+}
 
-CSV_HEADER='"test","rps","avg_latency_ms","min_latency_ms","p50_latency_ms","p95_latency_ms","p99_latency_ms","max_latency_ms"'
+CSV_HEADER='"test","rps","avg_latency_ms","min_latency_ms","p50_latency_ms","p95_latency_ms","p99_latency_ms","max_latency_ms","server_cpu_pct"'
 
 # --- Bring up servers ---
 

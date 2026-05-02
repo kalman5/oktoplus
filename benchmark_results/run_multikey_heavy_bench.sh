@@ -117,6 +117,12 @@ trap stop_server EXIT INT TERM
 extract_data_rows() { grep -v '^"test"' || true; }
 aggregate() { python3 "$RESULTS_DIR/bench_aggregate.py"; }
 
+CLK_TCK=$(getconf CLK_TCK)
+cpu_ticks() {
+    [ -e "/proc/$1/stat" ] || { echo 0; return; }
+    awk '{print $14 + $15}' "/proc/$1/stat" 2>/dev/null || echo 0
+}
+
 # Deterministic K x N populate via redis-cli --pipe.
 #
 # Keys are written zero-padded to 12 digits so they match
@@ -139,20 +145,27 @@ populate() {
 # times, emit one row prefixed with (K, N, clients, test_label).
 run_op() {
     local K=$1 N=$2 C=$3 label=$4; shift 4
-    local agg_csv
+    local cpu_before wall_start agg_csv wall_end cpu_after cpu_pct
+    cpu_before=$(cpu_ticks "$SERVER_PID")
+    wall_start=$(date +%s.%N)
     agg_csv=$(
         {
             for i in $(seq 1 "$ITERATIONS"); do
                 $BENCH -h 127.0.0.1 -p "$SERVER_PORT" -c "$C" -P "$PIPELINE" --csv \
                     -n "$QUERY_OPS" -r "$K" "$@" 2>/dev/null | extract_data_rows
             done
-        } | aggregate 2>/dev/null
+        } | aggregate 2>/dev/null | tr -d '\r'
     )
-    echo "$agg_csv" | awk -F',' -v K="$K" -v N="$N" -v C="$C" -v lbl="$label" '
+    wall_end=$(date +%s.%N)
+    cpu_after=$(cpu_ticks "$SERVER_PID")
+    cpu_pct=$(awk -v cb="$cpu_before" -v ca="$cpu_after" \
+                  -v ws="$wall_start" -v we="$wall_end" -v t="$CLK_TCK" \
+                  'BEGIN { dt = we - ws; if (dt > 0 && t > 0) printf "%.0f", (ca - cb) / t / dt * 100; else print 0 }')
+    echo "$agg_csv" | awk -F',' -v K="$K" -v N="$N" -v C="$C" -v lbl="$label" -v cpu="$cpu_pct" '
         {
             printf "%d,%d,%d,\"%s\"", K, N, C, lbl
             for (i=2; i<=NF; i++) printf ",%s", $i
-            printf "\n"
+            printf ",%s\n", cpu
         }'
 }
 
@@ -163,7 +176,7 @@ run_multikey_test() {
     log "Multi-key heavy test: $server"
     start_server "$server"
 
-    echo 'K_keys,N_elements,clients,test,rps,avg_latency_ms,min_latency_ms,p50_latency_ms,p95_latency_ms,p99_latency_ms,max_latency_ms' > "$outfile"
+    echo 'K_keys,N_elements,clients,test,rps,avg_latency_ms,min_latency_ms,p50_latency_ms,p95_latency_ms,p99_latency_ms,max_latency_ms,server_cpu_pct' > "$outfile"
     echo "$CONFIG_LINE" > "${outfile%.csv}.config"
 
     for K in $KEY_COUNTS; do

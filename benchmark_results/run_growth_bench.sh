@@ -115,30 +115,41 @@ trap stop_server EXIT INT TERM
 extract_data_rows() { grep -v '^"test"' || true; }
 aggregate() { python3 "$RESULTS_DIR/bench_aggregate.py"; }
 
+# Read combined utime+stime in clock ticks for a PID.
+CLK_TCK=$(getconf CLK_TCK)
+cpu_ticks() {
+    [ -e "/proc/$1/stat" ] || { echo 0; return; }
+    awk '{print $14 + $15}' "/proc/$1/stat" 2>/dev/null || echo 0
+}
+
 # Run a single (already-pipelined) command N_ITER times, emit the
-# aggregated median row prefixed with the list size. Output goes to
-# stdout in our enriched CSV format.
+# aggregated median row prefixed with the list size + the server's
+# average %CPU during the call window. Output goes to stdout in our
+# enriched CSV format.
 run_op() {
     local list_size=$1; shift
     local op_label=$1; shift
-    # Remaining args are passed straight to redis-benchmark.
-    local agg_csv
+    local cpu_before wall_start agg_csv wall_end cpu_after cpu_pct
+    cpu_before=$(cpu_ticks "$SERVER_PID")
+    wall_start=$(date +%s.%N)
     agg_csv=$(
         {
             for i in $(seq 1 "$ITERATIONS"); do
                 $BENCH -h 127.0.0.1 -p "$SERVER_PORT" -P "$PIPELINE" --csv "$@" \
                     2>/dev/null | extract_data_rows
             done
-        } | aggregate 2>/dev/null
+        } | aggregate 2>/dev/null | tr -d '\r'
     )
-    # agg_csv is one row: "test","rps","avg",...
-    # Prepend list_size and replace the test name with our explicit label.
-    echo "$agg_csv" | awk -F',' -v sz="$list_size" -v lbl="$op_label" '
+    wall_end=$(date +%s.%N)
+    cpu_after=$(cpu_ticks "$SERVER_PID")
+    cpu_pct=$(awk -v cb="$cpu_before" -v ca="$cpu_after" \
+                  -v ws="$wall_start" -v we="$wall_end" -v t="$CLK_TCK" \
+                  'BEGIN { dt = we - ws; if (dt > 0 && t > 0) printf "%.0f", (ca - cb) / t / dt * 100; else print 0 }')
+    echo "$agg_csv" | awk -F',' -v sz="$list_size" -v lbl="$op_label" -v cpu="$cpu_pct" '
         {
-            # rebuild row: list_size, label, rest of columns from index 2
             printf "%d,\"%s\"", sz, lbl
             for (i=2; i<=NF; i++) printf ",%s", $i
-            printf "\n"
+            printf ",%s\n", cpu
         }'
 }
 
@@ -149,7 +160,7 @@ run_growth_test() {
     log "Growth test: $server"
     start_server "$server"
 
-    echo 'list_size,test,rps,avg_latency_ms,min_latency_ms,p50_latency_ms,p95_latency_ms,p99_latency_ms,max_latency_ms' > "$outfile"
+    echo 'list_size,test,rps,avg_latency_ms,min_latency_ms,p50_latency_ms,p95_latency_ms,p99_latency_ms,max_latency_ms,server_cpu_pct' > "$outfile"
     echo "$CONFIG_LINE" > "${outfile%.csv}.config"
 
     for plateau in $PLATEAUS; do
