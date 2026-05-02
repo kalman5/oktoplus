@@ -815,6 +815,32 @@ def main() -> int:
                 )
                 extra_lines.append("chart_parallelism_cpu.svg")
 
+            # Efficiency: rps per core saturated. Reveals per-core
+            # algorithmic cost. Redis (single-threaded) stays ~flat
+            # at its single-core ceiling. Oktoplus dropping with -c
+            # means lock contention is eating worker threads;
+            # Oktoplus rising with -c means the workload still has
+            # parallelism slack the design is exploiting.
+            def _safe(rps, cores):
+                return (rps / cores) if cores > 0 else 0
+            okto_rps_per_core  = [_safe(po[c][0], po[c][1]) for c in clients]
+            redis_rps_per_core = [_safe(pr[c][0], pr[c][1]) for c in clients]
+            eff_max = max(max(okto_rps_per_core), max(redis_rps_per_core)) * 1.10
+            if eff_max > 0:
+                line_chart(
+                    title=("Per-core efficiency during LPOS scan — "
+                           "rps / cores_saturated (higher is better)"),
+                    x_values=clients,
+                    series=[
+                        ("Oktoplus", okto_rps_per_core,  "#3fb950"),
+                        ("Redis",    redis_rps_per_core, "#f85149"),
+                    ],
+                    x_label="concurrent clients",
+                    y_max=eff_max,
+                    out_path=HERE / "chart_parallelism_rps_per_core.svg",
+                )
+                extra_lines.append("chart_parallelism_rps_per_core.svg")
+
     print(
         "wrote chart_p1.svg, chart_p16.svg, chart_p16_d256.svg, "
         "chart_concurrency.svg, chart_concurrency_random.svg, report.html"

@@ -144,6 +144,22 @@ The cores column makes the architectural difference unambiguous on a hardware-in
 
 ![Server cores saturated during LPOS scan](benchmark_results/chart_parallelism_cpu.svg)
 
+##### Per-core efficiency (rps / cores saturated)
+
+Total rps depends on both *how many cores* the design can saturate **and** *how much each core gets done*. Dividing rps by the cores actually saturated isolates the per-core efficiency:
+
+![Per-core efficiency during LPOS scan](benchmark_results/chart_parallelism_rps_per_core.svg)
+
+| Clients | Okto rps/core | Redis rps/core | Okto / Redis |
+|--------:|--------------:|---------------:|-------------:|
+|       1 |        69,875 |          8,540 |    **8.18×** |
+|       4 |        67,458 |          8,610 |    **7.83×** |
+|      16 |        57,358 |          8,459 |    **6.78×** |
+|      64 |        56,248 |          8,541 |    **6.59×** |
+|     128 |        85,420 |          8,791 |    **9.72×** |
+
+So Oktoplus delivers **~7-10× more rps per saturated core** than Redis on this CPU-heavy workload. The parallelism advantage (cores used) and the per-core advantage (algorithmic / data-structure cost per call) compose: ~12× more cores × ~7× per core ≈ the ~76× total ratio observed at `-c 128`. The per-core efficiency dipping slightly from 70K (`-c 1`) to 56K (`-c 16-64`) is the cost of cross-core coordination; it bounces back at `-c 128` once each core has enough pipelined work to amortise its overhead.
+
 Bench script: `benchmark_results/run_parallelism_advantage_bench.sh`. The same workload at smaller `N=1000` (10× shorter scans) reaches ~13× at `-c 128`; at smaller `-P 1` the network RTT eats most of the per-command CPU advantage and the ratio collapses to ~1.5×.
 
 ##### Single client, pipelined (`-P 16`), 256-byte values
