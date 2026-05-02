@@ -38,6 +38,28 @@ def read_rps(path: pathlib.Path) -> dict[str, float]:
     return out
 
 
+def read_cpu_pct(path: pathlib.Path) -> dict[str, float]:
+    """Map test name -> server_cpu_pct (last column).
+
+    Returns an empty dict if the CSV doesn't carry the column (older
+    files written before the CPU instrumentation landed). Callers
+    should treat a missing entry as "no annotation available" rather
+    than 0%.
+    """
+    out: dict[str, float] = {}
+    with path.open() as f:
+        reader = csv.DictReader(f)
+        if "server_cpu_pct" not in (reader.fieldnames or []):
+            return out
+        for row in reader:
+            test = row.get("test", "").strip()
+            try:
+                out[test] = float(row["server_cpu_pct"])
+            except (TypeError, ValueError):
+                continue
+    return out
+
+
 def short_name(test: str) -> str:
     """Strip redis-benchmark's verbose annotations to a short label.
 
@@ -204,6 +226,12 @@ def line_chart(
     x_label: str,
     y_max: float,
     out_path: pathlib.Path,
+    # Optional per-point text annotations, parallel to `series`. One
+    # list of label strings per series; len(labels) == len(y_values).
+    # Rendered slightly offset from each data point in the series'
+    # color so the annotation is unambiguously associated with its
+    # line. Used to surface the per-cell server CPU% alongside rps.
+    point_labels: list[list[str]] | None = None,
 ) -> None:
     width, height = 880, 380
     margin_l, margin_r, margin_t, margin_b = 70, 20, 60, 60
@@ -253,7 +281,7 @@ def line_chart(
         f'fill="{TEXT}">{x_label}</text>'
     )
 
-    for label, ys, color in series:
+    for si, (label, ys, color) in enumerate(series):
         pts = []
         for i, yv in enumerate(ys):
             y = margin_t + plot_h - (yv / y_max) * plot_h
@@ -267,6 +295,21 @@ def line_chart(
             parts.append(
                 f'<circle cx="{xs[i]:.1f}" cy="{y:.1f}" r="3.5" fill="{color}"/>'
             )
+        # Optional per-point text labels (e.g. server CPU%). Stacked
+        # above (Oktoplus, even index) or below (Redis, odd index)
+        # the data point so the two series' annotations don't overlap.
+        if point_labels and si < len(point_labels):
+            labels = point_labels[si]
+            dy = -10 if (si % 2 == 0) else 18  # above for first series, below for second
+            for i, lbl in enumerate(labels):
+                if i >= len(ys) or not lbl:
+                    continue
+                y = margin_t + plot_h - (ys[i] / y_max) * plot_h
+                parts.append(
+                    f'<text x="{xs[i]:.1f}" y="{y + dy:.1f}" '
+                    f'text-anchor="middle" fill="{color}" font-size="10" '
+                    f'font-weight="600">{lbl}</text>'
+                )
 
     legend_y = height - 8
     for si, (label, _, color) in enumerate(series):
@@ -448,12 +491,16 @@ def main() -> int:
     # Concurrency sweep on LPUSH (hot key).
     concurrencies = [1, 10, 50, 100, 200]
     okto_lpush, redis_lpush = [], []
+    okto_cpu, redis_cpu = [], []
     for c in concurrencies:
         okto_lpush.append(read_rps(RAW / f"parallel_oktoplus_c{c}.csv")["LPUSH"])
         redis_lpush.append(read_rps(RAW / f"parallel_redis_c{c}.csv")["LPUSH"])
+        okto_cpu.append(read_cpu_pct(RAW / f"parallel_oktoplus_c{c}.csv").get("LPUSH", 0))
+        redis_cpu.append(read_cpu_pct(RAW / f"parallel_redis_c{c}.csv").get("LPUSH", 0))
 
     line_chart(
-        title="LPUSH (hot key, fixed name), varying clients (-P 1) — rps (higher is better)",
+        title=("LPUSH (hot key, fixed name), varying clients (-P 1) — "
+               "rps (higher is better; labels = CPU cores saturated)"),
         x_values=concurrencies,
         series=[
             ("Oktoplus", okto_lpush, "#3fb950"),
@@ -462,12 +509,18 @@ def main() -> int:
         x_label="concurrent clients",
         y_max=max(max(okto_lpush), max(redis_lpush)) * 1.10,
         out_path=HERE / "chart_concurrency.svg",
+        point_labels=(
+            [[f"{c/100:.1f} cores" if c else "" for c in okto_cpu],
+             [f"{c/100:.1f} cores" if c else "" for c in redis_cpu]]
+            if any(okto_cpu + redis_cpu) else None
+        ),
     )
 
     # Concurrent + pipelined + random key scaling chart, on RPUSH.
     # Optional — only emit if the CSVs from PART 4 exist.
     rand_concurrencies = [10, 50, 100, 200]
     okto_rand_rpush, redis_rand_rpush = [], []
+    okto_rand_cpu, redis_rand_cpu = [], []
     have_rand = True
     for c in rand_concurrencies:
         okto_path = RAW / f"concurrent_random_oktoplus_c{c}_p16.csv"
@@ -477,9 +530,17 @@ def main() -> int:
             break
         okto_rand_rpush.append(lookup(read_rps(okto_path), "RPUSH "))
         redis_rand_rpush.append(lookup(read_rps(redis_path), "RPUSH "))
+        # CPU annotation: same prefix-based lookup as the rps lines.
+        okto_cpu_d = read_cpu_pct(okto_path)
+        redis_cpu_d = read_cpu_pct(redis_path)
+        try:    okto_rand_cpu.append(lookup(okto_cpu_d, "RPUSH "))
+        except KeyError: okto_rand_cpu.append(0)
+        try:    redis_rand_cpu.append(lookup(redis_cpu_d, "RPUSH "))
+        except KeyError: redis_rand_cpu.append(0)
     if have_rand:
         line_chart(
-            title="RPUSH (random key, -P 16), varying clients — rps (higher is better)",
+            title=("RPUSH (random key, -P 16), varying clients — "
+                   "rps (higher is better; labels = CPU cores saturated)"),
             x_values=rand_concurrencies,
             series=[
                 ("Oktoplus", okto_rand_rpush, "#3fb950"),
@@ -488,6 +549,11 @@ def main() -> int:
             x_label="concurrent clients",
             y_max=max(max(okto_rand_rpush), max(redis_rand_rpush)) * 1.10,
             out_path=HERE / "chart_concurrency_random.svg",
+            point_labels=(
+                [[f"{c/100:.1f} cores" if c else "" for c in okto_rand_cpu],
+                 [f"{c/100:.1f} cores" if c else "" for c in redis_rand_cpu]]
+                if any(okto_rand_cpu + redis_rand_cpu) else None
+            ),
         )
 
     # Large-value (-d 256) speed test, same shape as p16 but the value
@@ -702,9 +768,17 @@ def main() -> int:
         if clients:
             okto_par  = [po[c][0] for c in clients]
             redis_par = [pr[c][0] for c in clients]
+            # Per-point CPU labels in "N cores" format (rounded to 1
+            # decimal). Surfaces the architectural story directly on
+            # the throughput chart -- you can see e.g. "12.3 cores"
+            # under each Oktoplus point and "1.0 core" under each
+            # Redis point.
+            okto_labels  = [f"{po[c][1]:.1f} cores" for c in clients]
+            redis_labels = [f"{pr[c][1]:.1f} cores" for c in clients]
             line_chart(
                 title=("LPOS scan on 10K-element lists, multi-key, varying "
-                       "clients (-P 16) — rps (higher is better)"),
+                       "clients (-P 16) — rps (higher is better; "
+                       "labels = CPU cores saturated)"),
                 x_values=clients,
                 series=[
                     ("Oktoplus", okto_par,  "#3fb950"),
@@ -713,6 +787,7 @@ def main() -> int:
                 x_label="concurrent clients",
                 y_max=max(max(okto_par), max(redis_par)) * 1.10,
                 out_path=HERE / "chart_parallelism.svg",
+                point_labels=[okto_labels, redis_labels],
             )
             extra_lines.append("chart_parallelism.svg")
 

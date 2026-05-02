@@ -1,10 +1,10 @@
-"test","rps","avg_latency_ms","min_latency_ms","p50_latency_ms","p95_latency_ms","p99_latency_ms","max_latency_ms"
-"LPUSH","30413.62","0.03","0.01","0.03","0.04","0.05","4.17"
-"SADD","30432.14","0.03","0.01","0.03","0.04","0.05","0.77"
-"LPUSH (needed to benchmark LRANGE)","31289.11","0.03","0.01","0.03","0.04","0.05","0.86"
-"LRANGE_100 (first 100 elements)","20794.34","0.04","0.02","0.04","0.05","0.06","1.01"
-"RPUSH mylist__rand_int__ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","31347.96","0.03","0.01","0.03","0.04","0.05","0.78"
-"LPOP mylist__rand_int__","30969.34","0.03","0.01","0.03","0.04","0.05","0.72"
-"RPOP mylist__rand_int__","31836.99","0.03","0.01","0.03","0.04","0.05","0.99"
-"LLEN mylist__rand_int__","32123.36","0.03","0.01","0.03","0.04","0.05","0.78"
-"SCARD myset__rand_int__","31959.09","0.03","0.01","0.03","0.04","0.05","0.85"
+"test","rps","avg_latency_ms","min_latency_ms","p50_latency_ms","p95_latency_ms","p99_latency_ms","max_latency_ms","server_cpu_pct"
+"LPUSH","30703.10","0.03","0.01","0.03","0.04","0.05","0.88",50
+"SADD","30312.21","0.03","0.01","0.03","0.04","0.05","5.71",50
+"LPUSH (needed to benchmark LRANGE)","31387.32","0.03","0.01","0.03","0.04","0.05","2.20",50
+"LRANGE_100 (first 100 elements)","20973.15","0.04","0.02","0.04","0.05","0.06","1.04",50
+"RPUSH mylist__rand_int__ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","31535.79","0.03","0.01","0.03","0.04","0.05","0.79",52
+"LPOP mylist__rand_int__","29274.01","0.03","0.02","0.03","0.04","0.05","0.84",51
+"RPOP mylist__rand_int__","30349.01","0.03","0.01","0.03","0.04","0.05","0.66",51
+"LLEN mylist__rand_int__","31347.96","0.03","0.01","0.03","0.04","0.05","0.85",51
+"SCARD myset__rand_int__","32372.94","0.03","0.01","0.03","0.04","0.05","0.64",51

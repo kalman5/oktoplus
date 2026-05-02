@@ -1,18 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="880" height="380" viewBox="0 0 880 380" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12">
 <rect width="880" height="380" fill="#ffffff"/>
-<text x="440.0" y="22" text-anchor="middle" fill="#24292f" font-size="15" font-weight="600">LPUSH (hot key, fixed name), varying clients (-P 1) — rps (higher is better)</text>
+<text x="440.0" y="22" text-anchor="middle" fill="#24292f" font-size="15" font-weight="600">LPUSH (hot key, fixed name), varying clients (-P 1) — rps (higher is better; labels = CPU cores saturated)</text>
 <line x1="70" y1="320.0" x2="860" y2="320.0" stroke="#d0d7de" stroke-width="1"/>
 <text x="62" y="324.0" text-anchor="end" fill="#24292f">0</text>
 <line x1="70" y1="268.0" x2="860" y2="268.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="272.0" text-anchor="end" fill="#24292f">18,487</text>
+<text x="62" y="272.0" text-anchor="end" fill="#24292f">22,110</text>
 <line x1="70" y1="216.0" x2="860" y2="216.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="220.0" text-anchor="end" fill="#24292f">36,974</text>
+<text x="62" y="220.0" text-anchor="end" fill="#24292f">44,221</text>
 <line x1="70" y1="164.0" x2="860" y2="164.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="168.0" text-anchor="end" fill="#24292f">55,462</text>
-<line x1="70" y1="112.0" x2="860" y2="112.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="116.0" text-anchor="end" fill="#24292f">73,949</text>
-<line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="64.0" text-anchor="end" fill="#24292f">92,436</text>
+<text x="62" y="168.0" text-anchor="end" fill="#24292f">66,331</text>
+<line x1="70" y1="112.00000000000003" x2="860" y2="112.00000000000003" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="116.00000000000003" text-anchor="end" fill="#24292f">88,442</text>
+<line x1="70" y1="59.99999999999994" x2="860" y2="59.99999999999994" stroke="#d0d7de" stroke-width="1"/>
+<text x="62" y="63.99999999999994" text-anchor="end" fill="#24292f">110,552</text>
 <line x1="70" y1="60" x2="70" y2="320" stroke="#57606a" stroke-width="1"/>
 <line x1="70" y1="320" x2="860" y2="320" stroke="#57606a" stroke-width="1"/>
 <text x="70.0" y="338" text-anchor="middle" fill="#24292f">1</text>
@@ -21,18 +21,28 @@
 <text x="662.5" y="338" text-anchor="middle" fill="#24292f">100</text>
 <text x="860.0" y="338" text-anchor="middle" fill="#24292f">200</text>
 <text x="440.0" y="352" text-anchor="middle" fill="#24292f">concurrent clients</text>
-<polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,230.0 267.5,126.2 465.0,108.8 662.5,109.2 860.0,112.0"/>
-<circle cx="70.0" cy="230.0" r="3.5" fill="#3fb950"/>
-<circle cx="267.5" cy="126.2" r="3.5" fill="#3fb950"/>
-<circle cx="465.0" cy="108.8" r="3.5" fill="#3fb950"/>
-<circle cx="662.5" cy="109.2" r="3.5" fill="#3fb950"/>
-<circle cx="860.0" cy="112.0" r="3.5" fill="#3fb950"/>
-<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,235.5 267.5,92.2 465.0,83.6 662.5,86.0 860.0,85.6"/>
-<circle cx="70.0" cy="235.5" r="3.5" fill="#f85149"/>
-<circle cx="267.5" cy="92.2" r="3.5" fill="#f85149"/>
+<polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,248.1 267.5,155.9 465.0,143.8 662.5,148.0 860.0,156.7"/>
+<circle cx="70.0" cy="248.1" r="3.5" fill="#3fb950"/>
+<circle cx="267.5" cy="155.9" r="3.5" fill="#3fb950"/>
+<circle cx="465.0" cy="143.8" r="3.5" fill="#3fb950"/>
+<circle cx="662.5" cy="148.0" r="3.5" fill="#3fb950"/>
+<circle cx="860.0" cy="156.7" r="3.5" fill="#3fb950"/>
+<text x="70.0" y="238.1" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">0.5 cores</text>
+<text x="267.5" y="145.9" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">1.2 cores</text>
+<text x="465.0" y="133.8" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">1.1 cores</text>
+<text x="662.5" y="138.0" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">1.1 cores</text>
+<text x="860.0" y="146.7" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">1.1 cores</text>
+<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,250.7 267.5,120.0 465.0,83.6 662.5,135.7 860.0,123.0"/>
+<circle cx="70.0" cy="250.7" r="3.5" fill="#f85149"/>
+<circle cx="267.5" cy="120.0" r="3.5" fill="#f85149"/>
 <circle cx="465.0" cy="83.6" r="3.5" fill="#f85149"/>
-<circle cx="662.5" cy="86.0" r="3.5" fill="#f85149"/>
-<circle cx="860.0" cy="85.6" r="3.5" fill="#f85149"/>
+<circle cx="662.5" cy="135.7" r="3.5" fill="#f85149"/>
+<circle cx="860.0" cy="123.0" r="3.5" fill="#f85149"/>
+<text x="70.0" y="268.7" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.5 cores</text>
+<text x="267.5" y="138.0" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.9 cores</text>
+<text x="465.0" y="101.6" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.9 cores</text>
+<text x="662.5" y="153.7" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.8 cores</text>
+<text x="860.0" y="141.0" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.8 cores</text>
 <rect x="70" y="361" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="372" fill="#24292f">Oktoplus</text>
 <rect x="230" y="361" width="14" height="14" fill="#f85149"/>

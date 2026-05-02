@@ -1,7 +1,7 @@
-"test","rps","avg_latency_ms","min_latency_ms","p50_latency_ms","p95_latency_ms","p99_latency_ms","max_latency_ms"
-"RPUSH mylist__rand_int__ val","854700.88","3.30","1.29","3.18","4.42","4.97","5.85"
-"LPOP mylist__rand_int__","877193.00","3.17","1.28","3.06","4.25","4.70","5.49"
-"RPOP mylist__rand_int__","1204819.38","2.24","1.10","2.12","3.24","4.05","4.76"
-"LLEN mylist__rand_int__","1111111.12","2.41","1.10","2.33","3.31","3.77","4.19"
-"SADD myset__rand_int__ val","952381.00","2.92","1.27","2.79","3.97","4.39","4.87"
-"SCARD myset__rand_int__","1204819.38","2.29","1.11","2.17","3.09","3.58","4.52"
+"test","rps","avg_latency_ms","min_latency_ms","p50_latency_ms","p95_latency_ms","p99_latency_ms","max_latency_ms","server_cpu_pct"
+"RPUSH mylist__rand_int__ val","840336.12","3.38","1.34","3.25","4.66","5.36","6.51",40
+"LPOP mylist__rand_int__","900900.88","3.13","1.40","2.98","4.25","4.80","5.97",38
+"RPOP mylist__rand_int__","1162790.62","2.36","1.08","2.26","3.19","3.52","4.20",34
+"LLEN mylist__rand_int__","1075268.75","2.45","1.10","2.41","3.45","3.90","4.38",33
+"SADD myset__rand_int__ val","806451.62","3.52","1.30","3.41","4.85","5.35","6.14",40
+"SCARD myset__rand_int__","1030927.81","2.64","1.34","2.54","3.60","4.02","4.42",37
