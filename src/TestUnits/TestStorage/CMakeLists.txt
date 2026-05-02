@@ -1,4 +1,5 @@
 add_library (testunit_teststorage SHARED
+  testokt_string.cpp
   testsequencecontainer.cpp
   testsets.cpp
   teststorageconcurrency.cpp

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Storage/genericcontainer.h"
+#include "Storage/okt_string.h"
 
 #include "Support/noncopyable.h"
 
@@ -160,7 +161,14 @@ class SequenceContainer : public GenericContainer<CONTAINER>
 // `theStorage.lists`, a `DequePushBack foo v` populates
 // `theStorage.deques`. The names denote the *namespace*, not a
 // distinct backing implementation.
-using Lists   = SequenceContainer<boost::container::devector<std::string>>;
+// Lists slots use okt_string (16 B, vs std::string's 32 B in
+// libstdc++) to halve per-slot framework overhead. The std::string
+// API surface SequenceContainer needs is supported via okt_string's
+// string_view ctor / operator==/= and the into_std_string() helper
+// at the public API boundary.
+using Lists   = SequenceContainer<boost::container::devector<okt_string>>;
+// Deques and Vectors keep std::string for now -- the same template
+// instantiates for both value types; flipping these is a follow-on.
 using Deques  = SequenceContainer<boost::container::devector<std::string>>;
 using Vectors = SequenceContainer<std::vector<std::string>>;
 
@@ -181,12 +189,16 @@ size_t SequenceContainer<CONTAINER>::pushFront(
       },
       // Drain helpers: pop preferred end, return value (or nullopt
       // if container is now empty). Called once per waiter.
+      // Uses `auto` for the slot's value_type so the same lambda
+      // works for std::string-backed (Vectors / Deques) and
+      // okt_string-backed (Lists) containers; into_std_string
+      // converts at the std::optional<std::string> boundary.
       [](Container& aContainer) -> std::optional<std::string> {
         if (aContainer.empty()) return std::nullopt;
         if constexpr (requires { aContainer.pop_front(); }) {
-          std::string myValue = std::move(aContainer.front());
+          auto myValue = std::move(aContainer.front());
           aContainer.pop_front();
-          return myValue;
+          return into_std_string(std::move(myValue));
         } else {
           // Containers without pop_front (e.g. std::vector) never
           // host BLPOP-style waiters anyway; return nullopt so the
@@ -196,9 +208,9 @@ size_t SequenceContainer<CONTAINER>::pushFront(
       },
       [](Container& aContainer) -> std::optional<std::string> {
         if (aContainer.empty()) return std::nullopt;
-        std::string myValue = std::move(aContainer.back());
+        auto myValue = std::move(aContainer.back());
         aContainer.pop_back();
-        return myValue;
+        return into_std_string(std::move(myValue));
       },
       [&myRet](const Container& aContainer) {
         myRet = aContainer.size();
@@ -225,7 +237,7 @@ SequenceContainer<CONTAINER>::popFront(const std::string& aName,
         }
         uint64_t myCollected = 0;
         while (!aContainer.empty() && myCollected < aCount) {
-          myRet.emplace_back(std::move(aContainer.front()));
+          myRet.emplace_back(into_std_string(std::move(aContainer.front())));
           aContainer.pop_front();
           ++myCollected;
         }
@@ -267,9 +279,9 @@ size_t SequenceContainer<CONTAINER>::pushBack(
       [](Container& aContainer) -> std::optional<std::string> {
         if (aContainer.empty()) return std::nullopt;
         if constexpr (requires { aContainer.pop_front(); }) {
-          std::string myValue = std::move(aContainer.front());
+          auto myValue = std::move(aContainer.front());
           aContainer.pop_front();
-          return myValue;
+          return into_std_string(std::move(myValue));
         } else {
           // Containers without pop_front (e.g. std::vector) never
           // host BLPOP-style waiters anyway; return nullopt so the
@@ -279,9 +291,9 @@ size_t SequenceContainer<CONTAINER>::pushBack(
       },
       [](Container& aContainer) -> std::optional<std::string> {
         if (aContainer.empty()) return std::nullopt;
-        std::string myValue = std::move(aContainer.back());
+        auto myValue = std::move(aContainer.back());
         aContainer.pop_back();
-        return myValue;
+        return into_std_string(std::move(myValue));
       },
       [&myRet](const Container& aContainer) {
         myRet = aContainer.size();
@@ -304,7 +316,7 @@ SequenceContainer<CONTAINER>::popBack(const std::string& aName,
         }
         uint64_t myCollected = 0;
         while (!aContainer.empty() && myCollected < aCount) {
-          myRet.emplace_back(std::move(aContainer.back()));
+          myRet.emplace_back(into_std_string(std::move(aContainer.back())));
           aContainer.pop_back();
           ++myCollected;
         }
@@ -338,7 +350,7 @@ SequenceContainer<CONTAINER>::index(const std::string& aName,
           if (size_t(aIndex) < aContainer.size()) {
             auto myIt = aContainer.begin();
             std::advance(myIt, aIndex);
-            myRet = *myIt;
+            myRet = into_std_string(*myIt);
           }
         } else {
           // detail::safeAbs over int64 is defined for every input
@@ -347,7 +359,7 @@ SequenceContainer<CONTAINER>::index(const std::string& aName,
           if (myReverseIndex < aContainer.size()) {
             auto myIt = aContainer.rbegin();
             std::advance(myIt, myReverseIndex);
-            myRet = *myIt;
+            myRet = into_std_string(*myIt);
           }
         }
       });
@@ -375,7 +387,11 @@ SequenceContainer<CONTAINER>::insert(const std::string& aName,
           ++myIt;
         }
 
-        aContainer.insert(myIt, aValue);
+        // Construct value_type from the std::string -- explicit so
+        // okt_string-backed containers don't need an implicit
+        // std::string -> okt_string conversion.
+        using V = typename Container::value_type;
+        aContainer.insert(myIt, V(std::string_view(aValue)));
         myRet = aContainer.size();
       });
 
@@ -410,9 +426,12 @@ SequenceContainer<CONTAINER>::move(const std::string& aSourceName,
           // pop_back are noexcept, so once we've pushed successfully the
           // pop cannot fail and we won't observe a transient duplicate
           // outside this lock.
-          std::string myValue = (aSourceDirection == Direction::LEFT)
-                                    ? aContainer.front()
-                                    : aContainer.back();
+          // Copy at value_type so the same code works for both
+          // std::string and okt_string slots; convert at the
+          // std::optional<std::string> boundary below.
+          auto myValue = (aSourceDirection == Direction::LEFT)
+                             ? aContainer.front()
+                             : aContainer.back();
 
           if (aDestinationDirection == Direction::LEFT) {
             aContainer.push_front(myValue);
@@ -426,7 +445,7 @@ SequenceContainer<CONTAINER>::move(const std::string& aSourceName,
             aContainer.pop_back();
           }
 
-          myRet = std::move(myValue);
+          myRet = into_std_string(std::move(myValue));
         });
     return myRet;
   }
@@ -471,9 +490,9 @@ SequenceContainer<CONTAINER>::move(const std::string& aSourceName,
         // the value vanished (silent data loss on OOM). Push-first is
         // safe because devector's pop_* are noexcept, so once the
         // destination accepted the value the source pop cannot fail.
-        std::string myValue = (aSourceDirection == Direction::LEFT)
-                                  ? aSourceContainer.front()
-                                  : aSourceContainer.back();
+        auto myValue = (aSourceDirection == Direction::LEFT)
+                           ? aSourceContainer.front()
+                           : aSourceContainer.back();
 
         Base::theApplyer.performOnNew(
             aDestinationName,
@@ -492,7 +511,7 @@ SequenceContainer<CONTAINER>::move(const std::string& aSourceName,
           aSourceContainer.pop_back();
         }
 
-        myRet = std::move(myValue);
+        myRet = into_std_string(std::move(myValue));
       });
 
   return myRet;
@@ -614,7 +633,7 @@ std::vector<std::string> SequenceContainer<CONTAINER>::range(
         std::advance(myItStop, myStop + 1);
 
         while (myItStart != myItStop) {
-          myRet.emplace_back(*myItStart);
+          myRet.emplace_back(into_std_string(*myItStart));
           ++myItStart;
         }
       });
@@ -693,7 +712,9 @@ typename SequenceContainer<CONTAINER>::Status SequenceContainer<CONTAINER>::set(
           if (size_t(aIndex) < aContainer.size()) {
             auto myIt = aContainer.begin();
             std::advance(myIt, aIndex);
-            *myIt  = aValue;
+            // string_view rhs hits std::string's and okt_string's
+            // assignment operators uniformly.
+            *myIt  = std::string_view(aValue);
             myRet  = Status::OK;
           } else {
             myRet = Status::OUT_OF_RANGE;
@@ -705,7 +726,9 @@ typename SequenceContainer<CONTAINER>::Status SequenceContainer<CONTAINER>::set(
           if (myReverseIndex < aContainer.size()) {
             auto myIt = aContainer.rbegin();
             std::advance(myIt, myReverseIndex);
-            *myIt  = aValue;
+            // string_view rhs hits std::string's and okt_string's
+            // assignment operators uniformly.
+            *myIt  = std::string_view(aValue);
             myRet  = Status::OK;
           } else {
             myRet = Status::OUT_OF_RANGE;
@@ -802,9 +825,9 @@ SequenceContainer<CONTAINER>::tryPopFrontOrWait(
       aName,
       [](Container& aContainer) -> std::optional<std::string> {
         if (aContainer.empty()) return std::nullopt;
-        std::string myValue = std::move(aContainer.front());
+        auto myValue = std::move(aContainer.front());
         aContainer.pop_front();
-        return myValue;
+        return into_std_string(std::move(myValue));
       },
       std::move(myWaiter),
       aWaiterId);
@@ -823,9 +846,9 @@ SequenceContainer<CONTAINER>::tryPopBackOrWait(
       aName,
       [](Container& aContainer) -> std::optional<std::string> {
         if (aContainer.empty()) return std::nullopt;
-        std::string myValue = std::move(aContainer.back());
+        auto myValue = std::move(aContainer.back());
         aContainer.pop_back();
-        return myValue;
+        return into_std_string(std::move(myValue));
       },
       std::move(myWaiter),
       aWaiterId);
