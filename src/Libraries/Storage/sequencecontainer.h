@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Storage/genericcontainer.h"
-#include "Storage/okt_string.h"
+#include "Storage/string.h"
 
 #include "Support/noncopyable.h"
 
@@ -161,12 +161,12 @@ class SequenceContainer : public GenericContainer<CONTAINER>
 // `theStorage.lists`, a `DequePushBack foo v` populates
 // `theStorage.deques`. The names denote the *namespace*, not a
 // distinct backing implementation.
-// Lists slots use okt_string (16 B, vs std::string's 32 B in
-// libstdc++) to halve per-slot framework overhead. The std::string
-// API surface SequenceContainer needs is supported via okt_string's
-// string_view ctor / operator==/= and the into_std_string() helper
-// at the public API boundary.
-using Lists   = SequenceContainer<boost::container::devector<okt_string>>;
+// Lists slots use okts::stor::string (16 B, vs std::string's 32 B
+// in libstdc++) to halve per-slot framework overhead. The
+// std::string API surface SequenceContainer needs is supported via
+// our string's string_view ctor / operator==/= and the
+// into_std_string() helper at the public API boundary.
+using Lists   = SequenceContainer<boost::container::devector<string>>;
 // Deques and Vectors keep std::string for now -- the same template
 // instantiates for both value types; flipping these is a follow-on.
 using Deques  = SequenceContainer<boost::container::devector<std::string>>;
@@ -191,8 +191,9 @@ size_t SequenceContainer<CONTAINER>::pushFront(
       // if container is now empty). Called once per waiter.
       // Uses `auto` for the slot's value_type so the same lambda
       // works for std::string-backed (Vectors / Deques) and
-      // okt_string-backed (Lists) containers; into_std_string
-      // converts at the std::optional<std::string> boundary.
+      // okts::stor::string-backed (Lists) containers;
+      // into_std_string converts at the std::optional<std::string>
+      // boundary.
       [](Container& aContainer) -> std::optional<std::string> {
         if (aContainer.empty()) return std::nullopt;
         if constexpr (requires { aContainer.pop_front(); }) {
@@ -388,8 +389,8 @@ SequenceContainer<CONTAINER>::insert(const std::string& aName,
         }
 
         // Construct value_type from the std::string -- explicit so
-        // okt_string-backed containers don't need an implicit
-        // std::string -> okt_string conversion.
+        // okts::stor::string-backed containers don't need an
+        // implicit std::string -> okts::stor::string conversion.
         using V = typename Container::value_type;
         aContainer.insert(myIt, V(std::string_view(aValue)));
         myRet = aContainer.size();
@@ -427,8 +428,8 @@ SequenceContainer<CONTAINER>::move(const std::string& aSourceName,
           // pop cannot fail and we won't observe a transient duplicate
           // outside this lock.
           // Copy at value_type so the same code works for both
-          // std::string and okt_string slots; convert at the
-          // std::optional<std::string> boundary below.
+          // std::string and okts::stor::string slots; convert at
+          // the std::optional<std::string> boundary below.
           auto myValue = (aSourceDirection == Direction::LEFT)
                              ? aContainer.front()
                              : aContainer.back();
@@ -712,8 +713,8 @@ typename SequenceContainer<CONTAINER>::Status SequenceContainer<CONTAINER>::set(
           if (size_t(aIndex) < aContainer.size()) {
             auto myIt = aContainer.begin();
             std::advance(myIt, aIndex);
-            // string_view rhs hits std::string's and okt_string's
-            // assignment operators uniformly.
+            // string_view rhs hits std::string's and
+            // okts::stor::string's assignment operators uniformly.
             *myIt  = std::string_view(aValue);
             myRet  = Status::OK;
           } else {
@@ -726,8 +727,8 @@ typename SequenceContainer<CONTAINER>::Status SequenceContainer<CONTAINER>::set(
           if (myReverseIndex < aContainer.size()) {
             auto myIt = aContainer.rbegin();
             std::advance(myIt, myReverseIndex);
-            // string_view rhs hits std::string's and okt_string's
-            // assignment operators uniformly.
+            // string_view rhs hits std::string's and
+            // okts::stor::string's assignment operators uniformly.
             *myIt  = std::string_view(aValue);
             myRet  = Status::OK;
           } else {
