@@ -1,10 +1,10 @@
 "test","rps","avg_latency_ms","min_latency_ms","p50_latency_ms","p95_latency_ms","p99_latency_ms","max_latency_ms","server_cpu_pct"
-"LPUSH","27352.30","0.03","0.01","0.03","0.05","0.09","20.34",46
-"SADD","27831.90","0.03","0.01","0.03","0.05","0.09","14.45",46
-"LPUSH (needed to benchmark LRANGE)","27107.62","0.03","0.01","0.03","0.05","0.09","23.17",46
-"LRANGE_100 (first 100 elements)","18670.65","0.04","0.02","0.04","0.06","0.10","15.71",46
-"RPUSH mylist__rand_int__ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","27344.82","0.03","0.01","0.03","0.05","0.09","12.11",47
-"LPOP mylist__rand_int__","27472.53","0.03","0.01","0.03","0.05","0.08","28.05",46
-"RPOP mylist__rand_int__","26525.20","0.03","0.01","0.03","0.05","0.08","60.58",45
-"LLEN mylist__rand_int__","28066.24","0.03","0.02","0.03","0.05","0.09","9.23",46
-"SCARD myset__rand_int__","28653.29","0.03","0.01","0.03","0.05","0.08","15.51",46
+"LPUSH","33478.41","0.03","0.02","0.02","0.03","0.06","113.47",40
+"SADD","37622.27","0.02","0.02","0.02","0.03","0.04","28.14",40
+"LPUSH (needed to benchmark LRANGE)","31545.74","0.03","0.02","0.03","0.05","0.06","1.28",40
+"LRANGE_100 (first 100 elements)","19884.67","0.04","0.02","0.04","0.05","0.07","1.43",40
+"RPUSH mylist__rand_int__ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","29761.91","0.03","0.01","0.03","0.04","0.06","1.22",51
+"LPOP mylist__rand_int__","29214.14","0.03","0.01","0.03","0.04","0.06","0.69",52
+"RPOP mylist__rand_int__","29351.33","0.03","0.01","0.03","0.04","0.06","0.81",51
+"LLEN mylist__rand_int__","28801.84","0.03","0.01","0.03","0.04","0.06","0.57",50
+"SCARD myset__rand_int__","29682.40","0.03","0.01","0.03","0.04","0.06","1.07",51
