@@ -161,16 +161,14 @@ class SequenceContainer : public GenericContainer<CONTAINER>
 // `theStorage.lists`, a `DequePushBack foo v` populates
 // `theStorage.deques`. The names denote the *namespace*, not a
 // distinct backing implementation.
-// Lists slots use okts::stor::string (16 B, vs std::string's 32 B
-// in libstdc++) to halve per-slot framework overhead. The
-// std::string API surface SequenceContainer needs is supported via
-// our string's string_view ctor / operator==/= and the
-// into_std_string() helper at the public API boundary.
+// All three sequence containers use okts::stor::string slots (16 B,
+// vs std::string's 32 B in libstdc++) to halve per-slot framework
+// overhead. The std::string API surface SequenceContainer needs is
+// supported via our string's string_view ctor / operator==/= and
+// the into_std_string() helper at the public API boundary.
 using Lists   = SequenceContainer<boost::container::devector<string>>;
-// Deques and Vectors keep std::string for now -- the same template
-// instantiates for both value types; flipping these is a follow-on.
-using Deques  = SequenceContainer<boost::container::devector<std::string>>;
-using Vectors = SequenceContainer<std::vector<std::string>>;
+using Deques  = SequenceContainer<boost::container::devector<string>>;
+using Vectors = SequenceContainer<std::vector<string>>;
 
 //// INLINE DEFINITIONS
 

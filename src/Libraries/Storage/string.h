@@ -65,6 +65,23 @@ class string {
     initFrom(aValue);
   }
 
+  // Direct ctor from std::string. C++ allows only one user-defined
+  // conversion per implicit conversion sequence, so without this
+  // overload `lazy_emplace(..., aName)` (aName a std::string&)
+  // fails to construct a string key: it would need
+  // std::string -> string_view -> okts::stor::string, two user-
+  // defined steps. Providing this ctor collapses the path.
+  /*implicit*/ string(const std::string& aValue)
+      : string(std::string_view(aValue)) {}
+
+  // Direct ctor from a C string literal. Without it, `okts::stor::string("hi")`
+  // is ambiguous between `string(string_view)` (via string_view's
+  // ctor from char*) and `string(const std::string&)` (via std::string's
+  // ctor from char*) -- both one user-defined conversion. This
+  // exact-match overload picks the winner.
+  /*implicit*/ string(const char* aValue)
+      : string(std::string_view(aValue)) {}
+
   string(const string& aOther) {
     initFrom(static_cast<std::string_view>(aOther));
   }
@@ -157,6 +174,25 @@ class string {
                          const string& aRhs) noexcept {
     return std::string_view(aLhs) == std::string_view(aRhs);
   }
+  // Direct overload for std::string. Without this, `string == std::string`
+  // is ambiguous between (string, string_view) + std::string -> string_view
+  // and (string, string) + std::string -> string -- both one user-defined
+  // conversion. This exact-match overload picks the winner with zero
+  // conversions; C++20's reversed-candidate rule covers the swapped form.
+  friend bool operator==(const string&      aLhs,
+                         const std::string& aRhs) noexcept {
+    return std::string_view(aLhs) == std::string_view(aRhs);
+  }
+
+  // Abseil hash hook. absl::flat_hash_map<string, ...> finds this
+  // via ADL and combines our content into the caller's hash state
+  // through the string_view view. Goes through string_view so a
+  // heterogeneous lookup with std::string_view or std::string
+  // produces the same hash bits.
+  template <typename H>
+  friend H AbslHashValue(H aH, const string& aS) {
+    return H::combine(std::move(aH), std::string_view(aS));
+  }
 
  private:
   static constexpr std::uint8_t kHeapMarker = 0xFF;
@@ -244,3 +280,17 @@ inline std::string into_std_string(string&& aValue) {
 }
 
 } // namespace okts::stor
+
+// std::hash specialization. Hashing through std::string_view keeps
+// us bit-identical with std::hash<std::string_view> and
+// std::hash<std::string>, so heterogeneous lookups in containers
+// keyed on okts::stor::string but probed with a std::string_view /
+// std::string find the same bucket.
+namespace std {
+template <>
+struct hash<::okts::stor::string> {
+  std::size_t operator()(const ::okts::stor::string& aS) const noexcept {
+    return std::hash<std::string_view>{}(std::string_view(aS));
+  }
+};
+} // namespace std

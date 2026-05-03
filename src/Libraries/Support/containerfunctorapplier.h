@@ -17,6 +17,7 @@
 #include <glog/logging.h>
 
 #include "Storage/blocking_waiter.h"
+#include "Storage/string.h"
 #include "Support/noncopyable.h"
 #include "Support/spinlock.h"
 
@@ -167,17 +168,31 @@ class ContainerFunctorApplier
     Container              storage;
   };
 
+  // Transparent hasher: every overload routes through string_view so
+  // the hash bits are bit-identical regardless of which type the
+  // caller probes the map with. Required by absl::flat_hash_map's
+  // heterogeneous-lookup contract -- hash(key) must equal hash(probe)
+  // for any (key, probe) that compare equal.
   struct string_hash {
     using is_transparent = void;
     size_t operator()(std::string_view txt) const {
       return std::hash<std::string_view>{}(txt);
     }
     size_t operator()(const std::string& txt) const {
-      return std::hash<std::string>{}(txt);
+      return std::hash<std::string_view>{}(std::string_view(txt));
+    }
+    size_t operator()(const okts::stor::string& txt) const {
+      return std::hash<std::string_view>{}(std::string_view(txt));
     }
   };
 
-  using Storage = absl::flat_hash_map<std::string,
+  // Storage uses okts::stor::string keys (16 B) instead of
+  // std::string (32 B) -- halves per-bucket key footprint in the
+  // absl::flat_hash_map slot array. Heterogeneous lookup with
+  // std::string / std::string_view still works via string_hash above
+  // and std::equal_to<> over the operator== overloads on
+  // okts::stor::string.
+  using Storage = absl::flat_hash_map<okts::stor::string,
                                       std::unique_ptr<ProtectedContainer>,
                                       string_hash,
                                       std::equal_to<>>;
@@ -196,7 +211,7 @@ class ContainerFunctorApplier
   // (shard → inner) is already established and held by the producer
   // before re-entry.
   using WaiterList = std::list<okts::stor::BlockingWaiter>;
-  using WaiterMap  = absl::flat_hash_map<std::string, WaiterList,
+  using WaiterMap  = absl::flat_hash_map<okts::stor::string, WaiterList,
                                          string_hash, std::equal_to<>>;
 
   // Outer shard mutex is a user-space TTAS spinlock with no
