@@ -5,6 +5,13 @@
 ###### What is oktoplus
 Oktoplus is a in-memory data store K:V where V is a container: std::list, std::map, boost::multi_index_container, std::set, you name it. Doing so the client can choose the best container for his own access data pattern.
 
+###### Why try it
+**RESP2 wire-compatible with Redis** — point `redis-cli`, `redis-benchmark`, or any existing Redis client at port `6379` and it just works. Drop-in for the read/write path on the supported commands (lists 100%, sets 94%; strings on the roadmap).
+
+**Faster than Redis at the same workload on most cells benchmarked** — single-client `-P 16` runs ~6–26% above the Redis reference across `LPUSH` / `LLEN` / `RPUSH` / `LPOP` / `RPOP` / `SADD`; CPU-heavy multi-key workloads (e.g. `LPOS` scans) reach ~100× because command execution is multi-threaded and sharded per key, so N writers on N keys use N cores. See the benchmark tables below for the per-cell numbers.
+
+**Not a drop-in for everything yet.** No persistence, no replication / clustering, no pub/sub / streams / scripting / transactions. If you need Redis as the system of record, stay on Redis; if you need it as a hot in-memory store and want the multi-core scaling and the richer container types (vector with O(1) `INDEX`, multi-set, multi-map, multi-index), Oktoplus is worth a try.
+
 If this reminds you of Redis then you are right — Redis is the inspiration. Oktoplus differs along a few axes that come up repeatedly in the rest of this README:
 
  - command execution is multi-threaded, sharded per-key
