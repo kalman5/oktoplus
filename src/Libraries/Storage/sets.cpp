@@ -25,7 +25,7 @@ size_t Sets::add(const std::string&                   aName,
 
   theApplyer.performOnNew(aName, [&myAdded, &aValues](Container& aContainer) {
     for (const auto& myString : aValues) {
-      if (aContainer.insert(std::string(myString)).second) {
+      if (aContainer.insert(okts::stor::string(myString)).second) {
         ++myAdded;
       }
     }
@@ -62,7 +62,7 @@ Sets::diff(const std::vector<std::string_view>& aNames) {
 
     theApplyer.performOnExisting(
         std::string(aNames[i]), [&myRet](const Container& aContainer) {
-          absl::erase_if(myRet, [&aContainer](const std::string& aVal) {
+          absl::erase_if(myRet, [&aContainer](const okts::stor::string& aVal) {
             return aContainer.count(aVal) > 0;
           });
         });
@@ -124,7 +124,7 @@ Sets::Container Sets::inter(const std::vector<std::string_view>& aNames) {
         std::string(aNames[i]),
         [&myRet, &myRan](const Container& aContainer) {
           myRan = true;
-          absl::erase_if(myRet, [&aContainer](const std::string& aVal) {
+          absl::erase_if(myRet, [&aContainer](const okts::stor::string& aVal) {
             return aContainer.count(aVal) == 0;
           });
         });
@@ -280,19 +280,28 @@ std::vector<std::string> Sets::pop(const std::string& aName, size_t aCount) {
   theApplyer.performOnExisting(
       aName, [&myRet, aCount](Container& aContainer) {
         size_t myToPop = std::min(aCount, aContainer.size());
-        myRet.reserve(myToPop);
 
         // std::sample picks myToPop items without replacement in a
         // single forward-iterator pass — O(N), N space. The previous
         // approach was O(K*N): each iteration constructed a new
         // distribution and std::advance'd from begin (O(N) on
         // flat_hash_set's forward iterators) → unusable on large sets.
+        //
+        // Sample into okts::stor::string slots first (the container's
+        // element type), then convert to std::string on the way into
+        // the public-API return value -- okts::stor::string has no
+        // implicit conversion to std::string, so back_inserter onto a
+        // std::vector<std::string> wouldn't compile.
+        std::vector<okts::stor::string> mySampled;
+        mySampled.reserve(myToPop);
         std::sample(aContainer.begin(), aContainer.end(),
-                    std::back_inserter(myRet), myToPop, rng());
+                    std::back_inserter(mySampled), myToPop, rng());
 
-        // Erase the sampled values by hash lookup (O(K) average).
-        for (const auto& myVal : myRet) {
+        myRet.reserve(myToPop);
+        for (const auto& myVal : mySampled) {
+          // Erase the sampled values by hash lookup (O(K) average).
           aContainer.erase(myVal);
+          myRet.push_back(into_std_string(myVal));
         }
       });
 
@@ -312,11 +321,18 @@ Sets::randMember(const std::string& aName, int64_t aCount) const {
         if (aCount >= 0) {
           // Without replacement: std::sample is single-pass, K-bounded
           // working set. The previous shuffle copied the whole set
-          // even when K << N.
+          // even when K << N. Sample into the container's element type
+          // (okts::stor::string), then convert to std::string for the
+          // public-API return.
           auto myN = std::min(static_cast<size_t>(aCount), aContainer.size());
-          myRet.reserve(myN);
+          std::vector<okts::stor::string> mySampled;
+          mySampled.reserve(myN);
           std::sample(aContainer.begin(), aContainer.end(),
-                      std::back_inserter(myRet), myN, rng());
+                      std::back_inserter(mySampled), myN, rng());
+          myRet.reserve(myN);
+          for (const auto& myVal : mySampled) {
+            myRet.push_back(into_std_string(myVal));
+          }
         } else {
           // With replacement: we genuinely need an indexable view to
           // pick K times. Materialise once (O(N)) then K random picks
@@ -326,14 +342,14 @@ Sets::randMember(const std::string& aName, int64_t aCount) const {
           // detail::safeAbs avoids signed-negation UB when a client
           // passes INT64_MIN as the negative count; bare `-aCount`
           // overflows int64_t.
-          auto                     myN = static_cast<size_t>(detail::safeAbs(aCount));
-          std::vector<std::string> myAll(aContainer.begin(),
-                                         aContainer.end());
+          auto myN = static_cast<size_t>(detail::safeAbs(aCount));
+          std::vector<okts::stor::string> myAll(aContainer.begin(),
+                                                aContainer.end());
           myRet.reserve(myN);
           auto myDist =
               std::uniform_int_distribution<size_t>(0, myAll.size() - 1);
           for (size_t i = 0; i < myN; ++i) {
-            myRet.push_back(myAll[myDist(rng())]);
+            myRet.push_back(into_std_string(myAll[myDist(rng())]));
           }
         }
       });
@@ -348,7 +364,7 @@ size_t Sets::remove(const std::string&                   aName,
   theApplyer.performOnExisting(
       aName, [&myRet, &aValues](Container& aContainer) {
         for (const auto& myValue : aValues) {
-          myRet += aContainer.erase(std::string(myValue));
+          myRet += aContainer.erase(okts::stor::string(myValue));
         }
       });
 

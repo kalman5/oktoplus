@@ -8,7 +8,7 @@ Oktoplus is a in-memory data store K:V where V is a container: std::list, std::m
 ###### Why try it
 **RESP2 wire-compatible with Redis** — point `redis-cli`, `redis-benchmark`, or any existing Redis client at port `6379` and it just works. Drop-in for the read/write path on the supported commands (lists 100%, sets 94%; strings on the roadmap).
 
-**Faster than Redis at the same workload on most cells benchmarked** — single-client `-P 16` runs ~6–26% above the Redis reference across `LPUSH` / `LLEN` / `RPUSH` / `LPOP` / `RPOP` / `SADD`; CPU-heavy multi-key workloads (e.g. `LPOS` scans) reach ~100× because command execution is multi-threaded and sharded per key, so N writers on N keys use N cores. See the benchmark tables below for the per-cell numbers.
+**Faster than Redis at the same workload on most cells benchmarked** — single-client `-P 16` runs ~12–49% above the Redis reference across `LPUSH` / `LLEN` / `RPUSH` / `LPOP` / `RPOP` / `SADD`; CPU-heavy multi-key workloads (e.g. `LPOS` scans) reach >100× because command execution is multi-threaded and sharded per key, so N writers on N keys use N cores. See the benchmark tables below for the per-cell numbers.
 
 **Not a drop-in for everything yet.** No persistence, no replication / clustering, no pub/sub / streams / scripting / transactions. If you need Redis as the system of record, stay on Redis; if you need it as a hot in-memory store and want the multi-core scaling and the richer container types (vector with O(1) `INDEX`, multi-set, multi-map, multi-index), Oktoplus is worth a try.
 
@@ -35,7 +35,7 @@ Redis Commands Compatibility (RESP)
 The server exposes the same data through two interfaces:
 
   - **RESP2** (default port `6379`, always on) — primary wire protocol, wire-compatible with Redis using the RESP2 framing (`+` `-` `:` `$` `*` types, `$-1\r\n` / `*-1\r\n` nulls), so existing tooling like `redis-cli` and `redis-benchmark` works out of the box. Override the bind address via `service.resp_endpoint` in the JSON config. Includes the admin commands `FLUSHDB` / `FLUSHALL`. RESP3 (`HELLO`-negotiated, native maps/sets/push, unified `_\r\n` null) is on the roadmap — see TODO below.
-  - **gRPC** (optional) — see `src/Libraries/Commands/commands.proto`. Use it to generate a client in your favourite language. Includes admin RPCs `flushAll` / `flushDb` plus all the list / set / deque / vector commands. **Disabled by default at build time** to keep baseline RSS down to ~9 MiB — pass `-DOKTOPLUS_WITH_GRPC=ON` to cmake to compile it in, then enable at runtime by setting `service.endpoint` in the JSON config.
+  - **gRPC** (optional) — see `src/Libraries/Commands/commands.proto`. Use it to generate a client in your favourite language. Includes admin RPCs `flushAll` / `flushDb` plus all the list / set / deque / vector commands. **Disabled by default at build time** to keep baseline RSS down to ~8.5 MiB — pass `-DOKTOPLUS_WITH_GRPC=ON` to cmake to compile it in, then enable at runtime by setting `service.endpoint` in the JSON config.
 
 The per-family compatibility tables ([LISTS](docs/compatibility_lists.md), [SETS](docs/compatibility_sets.md), [STRINGS](docs/compatibility_strings.md)) include a column showing which Redis commands are wired to gRPC and to RESP today.
 
@@ -74,13 +74,13 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |       29,542 |    30,423 |          97% |
-| SADD          |       32,268 |    29,412 |     110% |
-| LRANGE_100    |       26,185 |    24,624 |     106% |
-| LPOP (rand)   |       30,864 |    28,927 |     107% |
-| RPOP (rand)   |       29,412 |    28,736 |     102% |
-| LLEN (rand)   |       30,998 |    28,818 |     108% |
-| SCARD (rand)  |       32,362 |    28,794 |     112% |
+| LPUSH         |       47,259 |    45,600 |     104% |
+| SADD          |       49,407 |    44,209 |     112% |
+| LRANGE_100    |       36,670 |    35,336 |     104% |
+| LPOP (rand)   |       48,379 |    46,189 |     105% |
+| RPOP (rand)   |       51,387 |    47,148 |     109% |
+| LLEN (rand)   |       47,870 |    48,662 |          98% |
+| SCARD (rand)  |       46,816 |    48,309 |          97% |
 
 ##### Single client, pipelined (`-P 16`)
 
@@ -88,15 +88,15 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |      432,900 |   386,100 |     112% |
-| SADD          |      396,825 |   374,532 |     106% |
-| LPUSH (LRANGE seed) | 438,596 |   363,636 |     121% |
-| LRANGE_100    |      117,233 |   109,170 |     107% |
-| RPUSH (rand)  |      414,938 |   331,126 |     125% |
-| LPOP (rand)   |      371,747 |   341,297 |     109% |
-| RPOP (rand)   |      395,257 |   364,964 |     108% |
-| LLEN          |      487,805 |   387,597 |     126% |
-| SCARD         |      434,783 |   436,681 |         100% |
+| LPUSH         |      714,286 |   602,410 |     119% |
+| SADD          |      581,395 |   515,464 |     113% |
+| LPUSH (LRANGE seed) | 671,141 |   657,895 |     102% |
+| LRANGE_100    |      127,065 |   118,203 |     107% |
+| RPUSH (rand)  |      505,050 |   452,489 |     112% |
+| LPOP (rand)   |      534,759 |   467,290 |     114% |
+| RPOP (rand)   |      729,927 |   490,196 |     149% |
+| LLEN          |      709,220 |   518,135 |     137% |
+| SCARD         |      632,911 |   549,451 |     115% |
 
 ##### Many clients, no pipelining — LPUSH on a hot key
 
@@ -106,11 +106,11 @@ Hardware: AMD EPYC Genoa devserver. Build: `-O3 -march=native -mtune=native -ffa
 
 | Clients | Oktoplus rps | Redis rps | Okto / Redis |
 |--------:|-------------:|----------:|-------------:|
-|       1 |       31,496 |    30,331 |     104% |
-|      10 |       74,239 |    77,760 |          95% |
-|      50 |       76,278 |    98,232 |          78% |
-|     100 |       82,919 |    83,752 |          99% |
-|     200 |       81,367 |    90,827 |          90% |
+|       1 |       47,939 |    48,614 |          99% |
+|      10 |      104,384 |   154,321 |          68% |
+|      50 |      116,550 |   158,228 |          74% |
+|     100 |      126,263 |   145,985 |          86% |
+|     200 |      110,375 |   143,678 |          77% |
 
 ##### Many clients, pipelined, random keys
 
@@ -122,12 +122,12 @@ A slice from `concurrent_random_*_p16.csv` at `-c 100`:
 
 | Test            | Oktoplus rps | Redis rps | Okto / Redis |
 |-----------------|-------------:|----------:|-------------:|
-| RPUSH (rand)    |    1,020,408 |   925,926 |     110% |
-| LPOP (rand)     |    1,075,269 |   909,091 |     118% |
-| RPOP (rand)     |    1,111,111 | 1,190,476 |          93% |
-| LLEN (rand)     |      970,874 | 1,098,901 |          88% |
-| SADD (rand)     |      952,381 |   847,458 |     112% |
-| SCARD (rand)    |    1,041,667 | 1,265,823 |          82% |
+| RPUSH (rand)    |    1,449,275 | 1,086,956 |     133% |
+| LPOP (rand)     |    1,428,571 | 1,204,819 |     119% |
+| RPOP (rand)     |    1,515,152 | 1,408,451 |     108% |
+| LLEN (rand)     |    1,492,537 | 1,515,152 |          99% |
+| SADD (rand)     |    1,470,588 | 1,282,051 |     115% |
+| SCARD (rand)    |    1,492,537 | 1,333,333 |     112% |
 
 ##### Multi-key, CPU-heavy commands — per-key sharding
 
@@ -139,11 +139,11 @@ Random-key push/pop workloads at `-c 100 -P 16` saturate around ~1M rps for both
 
 | Clients | Oktoplus rps | Okto cores | Redis rps | Redis cores | Okto / Redis |
 |--------:|-------------:|-----------:|----------:|------------:|-------------:|
-|       1 |       65,445 |       0.9  |     8,217 |        1.0  |    8.0×  |
-|       4 |      260,417 |       3.4  |     8,408 |        1.0  |   31.0×  |
-|      16 |      862,069 |      10.3  |     8,537 |        1.0  |  101.0×  |
-|      64 |      943,396 |      11.5  |     8,342 |        1.0  |  113.1×  |
-|     128 |      925,926 |       6.5  |     8,392 |        1.0  |  110.3×  |
+|       1 |       67,204 |       0.8  |     7,899 |        1.0  |    8.5×  |
+|       4 |      268,817 |       3.2  |     7,945 |        1.0  |   33.8×  |
+|      16 |      925,926 |      11.0  |     8,185 |        1.0  |  113.1×  |
+|      64 |    1,063,830 |      11.9  |     8,194 |        1.0  |  129.8×  |
+|     128 |    1,020,408 |       6.3  |     8,233 |        1.0  |  123.9×  |
 
 The cores column expresses the same shape on a hardware-independent metric: Oktoplus's per-key sharding lets command execution scale with `-c` until the available cores are saturated; the Redis row sits at one core throughout because command execution is single-threaded by design. The `cores`-vs-clients curve is plotted separately at `chart_parallelism_cpu.svg` so the shape is visible without needing the absolute throughput axis:
 
@@ -157,15 +157,15 @@ Total rps depends on both *how many cores* the design can saturate **and** *how 
 
 | Clients | Okto rps/core | Redis rps/core | Okto / Redis |
 |--------:|--------------:|---------------:|-------------:|
-|       1 |        86,806 |          8,389 |   10.35× |
-|       4 |        89,127 |          8,640 |   10.32× |
-|      16 |        82,508 |          8,758 |    9.42× |
-|      64 |        93,615 |          8,681 |   10.78× |
-|     128 |       171,999 |          8,728 |   19.71× |
+|       1 |        80,969 |          8,060 |   10.05× |
+|       4 |        82,968 |          8,026 |   10.34× |
+|      16 |        84,252 |          8,267 |   10.19× |
+|      64 |        89,699 |          8,277 |   10.84× |
+|     128 |       162,227 |          8,401 |   19.31× |
 
 Two factors compose on this CPU-heavy workload: how many cores the workload uses (parallelism), and how much each core gets done per call (per-core efficiency). The per-core ratio sits around ~10× across `-c`, with no cross-core coordination penalty visible, and rises at `-c 128` once each core has enough pipelined work to amortise the per-command parsing overhead. The per-core component reflects the data-structure choice: `devector` iterates with one cache line per ~four list elements (16-byte `okts::stor::string` slot) and pays no per-element decode, while a listpack-based representation walks node pointers and decodes each entry.
 
-Bench script: `benchmark_results/run_parallelism_advantage_bench.sh`. At smaller `N=1000` (10× shorter scans) the parallelism-driven ratio falls to ~14× at `-c 128`; at smaller `-P 1` the network RTT eats most of the per-command CPU work and the ratio collapses to ~1.5×.
+Bench script: `benchmark_results/run_parallelism_advantage_bench.sh`. At smaller `N=1000` (10× shorter scans) the parallelism-driven ratio falls to ~19× at `-c 128`; at smaller `-P 1` the network RTT eats most of the per-command CPU work and the ratio collapses to ~1.5×.
 
 ##### Single client, pipelined (`-P 16`), 256-byte values
 
@@ -175,15 +175,15 @@ Same workload as the small-value `-P 16` table above but with a 256-byte payload
 
 | Test          | Oktoplus rps | Redis rps | Okto / Redis |
 |---------------|-------------:|----------:|-------------:|
-| LPUSH         |      384,615 |   358,423 |     107% |
-| SADD          |      414,938 |   369,004 |     112% |
-| LPUSH (LRANGE seed) | 358,423 |   344,828 |     104% |
-| LRANGE_100    |       50,176 |    53,191 |          94% |
-| RPUSH (rand, 256B) | 313,480 |   290,698 |     108% |
-| LPOP (rand)   |      332,226 |   297,619 |     112% |
-| RPOP (rand)   |      392,157 |   350,877 |     112% |
-| LLEN          |      465,116 |   406,504 |     114% |
-| SCARD         |      465,116 |   386,100 |     120% |
+| LPUSH         |      578,035 |   450,450 |     128% |
+| SADD          |      675,676 |   510,204 |     132% |
+| LPUSH (LRANGE seed) | 769,231 |   502,513 |     153% |
+| LRANGE_100    |       68,074 |    63,251 |     108% |
+| RPUSH (rand, 256B) | 418,410 |   395,257 |     106% |
+| LPOP (rand)   |      401,606 |   384,615 |     104% |
+| RPOP (rand)   |      483,092 |   523,560 |          92% |
+| LLEN          |      574,713 |   526,316 |     109% |
+| SCARD         |      675,676 |   581,395 |     116% |
 
 Full per-test CSVs and the raw-results history are under `benchmark_results/raw/`.
 
@@ -195,16 +195,30 @@ Generated by `benchmark_results/run_memory.sh` — for each cell, start a fresh 
 
 | N keys     | value | Oktoplus bytes/key | Redis bytes/key | Okto / Redis |
 |-----------:|------:|-------------------:|----------------:|-------------:|
-|   100,000  |    3B |                133 |              71 |        1.9×  |
-|   100,000  |   64B |                199 |             135 |        1.5×  |
-|   100,000  |  256B |                397 |             374 |        1.1×  |
-|   100,000  | 1024B |              1,190 |           1,342 |    0.89× |
-| 1,000,000  |    3B |                157 |              72 |        2.2×  |
-| 1,000,000  |   64B |                227 |             133 |        1.7×  |
-| 1,000,000  |  256B |                429 |             375 |        1.1×  |
-| 1,000,000  | 1024B |              1,224 |           1,345 |    0.91× |
+|   100,000  |    3B |                126 |              71 |        1.78× |
+|   100,000  |   64B |                196 |             134 |        1.47× |
+|   100,000  |  256B |                401 |             378 |        1.06× |
+|   100,000  | 1024B |              1,211 |           1,345 |    0.90× |
+| 1,000,000  |    3B |                156 |              72 |        2.16× |
+| 1,000,000  |   64B |                214 |             134 |        1.59× |
+| 1,000,000  |  256B |                429 |             375 |        1.14× |
+| 1,000,000  | 1024B |              1,225 |           1,344 |    0.91× |
 
-Per-key fixed overhead extrapolated from the 3-byte rows (where the value cost is negligible) is ~133–157 B for Oktoplus and ~70 B for Redis. The ratio drops as the value grows — 1.9× at 3B, 1.5× at 64B, 1.1× at 256B, ~0.9× at 1 KB. The 1 KB inversion comes from the storage-path string type: `okts::stor::string` (16 B SSO-or-heap, vs std::string's 32 B in libstdc++) is used both for value slots inside the list/deque/vector containers and for the per-shard hash-map keys, and allocates exactly `size` bytes (no NUL terminator, no capacity slack), so jemalloc serves the heap block from a smaller size class than std::string's `capacity+1`-rounded allocation would land in. Full per-trial CSVs at `benchmark_results/raw/memory.csv`, full table at `benchmark_results/memory_results.md`.
+Per-key fixed overhead extrapolated from the 3-byte rows (where the value cost is negligible) is ~126–156 B for Oktoplus and ~71–72 B for Redis. The ratio drops as the value grows — ~1.8–2.2× at 3B, ~1.5–1.6× at 64B, ~1.1× at 256B, ~0.9× at 1 KB. The 1 KB inversion comes from the storage-path string type: `okts::stor::string` (16 B SSO-or-heap, vs std::string's 32 B in libstdc++) is used both for value slots inside the list/deque/vector containers and for the per-shard hash-map keys, and allocates exactly `size` bytes (no NUL terminator, no capacity slack), so jemalloc serves the heap block from a smaller size class than std::string's `capacity+1`-rounded allocation would land in. Full per-trial CSVs at `benchmark_results/raw/memory.csv`, full table at `benchmark_results/memory_results.md`.
+
+##### Sets memory — bytes per member
+
+Sets store their members as `okts::stor::string` (16 B SSO-or-heap) — the same storage-path string the list / deque / vector slots use — rather than `std::string` (32 B in libstdc++). The benchmark loads ~1M members via `SADD` and reports `bytes/member = (steady − baseline) * 1024 / members` across three regimes: `int-big` (large integer sets, >512 members, hashtable-encoded on both servers), `int-512` (small all-integer sets ≤ 512 members, where Redis uses its packed **intset**), and `str12` (12-byte string members, stored inline in Oktoplus's SSO). Generated by `benchmark_results/run_memory_sets.sh`.
+
+![Sets memory, bytes per member](benchmark_results/chart_memory_sets.svg)
+
+| Regime  | What it is                          | Oktoplus B/mem | Redis B/mem | Okto / Redis |
+|---------|-------------------------------------|---------------:|------------:|-------------:|
+| str12   | 12-byte string members              |           24.4 |        37.0 |        0.66× |
+| int-big | integer members, large sets (>512)  |           24.4 |        29.9 |        0.82× |
+| int-512 | all-integer sets ≤ 512 members      |           42.5 |         3.1 |       13.71× |
+
+On large sets — string or integer — the 16 B member slot puts Oktoplus **18–34% below Redis** per member. The one regime Redis still wins decisively is small all-integer sets (`int-512`): Redis packs those into an **intset** (a sorted array of fixed-width ints — 2 bytes/member for values that fit `int16`), with no hash-table slots and no power-of-two capacity rounding, landing at ~3 B/member versus Oktoplus's `flat_hash_set` slot. An intset-style encoding for all-integer sets is the natural next step to close that last column. Full per-trial CSV at `benchmark_results/raw/memory_sets.csv`.
 
 ##### Residual memory after FLUSHALL
 
@@ -214,16 +228,16 @@ Per-key fixed overhead extrapolated from the 3-byte rows (where the value cost i
 
 | N keys     | value | Oktoplus residual (KiB) | Redis residual (KiB) |
 |-----------:|------:|------------------------:|---------------------:|
-|   100,000  |    3B |                  13,032 |               10,192 |
-|   100,000  |   64B |                  13,928 |               10,016 |
-|   100,000  |  256B |                  13,372 |               10,052 |
-|   100,000  | 1024B |                  16,820 |               11,020 |
-| 1,000,000  |    3B |                  13,652 |               11,612 |
-| 1,000,000  |   64B |                  16,008 |               11,804 |
-| 1,000,000  |  256B |                  22,416 |               14,196 |
-| 1,000,000  | 1024B |                  47,304 |               23,800 |
+|   100,000  |    3B |                  11,512 |               10,024 |
+|   100,000  |   64B |                  13,472 |                9,700 |
+|   100,000  |  256B |                  14,188 |                8,972 |
+|   100,000  | 1024B |                  17,980 |               10,540 |
+| 1,000,000  |    3B |                  13,132 |               11,280 |
+| 1,000,000  |   64B |                  15,212 |               11,636 |
+| 1,000,000  |  256B |                  21,636 |               13,256 |
+| 1,000,000  | 1024B |                  46,740 |               22,216 |
 
-Baseline RSS is ~9.5 MiB for Oktoplus and ~9.3 MiB for Redis. gRPC is a build-time opt-in (`-DOKTOPLUS_WITH_GRPC=ON`); the default build links neither `libprotobuf` nor `libgrpc++`, which keeps both the static binary footprint and the shared-library mappings small. The Oktoplus binary also bakes in jemalloc tuning via a `__malloc_conf` weak symbol (`narenas:1,muzzy_decay_ms:0,background_thread:true`): one arena instead of `4 × CPU` saves ~1.7 MiB of per-arena metadata fan-out at zero throughput cost (jemalloc's per-thread tcache absorbs almost every allocation before it touches the arena mutex), `muzzy_decay_ms:0` skips the muzzy intermediate state so dirty pages go straight back to the OS, and `background_thread:true` runs one jemalloc maintenance thread that proactively purges dirty extents for clients that never call `MEMORY PURGE`. *Delta over baseline* (truly retained allocator memory) is ~3–17 MiB across the workload sweep, with the worst case at 1M × 1024B.
+Baseline RSS is ~8.4 MiB for Oktoplus and ~8.5 MiB for Redis. gRPC is a build-time opt-in (`-DOKTOPLUS_WITH_GRPC=ON`); the default build links neither `libprotobuf` nor `libgrpc++`, which keeps both the static binary footprint and the shared-library mappings small. The Oktoplus binary also bakes in jemalloc tuning via a `__malloc_conf` weak symbol (`narenas:1,muzzy_decay_ms:0,background_thread:true`): one arena instead of `4 × CPU` saves ~1.7 MiB of per-arena metadata fan-out at zero throughput cost (jemalloc's per-thread tcache absorbs almost every allocation before it touches the arena mutex), `muzzy_decay_ms:0` skips the muzzy intermediate state so dirty pages go straight back to the OS, and `background_thread:true` runs one jemalloc maintenance thread that proactively purges dirty extents for clients that never call `MEMORY PURGE`. *Delta over baseline* (truly retained allocator memory) is ~3–37 MiB across the workload sweep, with the worst case at 1M × 1024B.
 
 #### Design properties
 
@@ -236,8 +250,8 @@ Baseline RSS is ~9.5 MiB for Oktoplus and ~9.3 MiB for Redis. gRPC is a build-ti
   - No replication, clustering, or persistence — see the release plan below.
   - No pub/sub, streams, scripting, or transactions.
   - Command coverage: lists 76%, sets 94% on RESP / 18% on gRPC, strings 0% — see the per-family compatibility tables linked at the top.
-  - At hot-key high-concurrency without pipelining (`-P 1`), the per-command wire path is slightly heavier than a hand-tuned single-threaded loop, so this cell sits ~3–24% below the Redis reference. With pipelining (`-P 16`) the same workload sits at ~1M rps for both servers.
-  - **Per-key fixed overhead is ~133–157 B at 3-byte values** (vs ~70 B for Redis). The gap shrinks with value size and inverts at 1 KB (~0.89–0.91× Redis); see the TODO above for the small-value optimisations still on the table.
+  - At hot-key high-concurrency without pipelining (`-P 1`), the per-command wire path is slightly heavier than a hand-tuned single-threaded loop, so this cell sits ~14–32% below the Redis reference at `-c ≥ 10`. With pipelining (`-P 16`) the same workload sits at ~1.5M rps for both servers.
+  - **Per-key fixed overhead is ~126–156 B at 3-byte values** (vs ~71–72 B for Redis). The gap shrinks with value size and inverts at 1 KB (~0.90–0.91× Redis); see the TODO above for the small-value optimisations still on the table.
   - Single-node, no production deployments.
 
 #### Release plan

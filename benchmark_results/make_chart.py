@@ -737,6 +737,40 @@ def main() -> int:
             )
             extra_lines.append("chart_memory_residual.svg")
 
+    # Sets memory chart (only emit if run_memory_sets.sh produced
+    # raw/memory_sets.csv). Bytes per MEMBER for SADD workloads -- this
+    # is where the Sets element-type change (std::string ->
+    # okts::stor::string, 32 B -> 16 B per member) shows up. Regimes on
+    # the x-axis; the int-512 regime is where Redis's intset still wins.
+    sets_csv = RAW / "memory_sets.csv"
+    if sets_csv.exists():
+        import csv as _csv
+        rows_by_regime = {}  # regime -> {server: bytes_per_member}
+        order = []
+        with sets_csv.open() as fh:
+            for row in _csv.DictReader(fh):
+                r = row["regime"]
+                if r not in rows_by_regime:
+                    rows_by_regime[r] = {}
+                    order.append(r)
+                rows_by_regime[r][row["server"]] = float(row["bytes_per_member"])
+        regimes = [r for r in order
+                   if "oktoplus" in rows_by_regime[r] and "redis" in rows_by_regime[r]]
+        if regimes:
+            okto_bpm  = [rows_by_regime[r]["oktoplus"] for r in regimes]
+            redis_bpm = [rows_by_regime[r]["redis"] for r in regimes]
+            grouped_bar_chart(
+                title="Sets memory — bytes per member (lower is better)",
+                series=[
+                    ("Oktoplus", okto_bpm, "#3fb950"),
+                    ("Redis",    redis_bpm, "#f85149"),
+                ],
+                categories=regimes,
+                y_max=max(max(okto_bpm), max(redis_bpm)) * 1.10,
+                out_path=HERE / "chart_memory_sets.svg",
+            )
+            extra_lines.append("chart_memory_sets.svg")
+
     # Parallelism-advantage chart: LPOS scan on a list of N elements,
     # multi-key, varying clients. Pure CPU per command (~5 bytes wire),
     # so Redis stays capped at single-core ceiling and Oktoplus scales

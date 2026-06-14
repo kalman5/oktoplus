@@ -57,7 +57,9 @@ grpc::Status CommandsSet::setDiff(grpc::ServerContext*,
   auto myRet = theSets.diff(myNames);
 
   for (auto const& myValue : myRet) {
-    aReply->add_values(myValue);
+    // myValue is okts::stor::string (no implicit conversion to
+    // std::string); render through string_view into the proto field.
+    aReply->add_values(std::string(std::string_view(myValue)));
   }
 
   return grpc::Status::OK;

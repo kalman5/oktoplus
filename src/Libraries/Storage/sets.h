@@ -10,13 +10,22 @@
 #include <absl/container/flat_hash_set.h>
 
 #include "Storage/genericcontainer.h"
+#include "Storage/string.h"
 #include "Support/noncopyable.h"
 
 namespace okts::stor {
 
-class Sets : public GenericContainer<absl::flat_hash_set<std::string>>
+// Set members are stored as okts::stor::string (16 B SSO-or-heap)
+// rather than std::string (32 B in libstdc++). Sets were the last
+// container still paying the wide std::string per member; switching
+// to the storage-path string halves the per-member slot for small
+// values and inherits the same heterogeneous-lookup contract (hashes
+// and compares through std::string_view), so std::string / const char*
+// / std::string_view probes still find the same bucket via the
+// implicit conversion to the key type.
+class Sets : public GenericContainer<absl::flat_hash_set<okts::stor::string>>
 {
-  using Container = absl::flat_hash_set<std::string>;
+  using Container = absl::flat_hash_set<okts::stor::string>;
   using Base      = GenericContainer<Container>;
 
  public:
