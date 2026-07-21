@@ -4,26 +4,26 @@
 <line x1="70" y1="350.0" x2="860" y2="350.0" stroke="#d0d7de" stroke-width="1"/>
 <text x="62" y="354.0" text-anchor="end" fill="#24292f">0</text>
 <line x1="70" y1="292.0" x2="860" y2="292.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="296.0" text-anchor="end" fill="#24292f">8</text>
+<text x="62" y="296.0" text-anchor="end" fill="#24292f">9</text>
 <line x1="70" y1="234.0" x2="860" y2="234.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="238.0" text-anchor="end" fill="#24292f">17</text>
+<text x="62" y="238.0" text-anchor="end" fill="#24292f">18</text>
 <line x1="70" y1="176.0" x2="860" y2="176.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="180.0" text-anchor="end" fill="#24292f">26</text>
+<text x="62" y="180.0" text-anchor="end" fill="#24292f">27</text>
 <line x1="70" y1="118.0" x2="860" y2="118.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="122.0" text-anchor="end" fill="#24292f">35</text>
+<text x="62" y="122.0" text-anchor="end" fill="#24292f">36</text>
 <line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="64.0" text-anchor="end" fill="#24292f">44</text>
+<text x="62" y="64.0" text-anchor="end" fill="#24292f">45</text>
 <line x1="70" y1="60" x2="70" y2="350" stroke="#57606a" stroke-width="1"/>
 <line x1="70" y1="350" x2="860" y2="350" stroke="#57606a" stroke-width="1"/>
 <text x="201.66666666666666" y="368" text-anchor="middle" fill="#24292f">int-big</text>
-<rect x="100.3" y="193.4" width="94.8" height="156.6" fill="#3fb950"/>
-<rect x="208.2" y="157.3" width="94.8" height="192.7" fill="#f85149"/>
+<rect x="100.3" y="198.3" width="94.8" height="151.7" fill="#3fb950"/>
+<rect x="208.2" y="161.0" width="94.8" height="189.0" fill="#f85149"/>
 <text x="465.0" y="368" text-anchor="middle" fill="#24292f">int-512</text>
 <rect x="363.6" y="86.4" width="94.8" height="263.6" fill="#3fb950"/>
-<rect x="471.6" y="334.5" width="94.8" height="15.5" fill="#f85149"/>
+<rect x="471.6" y="330.4" width="94.8" height="19.6" fill="#f85149"/>
 <text x="728.3333333333333" y="368" text-anchor="middle" fill="#24292f">str12</text>
-<rect x="626.9" y="201.1" width="94.8" height="148.9" fill="#3fb950"/>
-<rect x="734.9" y="107.0" width="94.8" height="243.0" fill="#f85149"/>
+<rect x="626.9" y="203.3" width="94.8" height="146.7" fill="#3fb950"/>
+<rect x="734.9" y="116.1" width="94.8" height="233.9" fill="#f85149"/>
 <rect x="70" y="391" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="402" fill="#24292f">Oktoplus</text>
 <rect x="270" y="391" width="14" height="14" fill="#f85149"/>
