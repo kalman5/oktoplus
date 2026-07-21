@@ -476,17 +476,14 @@ std::string RespHandler::handleMemory(const Args& aArgs) {
   if (!myErr.empty()) return myErr;
 
   if (iequalsToUpper(aArgs[1], "PURGE")) {
-    // Same hook FLUSHDB / FLUSHALL run; safe to call when there's
-    // nothing to purge (jemalloc no-op) and idempotent across calls.
     stor::releaseMemoryToOs();
     return RespParser::formatSimpleString("OK");
   }
 
   if (iequalsToUpper(aArgs[1], "STATS")) {
-    // Diagnostic: bytes jemalloc currently considers live (not yet
-    // free()'d). Stable across load+flush+purge cycles iff the
-    // process isn't leaking. Returned as a RESP integer so it's easy
-    // to script.
+    if (aArgs.size() >= 3 && iequalsToUpper(aArgs[2], "JSON")) {
+      return RespParser::formatBulkString(stor::statsJson());
+    }
     return RespParser::formatInteger(
         static_cast<int64_t>(stor::allocatedBytes()));
   }
