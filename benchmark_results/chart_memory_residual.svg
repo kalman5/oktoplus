@@ -4,43 +4,43 @@
 <line x1="70" y1="350.0" x2="860" y2="350.0" stroke="#d0d7de" stroke-width="1"/>
 <text x="62" y="354.0" text-anchor="end" fill="#24292f">0</text>
 <line x1="70" y1="292.0" x2="860" y2="292.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="296.0" text-anchor="end" fill="#24292f">9,672</text>
+<text x="62" y="296.0" text-anchor="end" fill="#24292f">9,646</text>
 <line x1="70" y1="234.0" x2="860" y2="234.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="238.0" text-anchor="end" fill="#24292f">19,345</text>
+<text x="62" y="238.0" text-anchor="end" fill="#24292f">19,293</text>
 <line x1="70" y1="175.99999999999997" x2="860" y2="175.99999999999997" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="179.99999999999997" text-anchor="end" fill="#24292f">29,018</text>
+<text x="62" y="179.99999999999997" text-anchor="end" fill="#24292f">28,939</text>
 <line x1="70" y1="118.0" x2="860" y2="118.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="122.0" text-anchor="end" fill="#24292f">38,691</text>
+<text x="62" y="122.0" text-anchor="end" fill="#24292f">38,586</text>
 <line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="64.0" text-anchor="end" fill="#24292f">48,364</text>
+<text x="62" y="64.0" text-anchor="end" fill="#24292f">48,232</text>
 <line x1="70" y1="60" x2="70" y2="350" stroke="#57606a" stroke-width="1"/>
 <line x1="70" y1="350" x2="860" y2="350" stroke="#57606a" stroke-width="1"/>
 <text x="119.375" y="368" text-anchor="middle" fill="#24292f">100k/3B</text>
 <rect x="81.4" y="300.4" width="35.5" height="49.6" fill="#3fb950"/>
-<rect x="121.8" y="292.2" width="35.5" height="57.8" fill="#f85149"/>
+<rect x="121.8" y="290.8" width="35.5" height="59.2" fill="#f85149"/>
 <text x="218.125" y="368" text-anchor="middle" fill="#24292f">100k/64B</text>
-<rect x="180.1" y="295.4" width="35.5" height="54.6" fill="#3fb950"/>
-<rect x="220.6" y="294.6" width="35.5" height="55.4" fill="#f85149"/>
+<rect x="180.1" y="295.7" width="35.5" height="54.3" fill="#3fb950"/>
+<rect x="220.6" y="293.9" width="35.5" height="56.1" fill="#f85149"/>
 <text x="316.875" y="368" text-anchor="middle" fill="#24292f">100k/256B</text>
-<rect x="278.9" y="290.4" width="35.5" height="59.6" fill="#3fb950"/>
-<rect x="319.3" y="292.7" width="35.5" height="57.3" fill="#f85149"/>
+<rect x="278.9" y="290.3" width="35.5" height="59.7" fill="#3fb950"/>
+<rect x="319.3" y="291.9" width="35.5" height="58.1" fill="#f85149"/>
 <text x="415.625" y="368" text-anchor="middle" fill="#24292f">100k/1024B</text>
-<rect x="377.6" y="277.3" width="35.5" height="72.7" fill="#3fb950"/>
-<rect x="418.1" y="292.1" width="35.5" height="57.9" fill="#f85149"/>
+<rect x="377.6" y="277.5" width="35.5" height="72.5" fill="#3fb950"/>
+<rect x="418.1" y="287.4" width="35.5" height="62.6" fill="#f85149"/>
 <text x="514.375" y="368" text-anchor="middle" fill="#24292f">1M/3B</text>
-<rect x="476.4" y="287.8" width="35.5" height="62.2" fill="#3fb950"/>
-<rect x="516.8" y="283.0" width="35.5" height="67.0" fill="#f85149"/>
+<rect x="476.4" y="293.3" width="35.5" height="56.7" fill="#3fb950"/>
+<rect x="516.8" y="280.8" width="35.5" height="69.2" fill="#f85149"/>
 <text x="613.125" y="368" text-anchor="middle" fill="#24292f">1M/64B</text>
-<rect x="575.1" y="280.8" width="35.5" height="69.2" fill="#3fb950"/>
-<rect x="615.6" y="280.5" width="35.5" height="69.5" fill="#f85149"/>
+<rect x="575.1" y="280.5" width="35.5" height="69.5" fill="#3fb950"/>
+<rect x="615.6" y="280.4" width="35.5" height="69.6" fill="#f85149"/>
 <text x="711.875" y="368" text-anchor="middle" fill="#24292f">1M/256B</text>
-<rect x="673.9" y="239.1" width="35.5" height="110.9" fill="#3fb950"/>
-<rect x="714.3" y="266.4" width="35.5" height="83.6" fill="#f85149"/>
+<rect x="673.9" y="243.5" width="35.5" height="106.5" fill="#3fb950"/>
+<rect x="714.3" y="267.3" width="35.5" height="82.7" fill="#f85149"/>
 <text x="810.625" y="368" text-anchor="middle" fill="#24292f">1M/1024B</text>
 <rect x="772.6" y="86.4" width="35.5" height="263.6" fill="#3fb950"/>
-<rect x="813.1" y="204.9" width="35.5" height="145.1" fill="#f85149"/>
-<line x1="70" y1="297.9" x2="860" y2="297.9" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="6,4"/>
-<line x1="70" y1="298.5" x2="860" y2="298.5" stroke="#f85149" stroke-width="1.5" stroke-dasharray="6,4"/>
+<rect x="813.1" y="213.2" width="35.5" height="136.8" fill="#f85149"/>
+<line x1="70" y1="298.0" x2="860" y2="298.0" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="6,4"/>
+<line x1="70" y1="298.3" x2="860" y2="298.3" stroke="#f85149" stroke-width="1.5" stroke-dasharray="6,4"/>
 <rect x="70" y="391" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="402" fill="#24292f">Oktoplus</text>
 <rect x="270" y="391" width="14" height="14" fill="#f85149"/>

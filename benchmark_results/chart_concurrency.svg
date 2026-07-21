@@ -4,15 +4,15 @@
 <line x1="70" y1="320.0" x2="860" y2="320.0" stroke="#d0d7de" stroke-width="1"/>
 <text x="62" y="324.0" text-anchor="end" fill="#24292f">0</text>
 <line x1="70" y1="268.0" x2="860" y2="268.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="272.0" text-anchor="end" fill="#24292f">38,869</text>
+<text x="62" y="272.0" text-anchor="end" fill="#24292f">39,285</text>
 <line x1="70" y1="216.0" x2="860" y2="216.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="220.0" text-anchor="end" fill="#24292f">77,738</text>
+<text x="62" y="220.0" text-anchor="end" fill="#24292f">78,571</text>
 <line x1="70" y1="164.0" x2="860" y2="164.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="168.0" text-anchor="end" fill="#24292f">116,607</text>
+<text x="62" y="168.0" text-anchor="end" fill="#24292f">117,857</text>
 <line x1="70" y1="112.00000000000003" x2="860" y2="112.00000000000003" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="116.00000000000003" text-anchor="end" fill="#24292f">155,477</text>
+<text x="62" y="116.00000000000003" text-anchor="end" fill="#24292f">157,142</text>
 <line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="64.0" text-anchor="end" fill="#24292f">194,346</text>
+<text x="62" y="64.0" text-anchor="end" fill="#24292f">196,428</text>
 <line x1="70" y1="60" x2="70" y2="320" stroke="#57606a" stroke-width="1"/>
 <line x1="70" y1="320" x2="860" y2="320" stroke="#57606a" stroke-width="1"/>
 <text x="70.0" y="338" text-anchor="middle" fill="#24292f">1</text>
@@ -21,28 +21,28 @@
 <text x="662.5" y="338" text-anchor="middle" fill="#24292f">100</text>
 <text x="860.0" y="338" text-anchor="middle" fill="#24292f">200</text>
 <text x="440.0" y="352" text-anchor="middle" fill="#24292f">concurrent clients</text>
-<polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,247.1 267.5,177.4 465.0,175.1 662.5,153.4 860.0,147.8"/>
-<circle cx="70.0" cy="247.1" r="3.5" fill="#3fb950"/>
-<circle cx="267.5" cy="177.4" r="3.5" fill="#3fb950"/>
-<circle cx="465.0" cy="175.1" r="3.5" fill="#3fb950"/>
-<circle cx="662.5" cy="153.4" r="3.5" fill="#3fb950"/>
-<circle cx="860.0" cy="147.8" r="3.5" fill="#3fb950"/>
-<text x="70.0" y="237.1" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">0.3 cores</text>
-<text x="267.5" y="167.4" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">0.7 cores</text>
-<text x="465.0" y="165.1" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">0.8 cores</text>
-<text x="662.5" y="143.4" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">0.7 cores</text>
-<text x="860.0" y="137.8" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">0.7 cores</text>
-<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,258.1 267.5,83.6 465.0,131.3 662.5,101.4 860.0,125.3"/>
-<circle cx="70.0" cy="258.1" r="3.5" fill="#f85149"/>
+<polyline fill="none" stroke="#3fb950" stroke-width="2.5" points="70.0,259.9 267.5,191.7 465.0,164.8 662.5,170.4 860.0,255.8"/>
+<circle cx="70.0" cy="259.9" r="3.5" fill="#3fb950"/>
+<circle cx="267.5" cy="191.7" r="3.5" fill="#3fb950"/>
+<circle cx="465.0" cy="164.8" r="3.5" fill="#3fb950"/>
+<circle cx="662.5" cy="170.4" r="3.5" fill="#3fb950"/>
+<circle cx="860.0" cy="255.8" r="3.5" fill="#3fb950"/>
+<text x="70.0" y="249.9" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">0.3 cores</text>
+<text x="267.5" y="181.7" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">0.7 cores</text>
+<text x="465.0" y="154.8" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">0.7 cores</text>
+<text x="662.5" y="160.4" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">0.7 cores</text>
+<text x="860.0" y="245.8" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">5.0 cores</text>
+<polyline fill="none" stroke="#f85149" stroke-width="2.5" points="70.0,258.0 267.5,83.6 465.0,127.1 662.5,148.3 860.0,197.2"/>
+<circle cx="70.0" cy="258.0" r="3.5" fill="#f85149"/>
 <circle cx="267.5" cy="83.6" r="3.5" fill="#f85149"/>
-<circle cx="465.0" cy="131.3" r="3.5" fill="#f85149"/>
-<circle cx="662.5" cy="101.4" r="3.5" fill="#f85149"/>
-<circle cx="860.0" cy="125.3" r="3.5" fill="#f85149"/>
-<text x="70.0" y="276.1" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.3 cores</text>
+<circle cx="465.0" cy="127.1" r="3.5" fill="#f85149"/>
+<circle cx="662.5" cy="148.3" r="3.5" fill="#f85149"/>
+<circle cx="860.0" cy="197.2" r="3.5" fill="#f85149"/>
+<text x="70.0" y="276.0" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.3 cores</text>
 <text x="267.5" y="101.6" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.6 cores</text>
-<text x="465.0" y="149.3" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.6 cores</text>
-<text x="662.5" y="119.4" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.6 cores</text>
-<text x="860.0" y="143.3" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.5 cores</text>
+<text x="465.0" y="145.1" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.6 cores</text>
+<text x="662.5" y="166.3" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.6 cores</text>
+<text x="860.0" y="215.2" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">0.5 cores</text>
 <rect x="70" y="361" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="372" fill="#24292f">Oktoplus</text>
 <rect x="230" y="361" width="14" height="14" fill="#f85149"/>
