@@ -301,6 +301,11 @@ void ContainerFunctorApplier<CONTAINER>::clear() {
     {
       std::lock_guard<ShardMutex> myLock(myShard.mutex);
       myEvicted.swap(myShard.storage);
+      // Shrink the now-empty shard map so its previous bucket array
+      // (if any) is released back to the allocator, not retained for
+      // reuse. flat_hash_map has no shrink_to_fit, but rehash(0)
+      // collapses it to minimal.
+      myShard.storage.rehash(0);
     }
 
     // A thread that passed find() and acquired its inner mutex BEFORE
@@ -314,6 +319,21 @@ void ContainerFunctorApplier<CONTAINER>::clear() {
     // shard lock find an empty map, so they can't reach these PCs.
     for (auto& myEntry : myEvicted) {
       std::lock_guard<ContainerMutex> myInner(myEntry.second->mutex);
+      // Proactively release the inner container's capacity back to
+      // the allocator before the unique_ptr destroys the
+      // ProtectedContainer. For sequence containers (devector/vector)
+      // clear() does not free capacity, so we shrink_to_fit to
+      // return the internal buffer (which holds 16B string slots).
+      // For sets (flat_hash_set) we rehash to 0 for same reason.
+      // Use if constexpr with requires to handle both shapes.
+      if constexpr (requires { myEntry.second->storage.clear(); }) {
+        myEntry.second->storage.clear();
+      }
+      if constexpr (requires { myEntry.second->storage.shrink_to_fit(); }) {
+        myEntry.second->storage.shrink_to_fit();
+      } else if constexpr (requires { myEntry.second->storage.rehash(0); }) {
+        myEntry.second->storage.rehash(0);
+      }
     }
     // myEvicted destructs at scope exit, freeing every PC and its
     // storage off the shard critical path.

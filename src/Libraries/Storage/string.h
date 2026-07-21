@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <dlfcn.h>
 #include <new>
 #include <string>
 #include <string_view>
@@ -196,6 +197,15 @@ class string {
 
  private:
   static constexpr std::uint8_t kHeapMarker = 0xFF;
+  // Threshold above which we bypass jemalloc's tcache. Large values
+  // (e.g. 1024B in the memory benchmark) allocated via tcache sit
+  // in the freeing thread's cache after FLUSHALL and cause RSS to
+  // stay ~7 MiB above baseline even after arena.4096.purge. Bypassing
+  // tcache for big strings makes them go straight to arena and get
+  // purged immediately, while keeping tcache for small sizes where
+  // it gives 6x throughput on concurrent workloads.
+  static constexpr std::size_t kLargeThreshold = 512;
+  static constexpr int kMallocxTcacheNone = 256; // MALLOCX_TCACHE(-1) = (1<<8)
 
   // Layout: 15-byte inline buffer + 1-byte discriminator. The
   // alignas(8) guarantees the heap pointer we memcpy into the front
@@ -219,12 +229,62 @@ class string {
 
   bool isHeap() const noexcept { return theMode == kHeapMarker; }
 
+  // jemalloc helpers dlsym'd so binary still runs with glibc malloc.
+  static void* mallocNoTcache(std::size_t aSize) {
+    using Fn = void* (*)(std::size_t, int);
+    static auto sFn = reinterpret_cast<Fn>(dlsym(RTLD_DEFAULT, "je_mallocx"));
+    if (!sFn) sFn = reinterpret_cast<Fn>(dlsym(RTLD_DEFAULT, "mallocx"));
+    if (!sFn) return nullptr;
+    return sFn(aSize, kMallocxTcacheNone);
+  }
+  static void freeNoTcache(void* aPtr, std::size_t aSize) {
+    // Prefer sdallocx(ptr, size, flags) which skips size lookup; fall back to dallocx.
+    using SdFn = void (*)(void*, std::size_t, int);
+    using DFn = void (*)(void*, int);
+    static auto sSd = reinterpret_cast<SdFn>(dlsym(RTLD_DEFAULT, "je_sdallocx"));
+    if (!sSd) sSd = reinterpret_cast<SdFn>(dlsym(RTLD_DEFAULT, "sdallocx"));
+    if (sSd) {
+      sSd(aPtr, aSize, kMallocxTcacheNone);
+      return;
+    }
+    static auto sD = reinterpret_cast<DFn>(dlsym(RTLD_DEFAULT, "je_dallocx"));
+    if (!sD) sD = reinterpret_cast<DFn>(dlsym(RTLD_DEFAULT, "dallocx"));
+    if (sD) {
+      sD(aPtr, kMallocxTcacheNone);
+      return;
+    }
+    // Last resort: plain free (may go via tcache but better than leak).
+    ::operator delete[](aPtr);
+  }
+
   void freeIfHeap() noexcept {
     if (isHeap()) {
       char* myPtr;
       std::memcpy(&myPtr, theInline, sizeof(myPtr));
-      // delete[] matches the `new char[size]` in initFrom().
-      delete[] myPtr;
+      std::uint32_t mySize;
+      std::memcpy(&mySize, theInline + sizeof(char*), sizeof(mySize));
+      if (mySize > kLargeThreshold) {
+        // Try no-tcache free; if jemalloc not linked it falls back to delete[] inside helper.
+        // To know if we used mallocx, we need to know if alloc was via mallocx. We track via size:
+        // large allocs always use mallocx, so always use no-tcache free path which will handle fallback.
+        // For safety, check if mallocx symbol exists by trying freeNoTcache which itself falls back.
+        // If the pointer was allocated via new[], freeNoTcache's fallback delete[] will still be correct
+        // for glibc but may mismatch for jemalloc's mallocx? mallocx memory must be freed via dallocx/sdallocx,
+        // not delete[]. So we need to know allocation method. We store a marker: for large, we always
+        // allocate via mallocx if available, so we free via dallocx. If mallocx not available, we allocated
+        // via new[] and should delete[].
+        // Detect jemalloc availability via presence of je_mallocx symbol.
+        using Fn = void* (*)(std::size_t, int);
+        static auto sM = reinterpret_cast<Fn>(dlsym(RTLD_DEFAULT, "je_mallocx"));
+        if (!sM) sM = reinterpret_cast<Fn>(dlsym(RTLD_DEFAULT, "mallocx"));
+        if (sM) {
+          freeNoTcache(myPtr, mySize);
+        } else {
+          delete[] myPtr;
+        }
+      } else {
+        delete[] myPtr;
+      }
     }
   }
 
@@ -235,11 +295,14 @@ class string {
       }
       theMode = static_cast<std::uint8_t>(aSv.size());
     } else {
-      // `new char[size]` throws std::bad_alloc on OOM, which is the
-      // same contract std::string offers at the storage path's API
-      // boundary. uint32_t size cap is 4 GiB, well above the RESP
-      // bulk-string protocol limit.
-      char* myBuf = new char[aSv.size()];
+      char* myBuf = nullptr;
+      if (aSv.size() > kLargeThreshold) {
+        myBuf = static_cast<char*>(mallocNoTcache(aSv.size()));
+      }
+      if (!myBuf) {
+        // Fallback to new[] (works with glibc and jemalloc tcache path)
+        myBuf = new char[aSv.size()];
+      }
       std::memcpy(myBuf, aSv.data(), aSv.size());
       std::memcpy(theInline, &myBuf, sizeof(myBuf));
       std::uint32_t mySize = static_cast<std::uint32_t>(aSv.size());
