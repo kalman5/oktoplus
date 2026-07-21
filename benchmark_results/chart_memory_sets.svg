@@ -8,22 +8,22 @@
 <line x1="70" y1="234.0" x2="860" y2="234.0" stroke="#d0d7de" stroke-width="1"/>
 <text x="62" y="238.0" text-anchor="end" fill="#24292f">18</text>
 <line x1="70" y1="176.0" x2="860" y2="176.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="180.0" text-anchor="end" fill="#24292f">28</text>
+<text x="62" y="180.0" text-anchor="end" fill="#24292f">27</text>
 <line x1="70" y1="118.0" x2="860" y2="118.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="122.0" text-anchor="end" fill="#24292f">37</text>
+<text x="62" y="122.0" text-anchor="end" fill="#24292f">36</text>
 <line x1="70" y1="60.0" x2="860" y2="60.0" stroke="#d0d7de" stroke-width="1"/>
-<text x="62" y="64.0" text-anchor="end" fill="#24292f">46</text>
+<text x="62" y="64.0" text-anchor="end" fill="#24292f">45</text>
 <line x1="70" y1="60" x2="70" y2="350" stroke="#57606a" stroke-width="1"/>
 <line x1="70" y1="350" x2="860" y2="350" stroke="#57606a" stroke-width="1"/>
 <text x="201.66666666666666" y="368" text-anchor="middle" fill="#24292f">int-big</text>
-<rect x="100.3" y="198.6" width="94.8" height="151.4" fill="#3fb950"/>
-<rect x="208.2" y="164.5" width="94.8" height="185.5" fill="#f85149"/>
+<rect x="100.3" y="195.7" width="94.8" height="154.3" fill="#3fb950"/>
+<rect x="208.2" y="185.6" width="94.8" height="164.4" fill="#f85149"/>
 <text x="465.0" y="368" text-anchor="middle" fill="#24292f">int-512</text>
 <rect x="363.6" y="86.4" width="94.8" height="263.6" fill="#3fb950"/>
-<rect x="471.6" y="330.8" width="94.8" height="19.2" fill="#f85149"/>
+<rect x="471.6" y="334.8" width="94.8" height="15.2" fill="#f85149"/>
 <text x="728.3333333333333" y="368" text-anchor="middle" fill="#24292f">str12</text>
-<rect x="626.9" y="198.6" width="94.8" height="151.4" fill="#3fb950"/>
-<rect x="734.9" y="120.5" width="94.8" height="229.5" fill="#f85149"/>
+<rect x="626.9" y="195.7" width="94.8" height="154.3" fill="#3fb950"/>
+<rect x="734.9" y="116.1" width="94.8" height="233.9" fill="#f85149"/>
 <rect x="70" y="391" width="14" height="14" fill="#3fb950"/>
 <text x="90" y="402" fill="#24292f">Oktoplus</text>
 <rect x="270" y="391" width="14" height="14" fill="#f85149"/>
