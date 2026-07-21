@@ -26,11 +26,33 @@ inline void releaseMemoryToOs() {
   }
   // Tell jemalloc to refresh its cached stats counters (so a follow-up
   // `stats.allocated` query reflects the post-purge reality), then
-  // purge every arena's dirty pages back to the OS.
+  // flush this thread's tcache and purge every arena's dirty pages back to the OS.
+  // Flushing tcache is critical: after FLUSHALL the clearing thread's tcache
+  // holds up to 100k+ freed extents (e.g. 1024B values). Without a flush,
+  // arena.4096.purge sees no dirty pages in the arena itself and RSS stays high.
   std::uint64_t myEpoch = 0;
   std::size_t   myEpochSz = sizeof(myEpoch);
   sMallctl("epoch", &myEpoch, &myEpochSz, &myEpoch, sizeof(myEpoch));
+  sMallctl("thread.tcache.flush", nullptr, nullptr, nullptr, 0);
   sMallctl("arena.4096.purge", nullptr, nullptr, nullptr, 0);
+  // Also try explicit per-arena purge via narenas, for jemalloc versions
+  // where 4096 magic is not enough, plus a second tcache flush after purge
+  // to catch any allocations that were promoted.
+  unsigned myNarenas = 0;
+  std::size_t myNarenasSz = sizeof(myNarenas);
+  if (sMallctl("arenas.narenas", &myNarenas, &myNarenasSz, nullptr, 0) == 0) {
+    char myName[64];
+    // Purge each arena individually (0..narenas-1) - some jemalloc builds
+    // require explicit per-arena purge.
+    for (unsigned i = 0; i < myNarenas; ++i) {
+      snprintf(myName, sizeof(myName), "arena.%u.purge", i);
+      sMallctl(myName, nullptr, nullptr, nullptr, 0);
+    }
+    // Final tcache flush + all-arenas purge to clean up anything
+    // that was flushed from tcache into arena as dirty.
+    sMallctl("thread.tcache.flush", nullptr, nullptr, nullptr, 0);
+    sMallctl("arena.4096.purge", nullptr, nullptr, nullptr, 0);
+  }
 }
 
 // Returns the number of bytes jemalloc currently believes are

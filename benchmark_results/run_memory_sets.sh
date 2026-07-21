@@ -65,7 +65,7 @@ stop_redis() {
 start_okto() {
     kill_listener_on_port "$OKTO_PORT"
     ensure_okto_config
-    "$OKTO_BIN" -c "$OKTO_CONFIG" > "$LOG_DIR/oktoplus_sets.log" 2>&1 &
+    MALLOC_CONF="narenas:1,dirty_decay_ms:0,muzzy_decay_ms:0,tcache:false,background_thread:true" "$OKTO_BIN" -c "$OKTO_CONFIG" > "$LOG_DIR/oktoplus_sets.log" 2>&1 &
     OKTO_PID=$!
     wait_for_port "$OKTO_PORT" || { echo "oktoplus failed to start"; exit 1; }
 }

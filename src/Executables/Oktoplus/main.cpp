@@ -44,7 +44,7 @@
 // builds linked against glibc malloc (the symbol is just unused).
 extern "C" {
 const char* malloc_conf
-    __attribute__((weak)) = "narenas:1,muzzy_decay_ms:0,background_thread:true";
+    __attribute__((weak)) = "narenas:1,dirty_decay_ms:0,muzzy_decay_ms:0,tcache:true,background_thread:true";
 }
 
 namespace okcfgs = okts::cfgs;
